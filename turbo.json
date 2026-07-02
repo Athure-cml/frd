@@ -11,7 +11,15 @@
     "scripts/*/src/**/*.ts",
     "scripts/*/src/**/*.json"
   ],
-  "globalEnv": ["NODE_ENV"],
+  "globalEnv": [
+    "NODE_ENV",
+    "VITE_GLOB_API_URL",
+    "VITE_ROUTER_HISTORY",
+    "VITE_COMPRESS",
+    "VITE_ARCHIVER",
+    "VITE_BASE",
+    "VITE_APP_STORE_SECURE_KEY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

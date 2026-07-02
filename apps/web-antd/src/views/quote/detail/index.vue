@@ -6,7 +6,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
 import { Page } from '@vben/common-ui';
-import { ArrowLeft, Copy, IconifyIcon, Pencil, Printer } from '@vben/icons';
+import { ArrowLeft, Copy, IconifyIcon } from '@vben/icons';
 
 import {
   Button,
@@ -176,7 +176,7 @@ onMounted(loadDetail);
         </div>
         <div class="quote-editor-actions">
           <Button v-if="detail?.editable && canEdit" @click="onEdit">
-            <Pencil class="size-4" />
+            <IconifyIcon class="size-4" icon="lucide:pencil" />
             {{ $t('common.edit') }}
           </Button>
           <Button
@@ -210,7 +210,7 @@ onMounted(loadDetail);
             {{ $t('page.quote.actions.copy') }}
           </Button>
           <Button @click="onPrint">
-            <Printer class="size-4" />
+            <IconifyIcon class="size-4" icon="lucide:printer" />
             {{ $t('page.quote.actions.print') }}
           </Button>
         </div>
