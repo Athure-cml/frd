@@ -1,0 +1,207 @@
+/* 概览模块共用表面：令牌、KPI 卡片、内容卡片、表格 */
+
+.dashboard-shell {
+  --ws-canvas: hsl(var(--background-deep));
+  --ws-surface: hsl(var(--card));
+  --ws-border: hsl(var(--border));
+  --ws-ink: hsl(var(--foreground));
+  --ws-muted: hsl(var(--muted-foreground));
+  --ws-action: hsl(var(--primary));
+  --ws-action-hover: color-mix(in srgb, hsl(var(--primary)) 88%, black);
+  --ws-action-soft: color-mix(in srgb, hsl(var(--primary)) 10%, transparent);
+  --ws-success: hsl(var(--success));
+  --ws-success-soft: color-mix(in srgb, hsl(var(--success)) 12%, transparent);
+  --ws-warning: hsl(var(--warning));
+  --ws-warning-soft: color-mix(in srgb, hsl(var(--warning)) 14%, transparent);
+  --ws-danger: hsl(var(--destructive));
+  --ws-danger-soft: color-mix(in srgb, hsl(var(--destructive)) 12%, transparent);
+  --ws-radius-sm: 12px;
+  --ws-shadow: 0 4px 24px color-mix(in srgb, hsl(var(--foreground)) 6%, transparent);
+  --ws-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  min-height: 100%;
+  padding: 16px;
+  background: var(--ws-canvas);
+}
+
+@media (min-width: 768px) {
+  .dashboard-shell {
+    padding: 20px 24px;
+  }
+}
+
+/* —— KPI —— */
+.workspace-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (min-width: 900px) {
+  .workspace-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .workspace-kpi-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+  }
+}
+
+.workspace-kpi-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 18px;
+  background: var(--ws-surface);
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius-sm);
+  box-shadow: var(--ws-shadow);
+}
+
+.workspace-kpi-main {
+  min-width: 0;
+}
+
+.workspace-kpi-label {
+  display: block;
+  font-size: 13px;
+  color: var(--ws-muted);
+}
+
+.workspace-kpi-value {
+  margin: 8px 0 0;
+  font-size: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  color: var(--ws-ink);
+}
+
+.workspace-kpi-trend {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+.workspace-kpi-trend--up {
+  color: var(--ws-success);
+}
+
+.workspace-kpi-trend--down {
+  color: var(--ws-danger);
+}
+
+.workspace-kpi-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+
+.workspace-kpi-icon--primary {
+  color: var(--ws-action);
+  background: var(--ws-action-soft);
+}
+
+.workspace-kpi-icon--accent {
+  color: color-mix(in srgb, hsl(var(--primary)) 75%, hsl(var(--foreground)));
+  background: color-mix(in srgb, hsl(var(--primary)) 16%, transparent);
+}
+
+.workspace-kpi-icon--success {
+  color: var(--ws-success);
+  background: var(--ws-success-soft);
+}
+
+.workspace-kpi-icon--warning {
+  color: var(--ws-warning);
+  background: var(--ws-warning-soft);
+}
+
+.workspace-kpi-icon--destructive {
+  color: var(--ws-danger);
+  background: var(--ws-danger-soft);
+}
+
+/* —— 内容卡片 —— */
+.ws-card {
+  height: 100%;
+  padding: 18px 20px;
+  background: var(--ws-surface);
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius-sm);
+  box-shadow: var(--ws-shadow);
+}
+
+.ws-card-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.ws-card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ws-ink);
+}
+
+.ws-card-action {
+  padding: 0;
+  font-size: 13px;
+  color: var(--ws-action);
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.ws-card-action:hover {
+  text-decoration: underline;
+}
+
+.ws-card-action:focus-visible {
+  outline: 2px solid var(--ws-action);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.dashboard-chart-area {
+  min-height: 300px;
+}
+
+/* —— 表格 —— */
+.dashboard-shell :deep(.ant-table) {
+  font-size: 13px;
+}
+
+.dashboard-shell :deep(.ant-table-thead > tr > th) {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ws-muted);
+  background: var(--ws-canvas) !important;
+}
+
+.dashboard-shell :deep(.ant-table-tbody > tr > td) {
+  color: var(--ws-ink);
+}
+
+.dashboard-shell :deep(.ant-table-cell) {
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-shell :deep(.ant-table-tbody > tr:hover > td) {
+  background: color-mix(in srgb, hsl(var(--primary)) 4%, transparent) !important;
+}

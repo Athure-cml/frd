@@ -16,8 +16,8 @@ export const MOCK_USERS: UserInfo[] = [
   {
     id: 0,
     password: '123456',
-    realName: 'Vben',
-    roles: ['super'],
+    realName: '系统管理员',
+    roles: ['super_admin'],
     username: 'vben',
   },
   {
@@ -87,106 +87,130 @@ const dashboardMenus = [
   },
 ];
 
-const createDemosMenus = (role: 'admin' | 'super' | 'user') => {
-  const roleWithMenus = {
-    admin: {
-      component: '/demos/access/admin-visible',
-      meta: {
-        icon: 'mdi:button-cursor',
-        title: 'demos.access.adminVisible',
-      },
-      name: 'AccessAdminVisibleDemo',
-      path: '/demos/access/admin-visible',
+const costLibraryMenus = [
+  {
+    meta: {
+      icon: 'lucide:database',
+      order: 10,
+      title: 'page.costLibrary.title',
     },
-    super: {
-      component: '/demos/access/super-visible',
-      meta: {
-        icon: 'mdi:button-cursor',
-        title: 'demos.access.superVisible',
-      },
-      name: 'AccessSuperVisibleDemo',
-      path: '/demos/access/super-visible',
-    },
-    user: {
-      component: '/demos/access/user-visible',
-      meta: {
-        icon: 'mdi:button-cursor',
-        title: 'demos.access.userVisible',
-      },
-      name: 'AccessUserVisibleDemo',
-      path: '/demos/access/user-visible',
-    },
-  };
-
-  return [
-    {
-      meta: {
-        icon: 'ic:baseline-view-in-ar',
-        keepAlive: true,
-        order: 1000,
-        title: 'demos.title',
-      },
-      name: 'Demos',
-      path: '/demos',
-      redirect: '/demos/access',
-      children: [
-        {
-          name: 'AccessDemos',
-          path: '/demosaccess',
-          meta: {
-            icon: 'mdi:cloud-key-outline',
-            title: 'demos.access.backendPermissions',
-          },
-          redirect: '/demos/access/page-control',
-          children: [
-            {
-              name: 'AccessPageControlDemo',
-              path: '/demos/access/page-control',
-              component: '/demos/access/index',
-              meta: {
-                icon: 'mdi:page-previous-outline',
-                title: 'demos.access.pageAccess',
-              },
-            },
-            {
-              name: 'AccessButtonControlDemo',
-              path: '/demos/access/button-control',
-              component: '/demos/access/button-control',
-              meta: {
-                icon: 'mdi:button-cursor',
-                title: 'demos.access.buttonControl',
-              },
-            },
-            {
-              name: 'AccessMenuVisible403Demo',
-              path: '/demos/access/menu-visible-403',
-              component: '/demos/access/menu-visible-403',
-              meta: {
-                authority: ['no-body'],
-                icon: 'mdi:button-cursor',
-                menuVisibleWithForbidden: true,
-                title: 'demos.access.menuVisible403',
-              },
-            },
-            roleWithMenus[role],
-          ],
+    name: 'CostLibrary',
+    path: '/cost-library',
+    children: [
+      {
+        name: 'CostLibraryRoad',
+        path: '/cost-library/road',
+        meta: {
+          icon: 'lucide:truck',
+          title: 'page.costLibrary.road',
         },
-      ],
+      },
+      {
+        name: 'CostLibrarySea',
+        path: '/cost-library/sea',
+        meta: {
+          icon: 'lucide:ship',
+          title: 'page.costLibrary.sea',
+        },
+      },
+      {
+        name: 'CostLibraryRail',
+        path: '/cost-library/rail',
+        meta: {
+          icon: 'lucide:train-front',
+          title: 'page.costLibrary.rail',
+        },
+      },
+    ],
+  },
+  {
+    meta: {
+      icon: 'lucide:columns-3',
+      order: 11,
+      title: 'page.costLibrary.template.menuTitle',
     },
-  ];
-};
+    name: 'CostTemplateManage',
+    path: '/cost-library/templates',
+    children: [
+      {
+        name: 'CostTemplateRoad',
+        path: '/cost-library/templates/road',
+        meta: {
+          icon: 'lucide:truck',
+          title: 'page.costLibrary.template.roadMenu',
+        },
+      },
+      {
+        name: 'CostTemplateSea',
+        path: '/cost-library/templates/sea',
+        meta: {
+          icon: 'lucide:ship',
+          title: 'page.costLibrary.template.seaMenu',
+        },
+      },
+      {
+        name: 'CostTemplateRail',
+        path: '/cost-library/templates/rail',
+        meta: {
+          icon: 'lucide:train-front',
+          title: 'page.costLibrary.template.railMenu',
+        },
+      },
+    ],
+  },
+];
+
+const systemMenus = [
+  {
+    meta: {
+      icon: 'lucide:settings',
+      order: 20,
+      title: 'page.system.title',
+    },
+    name: 'System',
+    path: '/system',
+    children: [
+      {
+        name: 'SystemDept',
+        path: '/system/dept',
+        meta: {
+          icon: 'lucide:building-2',
+          title: 'page.system.dept',
+        },
+      },
+      {
+        name: 'SystemUser',
+        path: '/system/user',
+        meta: {
+          icon: 'lucide:users',
+          title: 'page.system.user',
+        },
+      },
+      {
+        name: 'SystemRole',
+        path: '/system/role',
+        meta: {
+          icon: 'lucide:shield',
+          title: 'page.system.role',
+        },
+      },
+    ],
+  },
+];
+
+const adminMenus = [...dashboardMenus, ...costLibraryMenus, ...systemMenus];
 
 export const MOCK_MENUS = [
   {
-    menus: [...dashboardMenus, ...createDemosMenus('super')],
+    menus: adminMenus,
     username: 'vben',
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus('admin')],
+    menus: adminMenus,
     username: 'admin',
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus('user')],
+    menus: [...dashboardMenus],
     username: 'jack',
   },
 ];
@@ -309,77 +333,6 @@ export const MOCK_MENU_LIST = [
         ],
       },
     ],
-  },
-  {
-    id: 9,
-    meta: {
-      badgeType: 'dot',
-      order: 9998,
-      title: 'demos.vben.title',
-      icon: 'carbon:data-center',
-    },
-    name: 'Project',
-    path: '/vben-admin',
-    type: 'catalog',
-    status: 1,
-    children: [
-      {
-        id: 901,
-        pid: 9,
-        name: 'VbenDocument',
-        path: '/vben-admin/document',
-        component: 'IFrameView',
-        type: 'embedded',
-        status: 1,
-        meta: {
-          icon: 'carbon:book',
-          iframeSrc: 'https://doc.vben.pro',
-          title: 'demos.vben.document',
-        },
-      },
-      {
-        id: 902,
-        pid: 9,
-        name: 'VbenGithub',
-        path: '/vben-admin/github',
-        component: 'IFrameView',
-        type: 'link',
-        status: 1,
-        meta: {
-          icon: 'carbon:logo-github',
-          link: 'https://github.com/vbenjs/vue-vben-admin',
-          title: 'Github',
-        },
-      },
-      {
-        id: 903,
-        pid: 9,
-        name: 'VbenAntdv',
-        path: '/vben-admin/antdv',
-        component: 'IFrameView',
-        type: 'link',
-        status: 0,
-        meta: {
-          icon: 'carbon:hexagon-vertical-solid',
-          badgeType: 'dot',
-          link: 'https://ant.vben.pro',
-          title: 'demos.vben.antdv',
-        },
-      },
-    ],
-  },
-  {
-    id: 10,
-    component: '_core/about/index',
-    type: 'menu',
-    status: 1,
-    meta: {
-      icon: 'lucide:copyright',
-      order: 9999,
-      title: 'demos.vben.about',
-    },
-    name: 'About',
-    path: '/about',
   },
 ];
 

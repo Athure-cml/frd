@@ -28,11 +28,13 @@ const tabsValue = defineModel<string>('modelValue');
   <Page auto-content-height>
     <div class="flex size-full">
       <Card class="w-1/6 flex-none">
-        <div class="mt-4 flex-col-center h-40 gap-4">
-          <VbenAvatar
-            :src="userInfo?.avatar ?? preferences.app.defaultAvatar"
-            class="size-20"
-          />
+        <div class="mt-4 flex-col-center gap-4">
+          <slot name="avatar" :user-info="userInfo">
+            <VbenAvatar
+              :src="userInfo?.avatar ?? preferences.app.defaultAvatar"
+              class="size-20"
+            />
+          </slot>
           <span class="text-lg font-semibold">
             {{ userInfo?.realName ?? '' }}
           </span>

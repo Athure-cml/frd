@@ -74,6 +74,7 @@ export {
   Redo2,
   RemoveFormatting,
   RotateCw,
+  Save,
   Search,
   SearchX,
   Settings,

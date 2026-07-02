@@ -1,8 +1,9 @@
 import {
-  appCopyrightPreferences,
   defineOverridesPreferences,
   definePreferencesExtension,
 } from '@vben/preferences';
+
+const appTitle = import.meta.env.VITE_APP_TITLE;
 
 interface WebAntdPreferencesExtension {
   defaultTableSize: number;
@@ -17,11 +18,27 @@ interface WebAntdPreferencesExtension {
  * !!! 更改配置后请清空缓存，否则可能不生效
  */
 export const overridesPreferences = defineOverridesPreferences({
-  // overrides
   app: {
-    name: import.meta.env.VITE_APP_TITLE,
+    name: appTitle,
+    defaultHomePath: '/workspace',
+    // mixed：后端 /menu/all 控制菜单可见性，前端路由提供页面组件
+    accessMode: 'mixed',
+    enableCheckUpdates: false,
   },
-  copyright: appCopyrightPreferences,
+  copyright: {
+    companyName: appTitle,
+    companySiteLink: '',
+    date: String(new Date().getFullYear()),
+    enable: true,
+    icp: '',
+    icpLink: '',
+  },
+  logo: {
+    enable: true,
+    fit: 'contain',
+    source: '',
+    sourceDark: '',
+  },
 });
 
 export const preferencesExtension =
@@ -65,7 +82,7 @@ export const preferencesExtension =
       },
       {
         component: 'input',
-        defaultValue: '',
+        defaultValue: appTitle,
         key: 'reportTitle',
         label: 'preferences.antd.fields.reportTitle.label',
         placeholder: 'preferences.antd.fields.reportTitle.placeholder',

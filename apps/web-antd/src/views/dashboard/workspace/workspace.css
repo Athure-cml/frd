@@ -1,0 +1,498 @@
+@import '../shared/dashboard-surface.css';
+
+/* 福瑞多工作台 · 页面专属样式 */
+
+.workspace-page {
+  --ws-radius: 16px;
+}
+
+/* —— Banner（与下方 KPI 卡片同表面，克制主色点缀） —— */
+.workspace-banner {
+  background: var(--ws-surface);
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius-sm);
+  box-shadow: var(--ws-shadow);
+}
+
+.workspace-banner-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 20px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+@media (min-width: 768px) {
+  .workspace-banner-content {
+    padding: 22px 24px;
+  }
+}
+
+.workspace-banner-text {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.workspace-banner-date {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--ws-muted);
+}
+
+.workspace-banner-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ws-ink);
+}
+
+@media (min-width: 768px) {
+  .workspace-banner-title {
+    font-size: 22px;
+  }
+}
+
+.workspace-banner-subtitle {
+  max-width: 52ch;
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ws-muted);
+}
+
+.workspace-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .workspace-banner-actions {
+    width: auto;
+  }
+}
+
+.workspace-create-btn {
+  display: inline-flex !important;
+  gap: 6px;
+  align-items: center;
+  height: 36px !important;
+  padding: 0 16px !important;
+  font-weight: 500;
+  border: none !important;
+  border-radius: 8px !important;
+}
+
+.workspace-create-btn:hover {
+  background: var(--ws-action-hover) !important;
+}
+
+.workspace-banner-secondary {
+  height: 36px !important;
+  color: var(--ws-ink) !important;
+  background: var(--ws-surface) !important;
+  border-color: var(--ws-border) !important;
+  border-radius: 8px !important;
+}
+
+.workspace-banner-secondary:hover {
+  color: var(--ws-action) !important;
+  border-color: color-mix(in srgb, hsl(var(--primary)) 30%, hsl(var(--border))) !important;
+}
+
+.workspace-menu-item {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 下拉挂到 body，使用 :root 级设计令牌 */
+.workspace-quick-dropdown .ant-dropdown-menu {
+  min-width: 200px;
+  padding: 6px;
+  background: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  box-shadow: 0 8px 28px color-mix(in srgb, hsl(var(--foreground)) 12%, transparent);
+}
+
+.workspace-quick-dropdown .ant-dropdown-menu-item {
+  border-radius: 8px;
+}
+
+.workspace-quick-dropdown .ant-dropdown-menu-item:hover {
+  color: hsl(var(--primary)) !important;
+  background: hsl(var(--accent)) !important;
+}
+
+/* —— Layout grids —— */
+.workspace-mid-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (min-width: 1024px) {
+  .workspace-mid-grid {
+    grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+    gap: 18px;
+    margin-top: 18px;
+  }
+}
+
+.workspace-bottom-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (min-width: 900px) {
+  .workspace-bottom-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .workspace-bottom-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 18px;
+  }
+}
+
+/* —— Chart —— */
+.workspace-chart-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
+.workspace-chart-filter {
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--ws-muted);
+  background: var(--ws-canvas);
+  border-radius: 6px;
+}
+
+.workspace-chart-area {
+  min-height: 280px;
+}
+
+/* —— Todos —— */
+.workspace-todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.workspace-todo-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 8px 10px;
+  align-items: center;
+  padding: 10px 8px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 200ms var(--ws-ease);
+}
+
+.workspace-todo-item:hover {
+  background: var(--ws-canvas);
+}
+
+.workspace-todo-item--done .workspace-todo-title {
+  color: var(--ws-muted);
+  text-decoration: line-through;
+}
+
+.workspace-todo-check {
+  pointer-events: none;
+}
+
+.workspace-todo-body {
+  min-width: 0;
+}
+
+.workspace-todo-title {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ws-ink);
+  white-space: nowrap;
+}
+
+.workspace-todo-meta {
+  margin: 2px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--ws-muted);
+  white-space: nowrap;
+}
+
+.workspace-todo-priority {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 999px;
+}
+
+.ws-priority--urgent {
+  color: var(--ws-danger);
+  background: var(--ws-danger-soft);
+}
+
+.ws-priority--high {
+  color: var(--ws-warning);
+  background: var(--ws-warning-soft);
+}
+
+.ws-priority--medium {
+  color: var(--ws-action);
+  background: var(--ws-action-soft);
+}
+
+.workspace-todo-time {
+  font-size: 12px;
+  color: var(--ws-muted);
+  white-space: nowrap;
+}
+
+/* —— Pipeline —— */
+.workspace-pipeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.workspace-pipeline-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.workspace-pipeline-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--ws-action);
+  background: var(--ws-action-soft);
+  border-radius: 10px;
+}
+
+.workspace-pipeline-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-pipeline-top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workspace-pipeline-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ws-ink);
+  white-space: nowrap;
+}
+
+.workspace-pipeline-status {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 999px;
+}
+
+.workspace-pipeline-status--progress {
+  color: var(--ws-action);
+  background: var(--ws-action-soft);
+}
+
+.workspace-pipeline-status--done {
+  color: var(--ws-success);
+  background: var(--ws-success-soft);
+}
+
+.workspace-pipeline-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.workspace-pipeline-bar :deep(.ant-progress) {
+  flex: 1;
+  margin: 0;
+}
+
+.workspace-pipeline-progress--active :deep(.ant-progress-bg) {
+  background: var(--ws-action) !important;
+}
+
+.workspace-pipeline-progress--done :deep(.ant-progress-bg) {
+  background: var(--ws-success) !important;
+}
+
+.workspace-pipeline-pct {
+  flex-shrink: 0;
+  width: 36px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ws-muted);
+  text-align: right;
+}
+
+/* —— Routes —— */
+.workspace-routes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.workspace-routes-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.workspace-routes-rank {
+  width: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ws-muted);
+}
+
+.workspace-routes-icon {
+  flex-shrink: 0;
+  color: var(--ws-action);
+}
+
+.workspace-routes-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-routes-name {
+  display: block;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  color: var(--ws-ink);
+  white-space: nowrap;
+}
+
+.workspace-routes-bar {
+  height: 6px;
+  overflow: hidden;
+  background: var(--ws-canvas);
+  border-radius: 999px;
+}
+
+.workspace-routes-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary)),
+    color-mix(in srgb, hsl(var(--primary)) 55%, white)
+  );
+  border-radius: 999px;
+}
+
+.workspace-routes-value {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ws-ink);
+}
+
+/* —— Notices —— */
+.workspace-notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.workspace-notice-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 8px 0;
+}
+
+.workspace-notice-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--ws-action);
+  background: var(--ws-action-soft);
+  border-radius: 10px;
+}
+
+.workspace-notice-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-notice-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ws-ink);
+}
+
+.workspace-notice-desc {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ws-muted);
+}
+
+.workspace-notice-time {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--ws-muted);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-todo-item,
+  .workspace-kpi-card,
+  .workspace-create-btn {
+    transition: none;
+  }
+}

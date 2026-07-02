@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm run build:antd",
+  "devCommand": "pnpm dev:antd",
+  "installCommand": "pnpm install",
+  "framework": null,
+  "outputDirectory": "apps/web-antd/dist"
+}

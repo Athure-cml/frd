@@ -1,4 +1,4 @@
-import { initPreferences } from '@vben/preferences';
+import { initPreferences, updatePreferences } from '@vben/preferences';
 import { unmountGlobalLoading } from '@vben/utils';
 
 import { overridesPreferences, preferencesExtension } from './preferences';
@@ -18,6 +18,16 @@ async function initApplication() {
     extension: preferencesExtension,
     namespace,
     overrides: overridesPreferences,
+  });
+
+  // 覆盖缓存中的 logo 关闭状态，确保侧栏品牌标识始终显示
+  updatePreferences({
+    logo: {
+      enable: true,
+      fit: 'contain',
+      source: '',
+      sourceDark: '',
+    },
   });
 
   // 启动应用并挂载

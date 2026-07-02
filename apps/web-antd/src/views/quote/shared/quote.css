@@ -1,0 +1,394 @@
+/* ── List grid ── */
+
+.quote-grid .quote-no-link {
+  padding: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  color: hsl(var(--primary));
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.quote-grid .quote-no-link:hover {
+  text-decoration: underline;
+}
+
+.quote-grid :deep(.quote-row-expired) {
+  color: #cf1322;
+  background-color: rgb(255 77 79 / 6%);
+}
+
+.quote-grid :deep(.quote-row-voided) {
+  color: hsl(var(--muted-foreground));
+  background-color: hsl(var(--muted) / 35%);
+}
+
+.quote-detail-page .quote-detail-field {
+  padding: 10px 12px;
+  background: color-mix(in srgb, hsl(var(--muted)) 18%, hsl(var(--card)));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+.quote-detail-page .quote-detail-field--fee {
+  background: color-mix(in srgb, hsl(217deg 91% 45%) 8%, hsl(var(--card)));
+}
+
+.quote-detail-page .quote-detail-field__label {
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.quote-detail-page .quote-detail-field__value {
+  font-size: 13px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+@media print {
+  .quote-detail-page .quote-editor-actions {
+    display: none;
+  }
+}
+
+.quote-grid :deep(.col-quote-amount) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Editor shell ── */
+
+.quote-editor-page .quote-editor-card {
+  width: 100%;
+  overflow: hidden;
+}
+
+.quote-editor-page .quote-editor-card :deep(.ant-card-body) {
+  padding: 0;
+}
+
+.quote-editor-page .quote-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: color-mix(in srgb, hsl(var(--muted)) 20%, hsl(var(--card)));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.quote-editor-page .quote-editor-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.quote-editor-page .quote-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.quote-editor-page .quote-editor-actions__group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.quote-editor-page .quote-editor-actions__divider {
+  align-self: stretch;
+  width: 1px;
+  margin-block: 4px;
+  background: hsl(var(--border));
+}
+
+.quote-editor-page .quote-editor-actions :deep(.ant-btn) {
+  display: inline-flex;
+  align-items: center;
+}
+
+.quote-editor-page .quote-editor-delete-btn:not(:disabled):hover {
+  background: color-mix(in srgb, #ff4d4f 8%, transparent);
+}
+
+.quote-delete-popconfirm :deep(.ant-popconfirm-message-title) {
+  font-weight: 500;
+}
+
+.quote-delete-popconfirm :deep(.ant-popconfirm-description) {
+  margin-top: 4px;
+}
+
+.quote-delete-confirm {
+  font-size: 13px;
+  line-height: 1.5;
+  color: hsl(var(--muted-foreground));
+}
+
+.quote-delete-confirm__no {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--foreground));
+}
+
+.quote-editor-page .quote-no-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.quote-editor-page .quote-editor-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+/* ── Section panels ── */
+
+.quote-editor-page .quote-editor-section {
+  overflow: hidden;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 2px);
+}
+
+.quote-editor-page .quote-editor-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.quote-editor-page .quote-editor-section__title {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.quote-editor-page .quote-editor-section__count {
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted));
+  border-radius: 10px;
+}
+
+.quote-editor-page .quote-editor-section__body {
+  padding: 16px;
+}
+
+.quote-editor-page .quote-editor-section__body--flush {
+  padding: 0;
+}
+
+.quote-editor-page .quote-editor-section__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Readonly field display ── */
+
+.quote-editor-page .quote-field-value {
+  display: block;
+  min-height: 32px;
+  padding: 4px 0;
+  line-height: 1.5715;
+  color: hsl(var(--foreground));
+  word-break: break-word;
+}
+
+.quote-editor-page .quote-field-value--empty {
+  color: hsl(var(--muted-foreground));
+}
+
+.quote-editor-page .quote-field-value--remark {
+  min-height: auto;
+  white-space: pre-wrap;
+}
+
+/* ── Line table ── */
+
+.quote-editor-page .quote-line-table {
+  margin: 0;
+}
+
+.quote-editor-page .quote-line-table :deep(.ant-table) {
+  border-radius: 0;
+}
+
+.quote-editor-page .quote-line-table :deep(.ant-table-thead > tr > th.col-num),
+.quote-editor-page .quote-line-table :deep(.ant-table-tbody > tr > td.col-num) {
+  text-align: right;
+}
+
+.quote-editor-page .quote-line-table .ant-input,
+.quote-editor-page .quote-line-table .ant-input-number {
+  width: 100%;
+}
+
+.quote-editor-page .quote-line-table .ant-input-number :deep(.ant-input-number-input) {
+  text-align: right;
+}
+
+.quote-editor-page .quote-line-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.quote-editor-page .quote-line-action-btn {
+  flex-shrink: 0;
+  height: auto;
+  padding: 0 4px;
+}
+
+.quote-editor-page .quote-line-amount,
+.quote-editor-page .quote-line-num {
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--foreground) / 85%);
+}
+
+.quote-editor-page .quote-line-num--empty {
+  color: hsl(var(--muted-foreground));
+}
+
+.quote-editor-page .quote-total-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  background: color-mix(in srgb, hsl(var(--muted)) 28%, hsl(var(--card)));
+  border-top: 1px solid hsl(var(--border));
+}
+
+.quote-editor-page .quote-total-row__label {
+  font-weight: 400;
+  color: hsl(var(--muted-foreground));
+}
+
+.quote-editor-page .quote-total-row__value {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--foreground));
+}
+
+.quote-editor-page .quote-total-row__currency {
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+}
+
+/* ── Cost picker drawer ── */
+
+.quote-cost-picker {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 12px 12px 0;
+}
+
+.quote-cost-picker__grid {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.quote-cost-picker__grid > :deep(.h-full) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.quote-cost-picker-grid:deep(.vxe-grid) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.quote-cost-picker-grid :deep(.vxe-grid--layout-body-content-wrapper) {
+  flex: 1;
+  min-height: 0;
+}
+
+.quote-cost-picker-grid :deep(.vxe-table--body-wrapper) {
+  overflow: auto;
+}
+
+.quote-cost-picker-grid :deep(.quote-cost-picker-row--used) {
+  color: hsl(var(--muted-foreground));
+  background-color: hsl(var(--muted) / 40%);
+}
+
+.quote-cost-picker-grid :deep(.quote-cost-picker-row--used .vxe-cell--checkbox) {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.quote-cost-picker__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.quote-cost-picker__footer-hint {
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+}
+
+.quote-cost-picker__footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ── Road price modal ── */
+
+.quote-road-price-modal .quote-road-price-summary {
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: color-mix(in srgb, hsl(var(--muted)) 32%, hsl(var(--card)));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}

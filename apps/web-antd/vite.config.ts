@@ -8,10 +8,14 @@ export default defineConfig(async () => {
         proxy: {
           '/api': {
             changeOrigin: true,
+            // quote-api 无 /api 前缀，去掉代理路径中的 /api 后转发到 8080
             rewrite: (path) => path.replace(/^\/api/, ''),
-            // mock代理目标地址
-            target: 'http://localhost:5320/api',
+            target: 'http://localhost:8080',
             ws: true,
+          },
+          '/uploads': {
+            changeOrigin: true,
+            target: 'http://localhost:8080',
           },
         },
       },

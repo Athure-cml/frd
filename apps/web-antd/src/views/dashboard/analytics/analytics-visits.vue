@@ -5,44 +5,44 @@ import { onMounted, ref } from 'vue';
 
 import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 
+import { $t } from '#/locales';
+
+import { readThemeColors } from '../shared/chart-theme';
+import { monthlyQuoteVolume } from './mock-data';
+
 const chartRef = ref<EchartsUIType>();
 const { renderEcharts } = useEcharts(chartRef);
 
 onMounted(() => {
+  const colors = readThemeColors();
+
   renderEcharts({
+    color: [colors.primary],
     grid: {
-      bottom: 0,
+      bottom: 24,
       containLabel: true,
-      left: '1%',
-      right: '1%',
-      top: '2 %',
+      left: '2%',
+      right: '2%',
+      top: 16,
     },
     series: [
       {
-        barMaxWidth: 80,
-        // color: '#4f69fd',
-        data: [
-          3000, 2000, 3333, 5000, 3200, 4200, 3200, 2100, 3000, 5100, 6000,
-          3200, 4800,
-        ],
+        barMaxWidth: 48,
+        data: monthlyQuoteVolume.counts,
+        itemStyle: { borderRadius: [4, 4, 0, 0] },
+        name: $t('page.analytics.chart.quoteCount'),
         type: 'bar',
       },
     ],
     tooltip: {
-      axisPointer: {
-        lineStyle: {
-          // color: '#4f69fd',
-          width: 1,
-        },
-      },
       trigger: 'axis',
+      valueFormatter: (value) => `${value} ${$t('page.analytics.chart.unit')}`,
     },
     xAxis: {
-      data: Array.from({ length: 12 }).map((_item, index) => `${index + 1}月`),
+      data: monthlyQuoteVolume.months,
       type: 'category',
     },
     yAxis: {
-      max: 8000,
       splitNumber: 4,
       type: 'value',
     },

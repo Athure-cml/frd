@@ -1,28 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-import { $t } from '#/locales';
-
-const routes: RouteRecordRaw[] = [
-  {
-    meta: {
-      icon: 'ic:baseline-view-in-ar',
-      keepAlive: true,
-      order: 1000,
-      title: $t('demos.title'),
-    },
-    name: 'Demos',
-    path: '/demos',
-    children: [
-      {
-        meta: {
-          title: $t('demos.antd'),
-        },
-        name: 'AntDesignDemos',
-        path: '/demos/ant-design',
-        component: () => import('#/views/demos/antd/index.vue'),
-      },
-    ],
-  },
-];
+/** 演示菜单已移除，保留空导出以兼容路由模块扫描 */
+const routes: RouteRecordRaw[] = [];
 
 export default routes;

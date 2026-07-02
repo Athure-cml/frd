@@ -5,74 +5,64 @@ import { onMounted, ref } from 'vue';
 
 import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 
+import { $t } from '#/locales';
+
+import { readThemeColors } from '../shared/chart-theme';
+import { getQuoteStatusDistribution } from './mock-data';
+
 const chartRef = ref<EchartsUIType>();
 const { renderEcharts } = useEcharts(chartRef);
 
 onMounted(() => {
+  const colors = readThemeColors();
+  const distribution = getQuoteStatusDistribution();
+
+  const statusColors: Record<string, string> = {
+    draft: colors.warning,
+    expired: colors.muted,
+    lost: colors.destructive,
+    pending: colors.warning,
+    sent: colors.primary,
+    won: colors.success,
+  };
+
   renderEcharts({
-    legend: {
-      bottom: 0,
-      data: ['访问', '趋势'],
-    },
-    radar: {
-      indicator: [
-        {
-          name: '网页',
-        },
-        {
-          name: '移动端',
-        },
-        {
-          name: 'Ipad',
-        },
-        {
-          name: '客户端',
-        },
-        {
-          name: '第三方',
-        },
-        {
-          name: '其它',
-        },
-      ],
-      radius: '60%',
-      splitNumber: 8,
+    grid: {
+      bottom: 24,
+      containLabel: true,
+      left: '2%',
+      right: '8%',
+      top: 8,
     },
     series: [
       {
-        areaStyle: {
-          opacity: 1,
-          shadowBlur: 0,
-          shadowColor: 'rgba(0,0,0,.2)',
-          shadowOffsetX: 0,
-          shadowOffsetY: 10,
-        },
-        data: [
-          {
-            itemStyle: {
-              color: '#b6a2de',
-            },
-            name: '访问',
-            value: [90, 50, 86, 40, 50, 20],
+        barMaxWidth: 28,
+        data: distribution.map((item) => ({
+          itemStyle: {
+            borderRadius: [0, 4, 4, 0],
+            color: statusColors[item.key],
           },
-          {
-            itemStyle: {
-              color: '#5ab1ef',
-            },
-            name: '趋势',
-            value: [70, 75, 70, 76, 20, 85],
-          },
-        ],
-        itemStyle: {
-          // borderColor: '#fff',
-          borderRadius: 10,
-          borderWidth: 2,
+          value: item.value,
+        })),
+        label: {
+          position: 'right',
+          show: true,
         },
-        symbolSize: 0,
-        type: 'radar',
+        type: 'bar',
       },
     ],
-    tooltip: {},
+    tooltip: {
+      trigger: 'axis',
+      valueFormatter: (value) => `${value} ${$t('page.analytics.chart.unit')}`,
+    },
+    xAxis: {
+      splitNumber: 4,
+      type: 'value',
+    },
+    yAxis: {
+      data: distribution.map((item) => item.label),
+      type: 'category',
+    },
   });
 });
 </script>

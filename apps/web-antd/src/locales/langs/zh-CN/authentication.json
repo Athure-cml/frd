@@ -1,0 +1,11 @@
+{
+  "welcomeBack": "欢迎登录",
+  "pageTitle": "专业报价，高效出单",
+  "pageDesc": "福瑞多内部销售报价管理平台",
+  "loginSubtitle": "使用工号与密码登录，管理您的报价单",
+  "enterSystem": "进入系统",
+  "username": "工号",
+  "usernameTip": "请输入工号",
+  "passwordTip": "请输入密码",
+  "loginSuccessDesc": "欢迎回来，开始您的工作"
+}

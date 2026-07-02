@@ -1,0 +1,10 @@
+.customer-grid .customer-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.customer-grid :deep(.col-customer-muted) {
+  color: hsl(var(--muted-foreground));
+}

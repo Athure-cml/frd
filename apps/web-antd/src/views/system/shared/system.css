@@ -1,0 +1,146 @@
+.system-grid :deep(.col-sys-num) {
+  font-variant-numeric: tabular-nums;
+}
+
+.system-drawer-form :deep(.ant-select),
+.system-drawer-form :deep(.ant-input-textarea),
+.system-drawer-form :deep(textarea.ant-input) {
+  width: 100%;
+}
+
+.system-grid :deep(.table-operations) {
+  gap: 4px;
+}
+
+.sys-code {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.sys-perm-trigger:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* 角色表单：全宽字段 + 权限树滚动区 */
+.system-role-form :deep(.col-span-full [data-slot='form-control']),
+.system-role-form :deep(.col-span-full .flex-auto),
+.system-role-form :deep(.col-span-full .flex-auto > .relative) {
+  width: 100%;
+}
+
+.system-role-form :deep(.col-span-full .flex-auto > .relative) {
+  align-items: stretch;
+}
+
+.system-role-form :deep(.sys-remark-field),
+.system-role-form :deep(.sys-perm-field) {
+  align-items: stretch;
+  width: 100%;
+}
+
+.system-role-form :deep(.sys-remark-field textarea),
+.system-role-form :deep(.sys-remark-field .ant-input-textarea) {
+  width: 100%;
+}
+
+.system-role-form :deep(.sys-perm-field [data-slot='form-control']) {
+  width: 100%;
+}
+
+.system-role-form :deep(.sys-perm-spin),
+.system-role-form :deep(.sys-perm-spin .ant-spin-container) {
+  width: 100%;
+}
+
+.sys-perm-panel {
+  width: 100%;
+}
+
+.sys-perm-tree-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.sys-perm-tree-toolbar__divider {
+  align-self: stretch;
+  width: 1px;
+  margin-block: 4px;
+  background: hsl(var(--border));
+}
+
+.sys-perm-tree-toolbar__codes {
+  margin-left: auto;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.sys-perm-tree-scroll {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: clamp(220px, calc(100vh - 380px), 520px);
+  padding: 8px 12px;
+  overflow: hidden auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  background: color-mix(in srgb, hsl(var(--muted)) 24%, hsl(var(--card)));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+.sys-perm-tree {
+  width: 100%;
+  padding: 0;
+}
+
+.sys-perm-tree :deep(.ant-tree) {
+  width: 100%;
+}
+
+.sys-perm-tree :deep(.ant-tree-list),
+.sys-perm-tree :deep(.ant-tree-list-holder),
+.sys-perm-tree :deep(.ant-tree-list-holder-inner) {
+  width: 100%;
+}
+
+.sys-perm-tree :deep(.ant-tree-treenode) {
+  align-items: flex-start;
+  width: 100%;
+  padding-block: 2px;
+}
+
+.sys-perm-tree :deep(.ant-tree-node-content-wrapper) {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  min-height: 24px;
+}
+
+.sys-perm-tree-node {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  align-items: baseline;
+}
+
+.sys-perm-tree-node--leaf {
+  font-size: 13px;
+}
+
+.sys-perm-code {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  letter-spacing: 0.02em;
+}

@@ -1,0 +1,11 @@
+{
+  "welcomeBack": "Sign in",
+  "pageTitle": "Quote faster, close smarter",
+  "pageDesc": "Furuiduo internal sales quotation platform",
+  "loginSubtitle": "Sign in with your employee ID and password to manage quotations",
+  "enterSystem": "Enter system",
+  "username": "Employee ID",
+  "usernameTip": "Enter your employee ID",
+  "passwordTip": "Enter your password",
+  "loginSuccessDesc": "Welcome back"
+}

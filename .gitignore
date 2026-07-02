@@ -27,6 +27,9 @@ package-lock.json
 # local env files
 .env.local
 .env.*.local
+# 含密钥的本地覆盖（模板 .env / .env.production.example 可提交）
+apps/web-antd/.env.production.local
+apps/web-antd/.env.development.local
 .eslintcache
 
 logs
@@ -60,3 +63,8 @@ vite.config.ts.*
 skills-lock.json
 .atomcode
 datalog
+# 福瑞多项目本地数据
+/data/
+
+# 工具缓存
+apps/web-antd/.impeccable/

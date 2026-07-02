@@ -5,37 +5,53 @@ import { onMounted, ref } from 'vue';
 
 import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 
+import { $t } from '#/locales';
+
+import { readThemeColors } from '../shared/chart-theme';
+import { topRoutes } from './mock-data';
+
 const chartRef = ref<EchartsUIType>();
 const { renderEcharts } = useEcharts(chartRef);
 
 onMounted(() => {
+  const colors = readThemeColors();
+
   renderEcharts({
+    color: [colors.primary],
+    grid: {
+      bottom: 8,
+      containLabel: true,
+      left: '2%',
+      right: '12%',
+      top: 8,
+    },
     series: [
       {
-        animationDelay() {
-          return Math.random() * 400;
+        barMaxWidth: 20,
+        data: topRoutes.map((item) => item.value),
+        itemStyle: { borderRadius: [0, 4, 4, 0] },
+        label: {
+          position: 'right',
+          show: true,
         },
-        animationEasing: 'exponentialInOut',
-        animationType: 'scale',
-        center: ['50%', '50%'],
-        color: ['#5ab1ef', '#b6a2de', '#67e0e3', '#2ec7c9'],
-        data: [
-          { name: '外包', value: 500 },
-          { name: '定制', value: 310 },
-          { name: '技术支持', value: 274 },
-          { name: '远程', value: 400 },
-        ].toSorted((a, b) => {
-          return a.value - b.value;
-        }),
-        name: '商业占比',
-        radius: '80%',
-        roseType: 'radius',
-        type: 'pie',
+        type: 'bar',
       },
     ],
-
     tooltip: {
-      trigger: 'item',
+      trigger: 'axis',
+      valueFormatter: (value) => `${value} ${$t('page.analytics.chart.unit')}`,
+    },
+    xAxis: {
+      splitNumber: 4,
+      type: 'value',
+    },
+    yAxis: {
+      axisLabel: {
+        overflow: 'truncate',
+        width: 120,
+      },
+      data: topRoutes.map((item) => item.name),
+      type: 'category',
     },
   });
 });

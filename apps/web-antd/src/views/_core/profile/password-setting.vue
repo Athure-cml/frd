@@ -1,63 +1,151 @@
 <script setup lang="ts">
-import type { VbenFormSchema } from '#/adapter/form';
+import { computed, inject, reactive, ref } from 'vue';
 
-import { computed } from 'vue';
+import { VbenInputPassword } from '@vben/common-ui';
+import { $t as $tAuth } from '@vben/locales';
 
-import { ProfilePasswordSetting, z } from '@vben/common-ui';
+import { Button, Form, FormItem, Input, message } from 'ant-design-vue';
 
-import { message } from 'ant-design-vue';
+import { changePasswordApi } from '#/api';
+import { $t } from '#/locales';
 
-const formSchema = computed((): VbenFormSchema[] => {
-  return [
-    {
-      fieldName: 'oldPassword',
-      label: '旧密码',
-      component: 'VbenInputPassword',
-      componentProps: {
-        placeholder: '请输入旧密码',
-      },
-    },
-    {
-      fieldName: 'newPassword',
-      label: '新密码',
-      component: 'VbenInputPassword',
-      componentProps: {
-        passwordStrength: true,
-        placeholder: '请输入新密码',
-      },
-    },
-    {
-      fieldName: 'confirmPassword',
-      label: '确认密码',
-      component: 'VbenInputPassword',
-      componentProps: {
-        passwordStrength: true,
-        placeholder: '请再次输入新密码',
-      },
-      dependencies: {
-        rules(values) {
-          const { newPassword } = values;
-          return z
-            .string({ required_error: '请再次输入新密码' })
-            .min(1, { message: '请再次输入新密码' })
-            .refine((value) => value === newPassword, {
-              message: '两次输入的密码不一致',
-            });
-        },
-        triggerFields: ['newPassword'],
-      },
-    },
-  ];
+import { profileContextKey } from './profile-context';
+
+import './profile.css';
+
+const profileContext = inject(profileContextKey);
+
+const submitting = ref(false);
+const formState = reactive({
+  confirmPassword: '',
+  newPassword: '',
+  oldPassword: '',
 });
 
-function handleSubmit() {
-  message.success('密码修改成功');
+const confirmMismatch = computed(
+  () =>
+    Boolean(formState.confirmPassword) &&
+    formState.confirmPassword !== formState.newPassword,
+);
+
+const confirmMatched = computed(
+  () =>
+    Boolean(formState.confirmPassword) &&
+    formState.confirmPassword === formState.newPassword,
+);
+
+const confirmValidateStatus = computed(() => {
+  if (confirmMismatch.value) {
+    return 'error' as const;
+  }
+  if (confirmMatched.value) {
+    return 'success' as const;
+  }
+  return undefined;
+});
+
+const confirmHelp = computed(() => {
+  if (confirmMismatch.value) {
+    return $t('page.profile.password.confirmMismatch');
+  }
+  if (confirmMatched.value) {
+    return $t('page.profile.password.confirmMatched');
+  }
+  return undefined;
+});
+
+function resetForm() {
+  formState.oldPassword = '';
+  formState.newPassword = '';
+  formState.confirmPassword = '';
+}
+
+async function handleSubmit() {
+  if (!formState.oldPassword) {
+    message.warning($t('page.profile.password.oldPlaceholder'));
+    return;
+  }
+  if (!formState.newPassword) {
+    message.warning($t('page.profile.password.newPlaceholder'));
+    return;
+  }
+  if (formState.newPassword.length < 6) {
+    message.warning($t('page.profile.password.minLength'));
+    return;
+  }
+  if (!formState.confirmPassword) {
+    message.warning($t('page.profile.password.confirmRequired'));
+    return;
+  }
+  if (confirmMismatch.value) {
+    message.warning($t('page.profile.password.confirmMismatch'));
+    return;
+  }
+
+  submitting.value = true;
+  try {
+    await changePasswordApi({
+      newPassword: formState.newPassword,
+      oldPassword: formState.oldPassword,
+    });
+    message.success($t('page.profile.updatePasswordSuccess'));
+    resetForm();
+    await profileContext?.reloadProfile();
+  } finally {
+    submitting.value = false;
+  }
 }
 </script>
+
 <template>
-  <ProfilePasswordSetting
-    class="w-1/3"
-    :form-schema="formSchema"
-    @submit="handleSubmit"
-  />
+  <Form
+    class="profile-password-form"
+    :colon="false"
+    :label-col="{ style: { width: '100px' } }"
+    :wrapper-col="{ style: { flex: 1, maxWidth: '420px' } }"
+    layout="horizontal"
+  >
+    <FormItem :label="$t('page.profile.password.old')">
+      <Input.Password
+        v-model:value="formState.oldPassword"
+        autocomplete="current-password"
+        :placeholder="$t('page.profile.password.oldPlaceholder')"
+      />
+    </FormItem>
+
+    <FormItem :label="$t('page.profile.password.new')">
+      <VbenInputPassword
+        v-model="formState.newPassword"
+        password-strength
+        :placeholder="$t('page.profile.password.newPlaceholder')"
+      >
+        <template #strengthText>
+          {{ $tAuth('authentication.passwordStrength') }}
+        </template>
+      </VbenInputPassword>
+    </FormItem>
+
+    <FormItem
+      :help="confirmHelp"
+      :label="$t('page.profile.password.confirm')"
+      :validate-status="confirmValidateStatus"
+    >
+      <VbenInputPassword
+        v-model="formState.confirmPassword"
+        :placeholder="$t('page.profile.password.confirmPlaceholder')"
+      />
+    </FormItem>
+
+    <FormItem
+      class="profile-password-form__actions"
+      :label-col="{ style: { width: '100px' } }"
+      :wrapper-col="{ style: { flex: 1, maxWidth: '420px' } }"
+    >
+      <div class="profile-password-form__actions-inner">
+        <Button :loading="submitting" type="primary" @click="handleSubmit">
+          {{ $t('page.profile.password.submit') }}
+        </Button>
+      </div>
+    </FormItem>
+  </Form>
 </template>
