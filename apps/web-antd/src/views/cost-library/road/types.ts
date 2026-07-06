@@ -4,6 +4,7 @@ export interface RoadCostRecord {
   validDate: string;
   supplier: string;
   logYardNameAddress: string;
+  zipCode?: string;
   city: string;
   state: string;
   por: string;
@@ -29,4 +30,5 @@ export interface RoadCostQueryForm {
   pol?: string;
   state?: string;
   supplier?: string;
+  zipCode?: string;
 }

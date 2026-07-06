@@ -1,12 +1,12 @@
 <script lang="ts" setup>
-import type { WorkspaceMetric } from './workspace-mock';
+import type { WorkspaceMetricView } from './map-workspace';
 
 import { IconifyIcon } from '@vben/icons';
 
 import { $t } from '#/locales';
 
 defineProps<{
-  items: WorkspaceMetric[];
+  items: WorkspaceMetricView[];
 }>();
 </script>
 

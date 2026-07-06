@@ -20,6 +20,7 @@ export function queryRoadCosts(
   const filtered = source.filter((item) => {
     return (
       keywordMatch(item.supplier, filters.supplier) &&
+      keywordMatch(item.zipCode ?? '', filters.zipCode) &&
       keywordMatch(item.city, filters.city) &&
       keywordMatch(item.state, filters.state) &&
       keywordMatch(item.pol, filters.pol)

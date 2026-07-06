@@ -20,10 +20,20 @@ interface WebAntdPreferencesExtension {
 export const overridesPreferences = defineOverridesPreferences({
   app: {
     name: appTitle,
-    defaultHomePath: '/workspace',
-    // mixed：后端 /menu/all 控制菜单可见性，前端路由提供页面组件
+    defaultHomePath: '/analytics',
+    layout: 'sidebar-mixed-nav',
+    // mixed：后端 /menu/all 控制菜单；纯 frontend 会丢失权限菜单
     accessMode: 'mixed',
     enableCheckUpdates: false,
+  },
+  breadcrumb: {
+    styleType: 'background',
+  },
+  sidebar: {
+    width: 320,
+  },
+  theme: {
+    mode: 'auto',
   },
   copyright: {
     companyName: appTitle,

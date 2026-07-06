@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { WorkspaceNotice } from './workspace-mock';
+import type { WorkspaceNoticeView } from './map-workspace';
 
 import { IconifyIcon } from '@vben/icons';
 
@@ -8,10 +8,11 @@ import { $t } from '#/locales';
 import WorkspaceCard from './workspace-card.vue';
 
 defineProps<{
-  items: WorkspaceNotice[];
+  items: WorkspaceNoticeView[];
 }>();
 
 const emit = defineEmits<{
+  noticeClick: [link: string];
   viewAll: [];
 }>();
 </script>
@@ -24,7 +25,16 @@ const emit = defineEmits<{
     @action="emit('viewAll')"
   >
     <ul class="workspace-notice-list">
-      <li v-for="item in items" :key="item.id" class="workspace-notice-item">
+      <li
+        v-for="item in items"
+        :key="item.id"
+        class="workspace-notice-item"
+        :class="{ 'workspace-notice-item--clickable': item.link }"
+        role="button"
+        tabindex="0"
+        @click="item.link && emit('noticeClick', item.link)"
+        @keydown.enter="item.link && emit('noticeClick', item.link)"
+      >
         <span class="workspace-notice-icon" aria-hidden="true">
           <IconifyIcon :icon="item.icon" class="size-4" />
         </span>

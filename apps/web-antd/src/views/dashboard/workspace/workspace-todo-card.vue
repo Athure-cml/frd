@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { WorkspaceTodo } from './workspace-mock';
+import type { WorkspaceTodoView } from './map-workspace';
 
 import { Checkbox } from 'ant-design-vue';
 
@@ -8,7 +8,7 @@ import { $t } from '#/locales';
 import WorkspaceCard from './workspace-card.vue';
 
 defineProps<{
-  items: WorkspaceTodo[];
+  items: WorkspaceTodoView[];
 }>();
 
 const emit = defineEmits<{
@@ -16,7 +16,7 @@ const emit = defineEmits<{
   viewAll: [];
 }>();
 
-const priorityClass: Record<WorkspaceTodo['priority'], string> = {
+const priorityClass: Record<WorkspaceTodoView['priority'], string> = {
   high: 'ws-priority--high',
   medium: 'ws-priority--medium',
   urgent: 'ws-priority--urgent',

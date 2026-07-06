@@ -87,6 +87,21 @@ export async function importUsStateZip(file: File) {
   return requestClient.upload<CostImportResult>(`${BASE}/import`, { file });
 }
 
+export async function importUsStateZipGeonames(file: File) {
+  return requestClient.upload<CostImportResult>(
+    `${BASE}/import-geonames`,
+    { file },
+    { timeout: 600_000 },
+  );
+}
+
+export async function importUsStateZipFile(file: File) {
+  if (file.name.toLowerCase().endsWith('.txt')) {
+    return importUsStateZipGeonames(file);
+  }
+  return importUsStateZip(file);
+}
+
 export async function exportUsStateZip() {
   return requestClient.download(`${BASE}/export`);
 }

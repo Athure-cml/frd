@@ -11,6 +11,7 @@ export default defineConfig(async () => {
             // quote-api 无 /api 前缀，去掉代理路径中的 /api 后转发到 8080
             rewrite: (path) => path.replace(/^\/api/, ''),
             target: 'http://localhost:8080',
+            timeout: 600_000,
             ws: true,
           },
           '/uploads': {

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { WorkspacePipelineItem } from './workspace-mock';
+import type { WorkspacePipelineView } from './map-workspace';
 
 import { IconifyIcon } from '@vben/icons';
 
@@ -10,7 +10,7 @@ import { $t } from '#/locales';
 import WorkspaceCard from './workspace-card.vue';
 
 defineProps<{
-  items: WorkspacePipelineItem[];
+  items: WorkspacePipelineView[];
 }>();
 
 const emit = defineEmits<{

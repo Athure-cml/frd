@@ -18,7 +18,7 @@ import {
   downloadUsStateZipExport,
   exportUsStateZip,
   getUsStateZipList,
-  importUsStateZip,
+  importUsStateZipFile,
 } from '#/api/master-data/us-state-zip';
 import { $t } from '#/locales';
 
@@ -175,8 +175,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
     <FormModal @success="gridApi.query()" />
     <MasterDataImportModal
       ref="importModalRef"
+      accept=".xlsx,.xls,.txt"
       hint-key="usStateZipImport"
-      :import-fn="importUsStateZip"
+      :import-fn="importUsStateZipFile"
       :title="$t('page.masterData.actions.importUsStateZip')"
       @success="gridApi.query()"
     />

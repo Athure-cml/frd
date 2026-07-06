@@ -13,6 +13,7 @@ const ROAD_DEFAULT_LAYOUT: CostTableTemplateLayout = {
         'validDate',
         'supplier',
         'logYardNameAddress',
+        'zipCode',
         'city',
         'state',
         'por',

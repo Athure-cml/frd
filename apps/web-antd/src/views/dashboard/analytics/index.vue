@@ -1,12 +1,11 @@
 <script lang="ts" setup>
-import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { $t } from '#/locales';
 
+import { useWorkspaceData } from '../workspace/use-workspace-data';
 import WorkspaceCard from '../workspace/workspace-card.vue';
 import WorkspaceKpi from '../workspace/workspace-kpi.vue';
-import { getWorkspaceMetrics } from '../workspace/workspace-mock';
 import AnalyticsChartTabs from './analytics-chart-tabs.vue';
 import AnalyticsVisitsData from './analytics-visits-data.vue';
 import AnalyticsVisitsSales from './analytics-visits-sales.vue';
@@ -17,8 +16,7 @@ import RecentQuotes from './recent-quotes.vue';
 import './analytics.css';
 
 const router = useRouter();
-
-const metrics = computed(() => getWorkspaceMetrics());
+const { metrics } = useWorkspaceData();
 
 function navToQuote(id: string) {
   router.push(`/quotes/${id}/edit`).catch(() => undefined);

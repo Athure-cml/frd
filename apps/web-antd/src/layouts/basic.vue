@@ -19,10 +19,12 @@ import {
 } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 
+import { getDashboardNotifications } from '#/api/dashboard';
 import { FRD_LOGO_SRC, FRD_LOGO_SRC_DARK } from '#/constants/brand';
 import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 import LoginForm from '#/views/_core/authentication/login.vue';
+import { mapDashboardNotification } from '#/views/dashboard/workspace/map-workspace';
 
 const notifications = ref<NotificationItem[]>([]);
 
@@ -73,7 +75,37 @@ function handleMakeAll() {
   notifications.value.forEach((item) => (item.isRead = true));
 }
 
-const viewAll = () => {};
+const viewAll = () => {
+  router.push('/workspace').catch(() => undefined);
+};
+
+async function loadNotifications() {
+  if (!accessStore.accessToken) {
+    notifications.value = [];
+    return;
+  }
+  try {
+    const items = await getDashboardNotifications();
+    notifications.value = items.map((item) => ({
+      ...mapDashboardNotification(item),
+      avatar: preferences.app.defaultAvatar,
+    }));
+  } catch {
+    notifications.value = [];
+  }
+}
+
+watch(
+  () => accessStore.accessToken,
+  (token) => {
+    if (token) {
+      loadNotifications().catch(() => undefined);
+    } else {
+      notifications.value = [];
+    }
+  },
+  { immediate: true },
+);
 
 const handleClick = (item: NotificationItem) => {
   if (item.link) {

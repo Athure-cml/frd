@@ -18,9 +18,19 @@ export function appendCostOperationColumn<T extends { id: number }>(
   const operation = buildOperationColumn(canEdit, onActionClick, {
     nameField,
     nameTitle,
+    operationOptions: [
+      'edit',
+      {
+        code: 'copy',
+        text: $t('page.costLibrary.actions.copy'),
+      },
+      'delete',
+    ],
   });
   if (operation) {
     operation.title = $t('page.costLibrary.fields.operation');
+    operation.minWidth = 220;
+    operation.width = 220;
     columns?.push(operation);
   }
   return columns;

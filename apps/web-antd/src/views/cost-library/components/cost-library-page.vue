@@ -23,6 +23,7 @@ import { $t } from '#/locales';
 
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import { getDefaultTemplate } from '../shared/default-templates';
+import { toCopyDrawerData } from '../shared/drawer-data';
 import {
   getGridStorageId,
   loadTableTemplates,
@@ -137,6 +138,10 @@ function onEdit(row: any) {
   formDrawerApi.setData({ ...row, template: activeTemplate.value }).open();
 }
 
+function onCopy(row: any) {
+  formDrawerApi.setData(toCopyDrawerData(row, activeTemplate.value)).open();
+}
+
 function onDelete(row: any) {
   const name = props.getRowName(row);
   const hideLoading = message.loading({
@@ -160,6 +165,9 @@ function onDelete(row: any) {
 function onActionClick(params: OnActionClickParams<any>) {
   if (params.code === 'edit') {
     onEdit(params.row);
+  }
+  if (params.code === 'copy') {
+    onCopy(params.row);
   }
   if (params.code === 'delete') {
     onDelete(params.row);

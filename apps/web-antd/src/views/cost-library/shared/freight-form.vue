@@ -23,6 +23,7 @@ import {
   useFreightFormSchema,
 } from '../shared/freight-schema';
 import { getDefaultTemplate } from './default-templates';
+import { isCostCopyPayload } from './drawer-data';
 
 const props = defineProps<{
   mode: 'sea';
@@ -31,6 +32,7 @@ const props = defineProps<{
 const emit = defineEmits<{ success: [] }>();
 
 const recordId = ref<number>();
+const isCopy = ref(false);
 const api = seaCostApi;
 const activeTemplate = ref<CostTableTemplate>(getDefaultTemplate(props.mode));
 
@@ -41,13 +43,19 @@ const [Form, formApi] = useVbenForm({
   wrapperClass: 'grid-cols-1 sm:grid-cols-2',
 });
 
-const getTitle = computed(() =>
-  recordId.value
-    ? $t('page.costLibrary.actions.editRecord')
-    : $t('page.costLibrary.actions.createRecord', [
-        $t('page.costLibrary.seaRecord'),
-      ]),
-);
+const getTitle = computed(() => {
+  if (recordId.value) {
+    return $t('page.costLibrary.actions.editRecord');
+  }
+  if (isCopy.value) {
+    return $t('page.costLibrary.actions.copyRecord', [
+      $t('page.costLibrary.seaRecord'),
+    ]);
+  }
+  return $t('page.costLibrary.actions.createRecord', [
+    $t('page.costLibrary.seaRecord'),
+  ]);
+});
 
 function applyTemplateSchema(template?: CostTableTemplate) {
   activeTemplate.value = template ?? getDefaultTemplate(props.mode);
@@ -91,14 +99,23 @@ const [Drawer, drawerApi] = useVbenDrawer({
     }
     void (async () => {
       const data = drawerApi.getData<
-        FreightCostRecord & { template?: CostTableTemplate }
+        FreightCostRecord & { copyFrom?: boolean; template?: CostTableTemplate }
       >();
       recordId.value = data?.id;
+      isCopy.value = isCostCopyPayload(data);
       applyTemplateSchema(data?.template);
       formApi.resetForm();
       if (data?.id) {
         formApi.setValues(
           mergeRecordWithExtraFields(rowToFreightFormValues(data)),
+        );
+        return;
+      }
+      if (isCopy.value && data) {
+        formApi.setValues(
+          mergeRecordWithExtraFields(
+            rowToFreightFormValues(data as FreightCostRecord),
+          ),
         );
         return;
       }

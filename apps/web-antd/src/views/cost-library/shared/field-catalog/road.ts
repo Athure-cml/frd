@@ -23,6 +23,12 @@ export const ROAD_FIELD_CATALOG: FieldCatalogEntry[] = [
     showOverflow: true,
   },
   {
+    field: 'zipCode',
+    group: 'basic',
+    labelKey: road('zipCode'),
+    minWidth: 96,
+  },
+  {
     field: 'city',
     group: 'basic',
     labelKey: road('city'),

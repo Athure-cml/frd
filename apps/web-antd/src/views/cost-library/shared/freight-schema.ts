@@ -12,20 +12,17 @@ export function useFreightFormSchema(): VbenFormSchema[] {
       component: 'Input',
       fieldName: 'origin',
       label: f('pol'),
-      rules: 'required',
     },
     {
       component: 'Input',
       fieldName: 'destination',
       label: f('pod'),
-      rules: 'required',
     },
     {
       component: 'InputNumber',
       componentProps: { class: 'w-full', min: 0, precision: 2 },
       fieldName: 'unitPrice',
       label: f('ofRate'),
-      rules: 'required',
     },
     {
       component: 'InputNumber',
@@ -49,7 +46,6 @@ export function useFreightFormSchema(): VbenFormSchema[] {
       component: 'Input',
       fieldName: 'carrier',
       label: f('ssl'),
-      rules: 'required',
     },
     {
       component: 'Textarea',
@@ -76,7 +72,6 @@ export function useFreightFormSchema(): VbenFormSchema[] {
       defaultValue: 'draft',
       fieldName: 'status',
       label: f('status'),
-      rules: 'selectRequired',
     },
   ];
 }

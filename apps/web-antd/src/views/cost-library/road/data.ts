@@ -18,6 +18,15 @@ export function useRoadSearchSchema(): VbenFormSchema[] {
     },
     {
       component: 'Input',
+      componentProps: {
+        autocomplete: 'off',
+        placeholder: $t('page.costLibrary.search.zipCodePlaceholder'),
+      },
+      fieldName: 'zipCode',
+      label: t('zipCode'),
+    },
+    {
+      component: 'Input',
       componentProps: { autocomplete: 'off' },
       fieldName: 'city',
       label: t('city'),

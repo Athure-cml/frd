@@ -84,7 +84,7 @@ export function buildTemplateFormSchema(
     ordered.push({
       ...base,
       label: item.title,
-      rules: item.required ? 'required' : base.rules,
+      rules: item.required ? 'required' : undefined,
     });
   }
 

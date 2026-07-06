@@ -24,13 +24,17 @@ export function useRoadFormSchema(): VbenFormSchema[] {
       component: 'Input',
       fieldName: 'supplier',
       label: t('supplier'),
-      rules: 'required',
     },
     {
       component: 'Input',
       fieldName: 'logYardNameAddress',
       formItemClass: 'col-span-full',
       label: t('logYardNameAddress'),
+    },
+    {
+      component: 'Input',
+      fieldName: 'zipCode',
+      label: t('zipCode'),
     },
     {
       component: 'Input',
@@ -133,6 +137,7 @@ export function toRoadSavePayload(values: Record<string, any>): RoadCostSave {
     city: values.city,
     fsc: values.fsc ?? 0,
     logYardNameAddress: values.logYardNameAddress,
+    zipCode: values.zipCode,
     nsLift: values.nsLift ?? 0,
     owTriAxle: values.owTriAxle ?? 0,
     pol: values.pol,

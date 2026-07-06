@@ -10,11 +10,18 @@ import { Alert, Upload as AntUpload, Button, message } from 'ant-design-vue';
 
 import { $t } from '#/locales';
 
-const props = defineProps<{
-  hintKey?: string;
-  importFn: (file: File) => Promise<CostImportResult>;
-  title: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    accept?: string;
+    hintKey?: string;
+    importFn: (file: File) => Promise<CostImportResult>;
+    title: string;
+  }>(),
+  {
+    accept: '.xlsx,.xls',
+    hintKey: undefined,
+  },
+);
 
 const emit = defineEmits<{ success: [] }>();
 
@@ -50,6 +57,11 @@ async function handleConfirm() {
   uploading.value = true;
   importErrors.value = [];
   modalApi.lock();
+  const hideLoading = message.loading({
+    content: $t('page.masterData.hint.importing'),
+    duration: 0,
+    key: 'master_data_import_msg',
+  });
   try {
     const result = await props.importFn(file);
     if (result.failed > 0) {
@@ -72,6 +84,7 @@ async function handleConfirm() {
     modalApi.close();
     fileList.value = [];
   } finally {
+    hideLoading();
     uploading.value = false;
     modalApi.unlock();
   }
@@ -93,14 +106,18 @@ defineExpose({ open });
       v-model:file-list="fileList"
       :before-upload="() => false"
       :max-count="1"
-      accept=".xlsx,.xls"
+      :accept="accept"
     >
       <p class="ant-upload-drag-icon flex justify-center">
         <ArrowUpToLine class="size-10 text-primary" />
       </p>
       <p class="ant-upload-text">{{ $t('page.masterData.hint.importDrop') }}</p>
       <p class="ant-upload-hint text-muted-foreground">
-        {{ $t('page.masterData.hint.importFormat') }}
+        {{
+          props.hintKey
+            ? hint('Format')
+            : $t('page.masterData.hint.importFormat')
+        }}
       </p>
     </AntUpload.Dragger>
     <Alert

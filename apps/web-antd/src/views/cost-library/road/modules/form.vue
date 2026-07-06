@@ -17,6 +17,7 @@ import {
   mergeRecordWithExtraFields,
 } from '../../shared/build-template-form-schema';
 import { getDefaultTemplate } from '../../shared/default-templates';
+import { isCostCopyPayload } from '../../shared/drawer-data';
 import {
   rowToRoadFormValues,
   toRoadSavePayload,
@@ -26,6 +27,7 @@ import {
 const emit = defineEmits<{ success: [] }>();
 
 const recordId = ref<number>();
+const isCopy = ref(false);
 const activeTemplate = ref<CostTableTemplate>(getDefaultTemplate('road'));
 
 const [Form, formApi] = useVbenForm({
@@ -35,13 +37,19 @@ const [Form, formApi] = useVbenForm({
   wrapperClass: 'grid-cols-1 sm:grid-cols-2',
 });
 
-const getTitle = computed(() =>
-  recordId.value
-    ? $t('page.costLibrary.actions.editRecord')
-    : $t('page.costLibrary.actions.createRecord', [
-        $t('page.costLibrary.roadRecord'),
-      ]),
-);
+const getTitle = computed(() => {
+  if (recordId.value) {
+    return $t('page.costLibrary.actions.editRecord');
+  }
+  if (isCopy.value) {
+    return $t('page.costLibrary.actions.copyRecord', [
+      $t('page.costLibrary.roadRecord'),
+    ]);
+  }
+  return $t('page.costLibrary.actions.createRecord', [
+    $t('page.costLibrary.roadRecord'),
+  ]);
+});
 
 function applyTemplateSchema(template?: CostTableTemplate) {
   activeTemplate.value = template ?? getDefaultTemplate('road');
@@ -84,13 +92,20 @@ const [Drawer, drawerApi] = useVbenDrawer({
       return;
     }
     const data = drawerApi.getData<
-      RoadCostRecord & { template?: CostTableTemplate }
+      RoadCostRecord & { copyFrom?: boolean; template?: CostTableTemplate }
     >();
     recordId.value = data?.id;
+    isCopy.value = isCostCopyPayload(data);
     applyTemplateSchema(data?.template);
     formApi.resetForm();
     if (data?.id) {
       formApi.setValues(mergeRecordWithExtraFields(rowToRoadFormValues(data)));
+      return;
+    }
+    if (isCopy.value && data) {
+      formApi.setValues(
+        mergeRecordWithExtraFields(rowToRoadFormValues(data as RoadCostRecord)),
+      );
       return;
     }
     formApi.setValues({ extraFields: {} });

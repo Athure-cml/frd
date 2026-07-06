@@ -20,6 +20,16 @@ export function quoteCostTypeToMode(type: QuoteCostType): CostMode {
 export function buildQuoteCostPickerColumns(
   mode: CostMode,
 ): VxeTableGridOptions['columns'] {
+  return [
+    { fixed: 'left', type: 'radio', width: 48 },
+    ...buildCostSnapshotColumns(mode),
+  ];
+}
+
+/** 与成本库列表一致的数据列（含 # 序号，无勾选/操作列） */
+export function buildCostSnapshotColumns(
+  mode: CostMode,
+): VxeTableGridOptions['columns'] {
   const template = getDefaultTemplate(mode);
   const nameField =
     mode === 'road' ? 'supplier' : mode === 'sea' ? 'origin' : 'port';
@@ -30,7 +40,7 @@ export function buildQuoteCostPickerColumns(
         ? $t('page.costLibrary.seaFields.pol')
         : $t('page.costLibrary.fumigationFields.port');
 
-  const dataColumns =
+  return (
     buildColumnsFromTemplate({
       canEdit: false,
       includeOperation: false,
@@ -39,7 +49,6 @@ export function buildQuoteCostPickerColumns(
       nameTitle,
       onActionClick: () => {},
       template,
-    }) ?? [];
-
-  return [{ fixed: 'left', type: 'radio', width: 48 }, ...dataColumns];
+    }) ?? []
+  );
 }

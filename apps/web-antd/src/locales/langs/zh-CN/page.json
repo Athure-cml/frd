@@ -143,7 +143,11 @@
       "portSyncTitle": "港口档案同步完成",
       "portSync": "UN/LOCODE 增量同步成功，新增 128 条记录。",
       "expireReminderTitle": "报价即将到期",
-      "expireReminder": "6 份报价将在 3 日内失效，请及时跟进。"
+      "expireReminder": "6 份报价将在 3 日内失效，请及时跟进。",
+      "quoteExpiringTitle": "报价即将到期",
+      "quoteExpiring": "{0} 份报价将在 {1} 日内失效，请及时跟进。",
+      "costUpdatedTitle": "引用成本已更新",
+      "costUpdated": "报价单 {0} 引用的{1}成本已有更新，请核对。"
     }
   },
   "analytics": {
@@ -249,7 +253,9 @@
       "batchEditRoad": "批量修改卡车成本",
       "batchEditSea": "批量修改海运成本",
       "batchEditFumigation": "批量修改熏蒸成本",
-      "batchDelete": "批量删除"
+      "batchDelete": "批量删除",
+      "copy": "复制",
+      "copyRecord": "复制录入{0}"
     },
     "confirm": {
       "batchDelete": "确认删除选中的 {0} 条记录？此操作不可恢复。"
@@ -270,6 +276,9 @@
       "batchFill": "仅填写需要批量更新的字段，留空项不会修改。",
       "batchEmpty": "请至少填写一个要批量修改的字段",
       "batchSelected": "已选择 {0} 条记录"
+    },
+    "search": {
+      "zipCodePlaceholder": "输入 Zip code 模糊查询"
     },
     "template": {
       "label": "表格视图",
@@ -386,20 +395,21 @@
       "custom": "自定义字段"
     },
     "roadFields": {
-      "validDate": "*VALID DATE",
-      "supplier": "*SUPPLIER",
+      "validDate": "VALID DATE",
+      "supplier": "SUPPLIER",
       "logYardNameAddress": "LOG YARD NAME &ADDRESS",
-      "city": "*City",
-      "state": "*State",
-      "por": "*POR",
-      "pol": "*POL",
-      "baseFreight": "*BASE FREIGHT",
+      "zipCode": "Zip code",
+      "city": "City",
+      "state": "State",
+      "por": "POR",
+      "pol": "POL",
+      "baseFreight": "BASE FREIGHT",
       "fsc": "FSC",
       "chassis": "CHASSIS",
       "owTriAxle": "OW/TRI-AXCEL",
       "split": "SPLIT",
       "stopOff": "STOP OFF",
-      "allIn": "*ALL IN",
+      "allIn": "ALL IN",
       "allInNonOak": "ALL IN (NON OAK)",
       "allInOak": "ALL IN (OAK)",
       "waitingFee": "WAITING FEE",
@@ -448,7 +458,8 @@
       "editor": "填写 7 个匹配字段后点击「引入成本库」自动带入费用。",
       "readonly": "当前报价单不可编辑，仅可查看。",
       "matchKeys": "Zip code / City / State / POR / POL / POD / SSL 用于成本库联合匹配",
-      "zipAutoFill": "输入 Zip code 可模糊查询，选中后自动填充 City、State"
+      "zipAutoFill": "输入 Zip code 可模糊查询，选中后自动填充 City、State",
+      "followUpStatus": "跟进记录将自动记录当前单据状态，无需手动选择"
     },
     "sections": {
       "basic": "基础信息区",
@@ -487,7 +498,9 @@
       "won": "成交",
       "copy": "复制新建",
       "print": "打印报价单",
-      "addFollowUp": "新增跟进"
+      "addFollowUp": "新增跟进",
+      "backToList": "返回列表",
+      "backToDetail": "返回详情"
     },
     "fields": {
       "quoteNo": "报价单号",
@@ -500,6 +513,7 @@
       "createdBy": "创建人",
       "updatedAt": "更新时间",
       "followUpBy": "跟进人",
+      "docStatusSnapshot": "单据状态",
       "time": "时间",
       "operator": "操作人",
       "content": "内容",
@@ -521,6 +535,7 @@
       "customer": "请选择客户",
       "routeSummary": "如：上海 → 洛杉矶",
       "followContent": "填写本次跟进内容",
+      "followUpBy": "请选择跟进人",
       "zipCode": "输入 Zip code 模糊查询"
     },
     "transportMode": {
@@ -541,7 +556,8 @@
     },
     "validation": {
       "customerRequired": "请选择客户",
-      "followContent": "请填写跟进内容"
+      "followContent": "请填写跟进内容",
+      "followUpBy": "请选择跟进人"
     },
     "message": {
       "noCostMatch": "无对应成本数据，请先维护成本库",
@@ -565,7 +581,8 @@
       "deletePrefix": "确定删除报价单 ",
       "deleteSuffix": " 吗？此操作不可恢复。",
       "void": "确定作废报价单「{0}」吗？",
-      "won": "确认将该报价单标记为已成交？"
+      "won": "确认将该报价单标记为已成交？",
+      "deleteFollowUp": "确定删除这条跟进记录吗？"
     },
     "costSource": {
       "MANUAL": "手动",
@@ -577,6 +594,7 @@
     "costPicker": {
       "title": "从成本库选择",
       "selectOne": "请选择一条成本记录",
+      "confirmHint": "单击选中一行，双击或点「确认」引入",
       "selectRows": "请先选择成本记录",
       "addSelected": "添加已选（{0}）",
       "selectedHint": "已选 {0} 条成本记录",
@@ -600,11 +618,13 @@
       "exchangeRate": "按生效日期维护外币兑基准币汇率，保存报价时自动快照。",
       "rateMeaning": "1 单位源币种 = 汇率 × 目标币种",
       "usStateZip": "维护美国州、城市与邮政编码（State / City / Zip code），供运价录入与报价使用。",
-      "usStateZipEmpty": "暂无邮政编码数据，可通过导入或手工新建城市、邮编。",
-      "usStateZipImportTemplate": "表头须为 State、City、Zip code；导入时州代码不存在将自动跳过该行。",
+      "usStateZipEmpty": "暂无邮政编码数据，可上传 GeoNames US.txt 全量导入，或使用 Excel 导入 / 手工新建。",
+      "usStateZipImportTemplate": "支持 GeoNames US.txt（Tab 分隔，从 geonames.org 下载 US.zip 解压）或 Excel（表头 State、City、Zip code）。已存在的数据会自动跳过。",
+      "usStateZipImportFormat": "支持 .xlsx / .xls / .txt",
       "selectFile": "请选择 Excel 文件",
       "importDrop": "点击或拖拽文件到此处",
       "importFormat": "支持 .xlsx / .xls",
+      "importing": "正在导入，大文件可能需要数分钟，请耐心等待…",
       "importPartial": "成功 {0} 条，失败 {1} 条",
       "importSuccess": "成功导入 {0} 条",
       "importErrorTitle": "部分行导入失败",

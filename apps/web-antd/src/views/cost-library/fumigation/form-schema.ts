@@ -12,14 +12,12 @@ export function useFumigationFormSchema(): VbenFormSchema[] {
       componentProps: { autocomplete: 'off' },
       fieldName: 'port',
       label: f('port'),
-      rules: 'required',
     },
     {
       component: 'Input',
       componentProps: { autocomplete: 'off' },
       fieldName: 'station',
       label: f('station'),
-      rules: 'required',
     },
     {
       component: 'Divider',

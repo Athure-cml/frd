@@ -34,6 +34,10 @@ const emit = defineEmits<{
 const costType = ref<QuoteCostType>('ROAD');
 const matchKeys = ref<QuoteMatchKeys>({});
 const selectedRow = ref<CostLibraryRecord | null>(null);
+const pendingOpen = ref<null | {
+  keys: QuoteMatchKeys;
+  type: QuoteCostType;
+}>(null);
 
 const modalTitle = computed(() => {
   const titleMap: Record<QuoteCostType, string> = {
@@ -63,19 +67,18 @@ const searchFormOptions = useI18nFormOptions(() => ({
 }));
 
 const [Modal, modalApi] = useVbenModal({
-  class: 'w-[96vw] max-w-[1600px]',
-  contentClass: '!flex !min-h-0 !flex-col !overflow-hidden !p-0',
+  class: 'quote-cost-picker-modal w-[96vw] max-w-[1600px]',
+  contentClass: '!flex !min-h-0 !flex-1 !flex-col !overflow-hidden !p-0',
   destroyOnClose: true,
   onConfirm: onConfirmPick,
   onOpenChange(isOpen) {
     if (!isOpen) {
       clearSelection();
+      pendingOpen.value = null;
     }
   },
   onOpened() {
-    void nextTick(() => {
-      gridApi.grid?.recalculate?.();
-    });
+    void applyOpenSearch();
   },
 });
 
@@ -84,14 +87,20 @@ const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridClass: 'quote-cost-picker-grid',
   gridEvents: {
+    cellClick: ({ row }: { row: CostLibraryRecord }) => {
+      selectedRow.value = row;
+    },
+    cellDblclick: ({ row }: { row: CostLibraryRecord }) => {
+      void confirmPick(row);
+    },
     radioChange: ({ row }: { row: CostLibraryRecord }) => {
       selectedRow.value = row;
     },
   },
   gridOptions: {
     columns: buildQuoteCostPickerColumns('road'),
-    height: 520,
-    minHeight: 400,
+    height: '100%',
+    minHeight: 480,
     pagerConfig: {},
     proxyConfig: {
       ajax: {
@@ -126,33 +135,85 @@ const [Grid, gridApi] = useVbenVxeGrid({
   },
 });
 
+function resolveSelectedRow(): CostLibraryRecord | null {
+  if (selectedRow.value) {
+    return selectedRow.value;
+  }
+  const grid = gridApi.grid;
+  if (!grid) {
+    return null;
+  }
+  const record =
+    grid.getRadioRecord?.() ??
+    grid.getRadioRecord?.(true) ??
+    grid.getCurrentRecord?.();
+  return (record as CostLibraryRecord | undefined) ?? null;
+}
+
+async function confirmPick(row?: CostLibraryRecord | null) {
+  const picked = row ?? resolveSelectedRow();
+  if (!picked) {
+    message.warning($t('page.quote.costPicker.selectOne'));
+    return false;
+  }
+  selectedRow.value = picked;
+  const type = costType.value;
+  await modalApi.close();
+  await nextTick();
+  emit('confirm', type, picked);
+  return true;
+}
+
 function clearSelection() {
   selectedRow.value = null;
   gridApi.grid?.clearRadioRow?.();
 }
 
-function onConfirmPick() {
-  const row = selectedRow.value ?? gridApi.grid?.getRadioRecord?.();
-  if (!row) {
-    message.warning($t('page.quote.costPicker.selectOne'));
+async function waitForGridReady() {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (typeof gridApi.grid?.commitProxy === 'function') {
+      return;
+    }
+    await nextTick();
+  }
+}
+
+async function applyOpenSearch() {
+  const pending = pendingOpen.value;
+  if (!pending) {
     return;
   }
-  emit('confirm', costType.value, row as CostLibraryRecord);
-  modalApi.close();
+  pendingOpen.value = null;
+
+  await waitForGridReady();
+
+  const { keys, type } = pending;
+  costType.value = type;
+  matchKeys.value = keys;
+
+  gridApi.setGridOptions({
+    columns: buildQuoteCostPickerColumns(quoteCostTypeToMode(type)),
+  });
+
+  const initialValues = getInitialSearchValues(type, keys);
+  await gridApi.formApi?.resetForm?.();
+  await gridApi.formApi?.setValues?.(initialValues);
+  gridApi.formApi?.setLatestSubmissionValues?.(initialValues);
+  await gridApi.reload?.();
+  await nextTick();
+  gridApi.grid?.recalculate?.();
+}
+
+async function onConfirmPick() {
+  await confirmPick();
 }
 
 async function open(type: QuoteCostType, keys: QuoteMatchKeys) {
   costType.value = type;
   matchKeys.value = keys;
   selectedRow.value = null;
+  pendingOpen.value = { keys, type };
   modalApi.open();
-  await nextTick();
-  gridApi.setGridOptions({
-    columns: buildQuoteCostPickerColumns(quoteCostTypeToMode(type)),
-  });
-  await gridApi.formApi?.resetForm?.();
-  await gridApi.formApi?.setValues?.(getInitialSearchValues(type, keys));
-  await gridApi.query?.();
 }
 
 defineExpose({ open });
@@ -165,5 +226,10 @@ defineExpose({ open });
         <Grid :form-options="searchFormOptions" />
       </div>
     </div>
+    <template #prepend-footer>
+      <span class="quote-cost-picker__footer-hint">
+        {{ $t('page.quote.costPicker.confirmHint') }}
+      </span>
+    </template>
   </Modal>
 </template>

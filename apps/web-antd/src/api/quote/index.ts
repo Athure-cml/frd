@@ -241,7 +241,7 @@ export async function getQuoteCostSnapshots(
 
 export async function createQuoteFollowUp(
   id: number,
-  data: { content: string; followStatus: string },
+  data: { content: string; followUpBy?: number },
 ) {
   return requestClient.post<QuoteApi.QuoteFollowUp>(
     `/quotes/${id}/follow-ups`,
@@ -252,7 +252,7 @@ export async function createQuoteFollowUp(
 export async function updateQuoteFollowUp(
   quoteId: number,
   followUpId: number,
-  data: { content: string; followStatus: string },
+  data: { content: string; followUpBy?: number },
 ) {
   return requestClient.put<QuoteApi.QuoteFollowUp>(
     `/quotes/${quoteId}/follow-ups/${followUpId}`,

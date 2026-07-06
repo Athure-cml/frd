@@ -244,6 +244,8 @@ export function useQuoteColumns(
   ];
 
   if (operationColumn) {
+    operationColumn.minWidth = 220;
+    operationColumn.width = 220;
     columns.push(operationColumn);
   }
 

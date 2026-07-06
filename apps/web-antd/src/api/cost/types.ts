@@ -69,6 +69,7 @@ export interface RoadCostRecord {
   fsc: number;
   id: number;
   logYardNameAddress: string;
+  zipCode?: string;
   nsLift: number;
   owTriAxle: number;
   pol: string;

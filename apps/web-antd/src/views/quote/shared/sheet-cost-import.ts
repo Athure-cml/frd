@@ -28,7 +28,9 @@ export function getInitialSearchValues(
     return {
       city: keys.city ?? '',
       pol: keys.pol ?? '',
+      por: keys.por ?? '',
       state: keys.state ?? '',
+      zipCode: keys.zipCode ?? '',
     };
   }
   if (type === 'SEA') {
@@ -52,6 +54,88 @@ function formatSeaOfRate(record: FreightCostRecord): string {
   return denom ? `${price}/${denom}` : String(price);
 }
 
+function recordSnapshot<T extends Record<string, unknown>>(
+  record: T,
+): Record<string, unknown> {
+  const { id: _id, updatedAt: _updatedAt, ...snapshot } = record;
+  return { ...snapshot };
+}
+
+/** 将历史快照字段名对齐成本库列表字段，便于复用同一套列定义 */
+export function normalizeSnapshotRow(
+  type: QuoteCostType,
+  snapshot: Record<string, unknown> = {},
+  costRefId: number,
+): Record<string, unknown> {
+  if (type === 'ROAD') {
+    return {
+      id: costRefId,
+      allIn: snapshot.allIn,
+      allInNonOak: snapshot.allInNonOak,
+      allInOak: snapshot.allInOak,
+      baseFreight: snapshot.baseFreight,
+      chassis: snapshot.chassis,
+      city: snapshot.city,
+      extraFields: snapshot.extraFields,
+      fsc: snapshot.fsc ?? snapshot.fscFreight,
+      logYardNameAddress: snapshot.logYardNameAddress,
+      nsLift: snapshot.nsLift,
+      owTriAxle: snapshot.owTriAxle,
+      pol: snapshot.pol,
+      por: snapshot.por,
+      prepull: snapshot.prepull,
+      redelivery: snapshot.redelivery,
+      remark: snapshot.remark,
+      split: snapshot.split,
+      state: snapshot.state,
+      stopOff: snapshot.stopOff,
+      supplier: snapshot.supplier,
+      validDate: snapshot.validDate,
+      waitingFee: snapshot.waitingFee,
+      zipCode: snapshot.zipCode,
+    };
+  }
+
+  if (type === 'SEA') {
+    return {
+      id: costRefId,
+      allIn: snapshot.allIn,
+      buc: snapshot.buc,
+      carrier: snapshot.carrier ?? snapshot.ssl,
+      currency: snapshot.currency,
+      destination: snapshot.destination ?? snapshot.pod,
+      extraFields: snapshot.extraFields,
+      origin: snapshot.origin ?? snapshot.pol,
+      remark: snapshot.remark,
+      spec: snapshot.spec,
+      status: snapshot.status,
+      surchargeValidDate: snapshot.surchargeValidDate,
+      unit: snapshot.unit,
+      unitPrice: snapshot.unitPrice,
+      validDate: snapshot.validDate,
+      validFrom: snapshot.validFrom,
+      validTo: snapshot.validTo,
+    };
+  }
+
+  return {
+    id: costRefId,
+    extraFields: snapshot.extraFields,
+    nonOakIndoor: snapshot.nonOakIndoor,
+    nonOakOutdoor: snapshot.nonOakOutdoor,
+    nonOakQuoteSummer: snapshot.nonOakQuoteSummer,
+    nonOakQuoteWinter: snapshot.nonOakQuoteWinter,
+    oakIndoor: snapshot.oakIndoor,
+    oakOutdoor: snapshot.oakOutdoor,
+    oakQuoteSummer: snapshot.oakQuoteSummer,
+    oakQuoteWinter: snapshot.oakQuoteWinter,
+    port: snapshot.port,
+    remark: snapshot.remark,
+    station: snapshot.station,
+    updatedAt: snapshot.updatedAt,
+  };
+}
+
 export function recordToCostMatchItem(
   type: QuoteCostType,
   record: CostLibraryRecord,
@@ -64,17 +148,7 @@ export function recordToCostMatchItem(
       costType: 'ROAD',
       costVersion: row.validDate,
       matchKeys,
-      snapshot: {
-        allInNonOak: row.allInNonOak,
-        allInOak: row.allInOak,
-        city: row.city,
-        fscFreight: row.fsc,
-        pol: row.pol,
-        por: row.por,
-        state: row.state,
-        supplier: row.supplier,
-        validDate: row.validDate,
-      },
+      snapshot: recordSnapshot(row as unknown as Record<string, unknown>),
     };
   }
 
@@ -85,16 +159,7 @@ export function recordToCostMatchItem(
       costType: 'SEA',
       costVersion: row.validDate ?? row.validFrom,
       matchKeys,
-      snapshot: {
-        currency: row.currency,
-        ofRateUsd: formatSeaOfRate(row),
-        pod: row.destination,
-        pol: row.origin,
-        spec: row.spec,
-        ssl: row.carrier,
-        unitPrice: row.unitPrice,
-        validDate: row.validDate ?? row.validFrom,
-      },
+      snapshot: recordSnapshot(row as unknown as Record<string, unknown>),
     };
   }
 
@@ -104,19 +169,7 @@ export function recordToCostMatchItem(
     costType: 'FUMIGATION',
     costVersion: row.updatedAt,
     matchKeys,
-    snapshot: {
-      nonOakIndoor: row.nonOakIndoor,
-      nonOakOutdoor: row.nonOakOutdoor,
-      nonOakQuoteSummer: row.nonOakQuoteSummer,
-      nonOakQuoteWinter: row.nonOakQuoteWinter,
-      oakIndoor: row.oakIndoor,
-      oakOutdoor: row.oakOutdoor,
-      oakQuoteSummer: row.oakQuoteSummer,
-      oakQuoteWinter: row.oakQuoteWinter,
-      port: row.port,
-      remark: row.remark,
-      station: row.station,
-    },
+    snapshot: recordSnapshot(row as unknown as Record<string, unknown>),
   };
 }
 

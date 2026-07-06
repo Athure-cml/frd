@@ -3,51 +3,17 @@ import type { QuoteApi, QuoteCostType } from '#/api/quote';
 
 import { computed } from 'vue';
 
-import { Empty, Table, Tag } from 'ant-design-vue';
+import { Empty, Tag } from 'ant-design-vue';
 
 import { $t } from '#/locales';
+
+import CostSnapshotGrid from './cost-snapshot-grid.vue';
 
 const props = defineProps<{
   matches: QuoteApi.QuoteCostMatchItem[];
 }>();
 
 const COST_TYPES: QuoteCostType[] = ['ROAD', 'SEA', 'FUMIGATION'];
-
-const TABLE_COLUMNS: Record<
-  QuoteCostType,
-  Array<{ dataIndex: string; title: string; width?: number }>
-> = {
-  ROAD: [
-    { dataIndex: 'validDate', title: 'validDate', width: 100 },
-    { dataIndex: 'city', title: 'City', width: 100 },
-    { dataIndex: 'state', title: 'State', width: 72 },
-    { dataIndex: 'por', title: 'POR', width: 88 },
-    { dataIndex: 'pol', title: 'POL', width: 88 },
-    { dataIndex: 'allInNonOak', title: 'ALL IN NON-OAK', width: 120 },
-    { dataIndex: 'allInOak', title: 'ALL IN OAK', width: 110 },
-    { dataIndex: 'fscFreight', title: 'FSC FREIGHT', width: 110 },
-    { dataIndex: 'supplier', title: 'supplier', width: 100 },
-  ],
-  SEA: [
-    { dataIndex: 'validDate', title: 'validDate', width: 100 },
-    { dataIndex: 'pol', title: 'POL', width: 88 },
-    { dataIndex: 'pod', title: 'POD', width: 88 },
-    { dataIndex: 'ssl', title: 'SSL', width: 100 },
-    { dataIndex: 'ofRateUsd', title: 'O/F RATE (USD)', width: 120 },
-    { dataIndex: 'unitPrice', title: 'unitPrice', width: 90 },
-    { dataIndex: 'spec', title: 'spec', width: 80 },
-    { dataIndex: 'currency', title: 'currency', width: 80 },
-  ],
-  FUMIGATION: [
-    { dataIndex: 'port', title: 'port', width: 88 },
-    { dataIndex: 'station', title: 'station', width: 88 },
-    { dataIndex: 'nonOakOutdoor', title: 'NON-OAK OUTDOOR', width: 130 },
-    { dataIndex: 'nonOakIndoor', title: 'NON-OAK IN DOOR', width: 130 },
-    { dataIndex: 'oakOutdoor', title: 'OAK OUTDOOR', width: 110 },
-    { dataIndex: 'oakIndoor', title: 'OAK IN DOOR', width: 110 },
-    { dataIndex: 'remark', title: 'REMARK', width: 160 },
-  ],
-};
 
 function tabLabel(type: QuoteCostType) {
   return $t(
@@ -60,30 +26,10 @@ function latestByType(type: QuoteCostType) {
 }
 
 const sections = computed(() =>
-  COST_TYPES.map((type) => {
-    const match = latestByType(type);
-    const snapshot = match?.snapshot ?? {};
-    return {
-      columns: TABLE_COLUMNS[type],
-      dataSource: match
-        ? [
-            {
-              key: `${type}-${match.costRefId}`,
-              costRefId: match.costRefId,
-              costVersion: match.costVersion ?? '—',
-              ...Object.fromEntries(
-                Object.entries(snapshot).map(([k, v]) => [
-                  k,
-                  v === null || v === undefined || v === '' ? '—' : String(v),
-                ]),
-              ),
-            },
-          ]
-        : [],
-      match,
-      type,
-    };
-  }),
+  COST_TYPES.map((type) => ({
+    match: latestByType(type),
+    type,
+  })),
 );
 </script>
 
@@ -108,18 +54,11 @@ const sections = computed(() =>
           {{ $t('page.quote.message.noCostSnapshot') }}
         </Tag>
       </div>
-      <Table
-        v-if="section.dataSource.length"
-        bordered
-        :columns="[
-          { dataIndex: 'costRefId', title: 'costRefId', width: 88 },
-          { dataIndex: 'costVersion', title: 'costVersion', width: 100 },
-          ...section.columns,
-        ]"
-        :data-source="section.dataSource"
-        :pagination="false"
-        :scroll="{ x: 'max-content' }"
-        size="small"
+      <CostSnapshotGrid
+        v-if="section.match"
+        :key="`${section.type}-${section.match.costRefId}`"
+        :match="section.match"
+        :type="section.type"
       />
       <Empty
         v-else

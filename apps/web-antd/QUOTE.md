@@ -215,8 +215,25 @@ SENT ──valid_until 到期──▶ EXPIRED
 | **4.3** | 提交 / 审批、状态迁移 | 待做 |
 | **4.5** | 报价业务视图表格（多模板、多行、熏蒸条件列） | 待做（见 [QUOTE-EXPORT.md](./QUOTE-EXPORT.md)） |
 | **4.4** | 导出 Excel | 待做 |
+| **5.1** | 企业微信邮件：发报价 + 收客户回复挂到报价单 | 待做 |
 
 **4.2 技术倾向**：优先前端 Picker + 现有成本 API + 现有 `PUT /quotes` 保存；必要时再增加 `GET /quotes/cost-preview`。
+
+### 5.1 企业微信邮件（待开发）
+
+通过企业微信自建应用邮件 API，实现报价外发与客户回复回流，回复自动关联到对应报价单。
+
+| 子项 | 说明 |
+|------|------|
+| **发报价** | 报价详情「发送邮件」→ `compose_send` 将 PDF/Excel 附件发至 `customer.email`；发件人为应用邮箱 |
+| **收回复** | 定时轮询 `get_mail_list` + `read_mail` 读取应用收件箱；解析 EML，挂到报价单跟进/邮件线程 |
+| **关联规则** | 优先邮件主题/正文中的报价单号；辅以发件人邮箱与 `customer.email` 匹配 |
+| **前端** | 发送弹窗（收件人/抄送/预览）；报价详情展示客户回复时间线 |
+| **后端** | `WeComTokenService`、`WeComMailService`、发送/收件记录表、异步发送与去重 |
+| **权限** | 管理后台：协作 → 邮件 → 可调用接口的应用；应用可见范围覆盖业务员 |
+| **参考** | [发送普通邮件](https://developer.work.weixin.qq.com/document/path/97504)、[获取收件箱邮件列表](https://developer.work.weixin.qq.com/document/path/97516)、[获取邮件内容](https://developer.work.weixin.qq.com/document/path/97983) |
+
+**范围外（本期不做）**：读取业务员个人邮箱全量收件、系统内完整邮箱客户端、IMAP 代收。
 
 ---
 

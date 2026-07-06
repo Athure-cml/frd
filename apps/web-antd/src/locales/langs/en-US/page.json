@@ -143,7 +143,11 @@
       "portSyncTitle": "Port sync completed",
       "portSync": "UN/LOCODE incremental sync added 128 records.",
       "expireReminderTitle": "Quotes expiring soon",
-      "expireReminder": "6 quotes expire within 3 days. Follow up promptly."
+      "expireReminder": "6 quotes expire within 3 days. Follow up promptly.",
+      "quoteExpiringTitle": "Quotes expiring soon",
+      "quoteExpiring": "{0} quote(s) expire within {1} day(s). Follow up promptly.",
+      "costUpdatedTitle": "Referenced cost updated",
+      "costUpdated": "Quote {0} references updated {1} cost. Please review."
     }
   },
   "analytics": {
@@ -249,7 +253,9 @@
       "batchEditRoad": "Batch Edit Truck Costs",
       "batchEditSea": "Batch Edit Ocean Costs",
       "batchEditFumigation": "Batch Edit Fumigation Costs",
-      "batchDelete": "Batch Delete"
+      "batchDelete": "Batch Delete",
+      "copy": "Copy",
+      "copyRecord": "Copy & Enter {0}"
     },
     "confirm": {
       "batchDelete": "Delete {0} selected record(s)? This cannot be undone."
@@ -270,6 +276,9 @@
       "batchFill": "Fill only the fields you want to update; blanks are ignored.",
       "batchEmpty": "Fill at least one field to update",
       "batchSelected": "{0} row(s) selected"
+    },
+    "search": {
+      "zipCodePlaceholder": "Fuzzy-search Zip code"
     },
     "template": {
       "label": "Table view",
@@ -386,20 +395,21 @@
       "surcharge": "Surcharges & Notes"
     },
     "roadFields": {
-      "validDate": "*VALID DATE",
-      "supplier": "*SUPPLIER",
+      "validDate": "VALID DATE",
+      "supplier": "SUPPLIER",
       "logYardNameAddress": "LOG YARD NAME &ADDRESS",
-      "city": "*City",
-      "state": "*State",
-      "por": "*POR",
-      "pol": "*POL",
-      "baseFreight": "*BASE FREIGHT",
+      "zipCode": "Zip code",
+      "city": "City",
+      "state": "State",
+      "por": "POR",
+      "pol": "POL",
+      "baseFreight": "BASE FREIGHT",
       "fsc": "FSC",
       "chassis": "CHASSIS",
       "owTriAxle": "OW/TRI-AXCEL",
       "split": "SPLIT",
       "stopOff": "STOP OFF",
-      "allIn": "*ALL IN",
+      "allIn": "ALL IN",
       "allInNonOak": "ALL IN (NON OAK)",
       "allInOak": "ALL IN (OAK)",
       "waitingFee": "WAITING FEE",
@@ -448,7 +458,8 @@
       "editor": "Fill 7 match keys, then click Import Cost Library.",
       "readonly": "This quote is read-only.",
       "matchKeys": "Zip code / City / State / POR / POL / POD / SSL for cost matching",
-      "zipAutoFill": "Fuzzy-search Zip code; City and State fill in on selection"
+      "zipAutoFill": "Fuzzy-search Zip code; City and State fill in on selection",
+      "followUpStatus": "Follow-up records automatically capture the current quote status"
     },
     "sections": {
       "basic": "Basic Info",
@@ -487,7 +498,9 @@
       "won": "Won",
       "copy": "Copy as New",
       "print": "Print",
-      "addFollowUp": "Add Follow-up"
+      "addFollowUp": "Add Follow-up",
+      "backToList": "Back to list",
+      "backToDetail": "Back to detail"
     },
     "fields": {
       "quoteNo": "Quote No.",
@@ -500,6 +513,7 @@
       "createdBy": "Created By",
       "updatedAt": "Updated At",
       "followUpBy": "Follow-up By",
+      "docStatusSnapshot": "Quote Status",
       "time": "Time",
       "operator": "Operator",
       "content": "Content",
@@ -520,6 +534,8 @@
     "placeholders": {
       "customer": "Select a customer",
       "routeSummary": "e.g. Shanghai → Los Angeles",
+      "followContent": "Please enter follow-up content",
+      "followUpBy": "Select follow-up owner",
       "zipCode": "Fuzzy-search Zip code"
     },
     "transportMode": {
@@ -540,7 +556,8 @@
     },
     "validation": {
       "customerRequired": "Please select a customer",
-      "followContent": "Please enter follow-up content"
+      "followContent": "Please enter follow-up content",
+      "followUpBy": "Select follow-up owner"
     },
     "message": {
       "noCostMatch": "No matching cost data. Please maintain the cost library first.",
@@ -564,7 +581,8 @@
       "deletePrefix": "Delete quote ",
       "deleteSuffix": "? This cannot be undone.",
       "void": "Void quote \"{0}\"?",
-      "won": "Mark this quote as won?"
+      "won": "Mark this quote as won?",
+      "deleteFollowUp": "Delete this follow-up record?"
     },
     "costSource": {
       "MANUAL": "Manual",
@@ -576,6 +594,7 @@
     "costPicker": {
       "title": "Pick from Cost Library",
       "selectOne": "Select one cost record",
+      "confirmHint": "Click to select, double-click or press Confirm to import",
       "selectRows": "Select at least one cost record",
       "addSelected": "Add selected ({0})",
       "selectedHint": "{0} cost record(s) selected",
@@ -599,11 +618,13 @@
       "exchangeRate": "Maintain FX rates by effective date. Rates are snapshotted when a quote is saved.",
       "rateMeaning": "1 unit of source currency = rate × target currency",
       "usStateZip": "Maintain US states, cities, and zip codes (State / City / Zip code) for freight and quotes.",
-      "usStateZipEmpty": "No zip code data yet. Import from Excel or add cities and zip codes manually.",
-      "usStateZipImportTemplate": "Headers: State, City, Zip code. Rows with unknown state codes are skipped.",
+      "usStateZipEmpty": "No zip code data yet. Upload GeoNames US.txt for a full import, or use Excel import / manual entry.",
+      "usStateZipImportTemplate": "Supports GeoNames US.txt (tab-separated, download US.zip from geonames.org) or Excel (headers: State, City, Zip code). Existing records are skipped.",
+      "usStateZipImportFormat": "Supports .xlsx / .xls / .txt",
       "selectFile": "Please select an Excel file",
       "importDrop": "Click or drag file here",
       "importFormat": "Supports .xlsx / .xls",
+      "importing": "Importing… Large files may take several minutes.",
       "importPartial": "{0} imported, {1} failed",
       "importSuccess": "{0} rows imported",
       "importErrorTitle": "Some rows failed",

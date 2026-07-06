@@ -39,6 +39,7 @@ export const preferencesExtension =
         placeholder:
           'demos.preferencesExtensionConfig.fields.reportTitle.placeholder',
       },
+
       {
         component: 'number',
         componentProps: {

@@ -54,7 +54,9 @@ export function buildOperationColumn<T>(
     },
     field: 'operation',
     fixed: 'right',
+    minWidth: 168,
+    showOverflow: false,
     title: t('fields.operation'),
-    width: 140,
+    width: 168,
   };
 }

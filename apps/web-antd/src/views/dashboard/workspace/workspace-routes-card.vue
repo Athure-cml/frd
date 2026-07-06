@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { WorkspaceRouteItem } from './workspace-mock';
+import type { WorkspaceRouteView } from './map-workspace';
 
 import { IconifyIcon } from '@vben/icons';
 
@@ -8,14 +8,14 @@ import { $t } from '#/locales';
 import WorkspaceCard from './workspace-card.vue';
 
 defineProps<{
-  items: WorkspaceRouteItem[];
+  items: WorkspaceRouteView[];
 }>();
 
 const emit = defineEmits<{
   viewAll: [];
 }>();
 
-const maxValue = (items: WorkspaceRouteItem[]) =>
+const maxValue = (items: WorkspaceRouteView[]) =>
   Math.max(...items.map((item) => item.value), 1);
 </script>
 
