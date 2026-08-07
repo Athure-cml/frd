@@ -37,7 +37,7 @@ import '../shared/quote.css';
 
 const props = defineProps<{
   transportMode: QuoteTransportMode;
-  /** 当前报价单已引用的成本记录 ID，用于禁止重复选择 */
+  /** ????????????—ID????????? */
   usedCostRefIds?: number[];
 }>();
 
@@ -47,7 +47,7 @@ const emit = defineEmits<{
 
 const pickerMode = computed(() => costModeToPickerMode(props.transportMode));
 const costApi = computed(() => getCostApi(pickerMode.value));
-const usedCostRefIdSet = computed(() => new Set(props.usedCostRefIds ?? []));
+const usedCostRefIdSet = computed(() => new Set(props.usedCostRefIds));
 const selectedCount = ref(0);
 const pendingRoadRecords = ref<RoadCostRecord[]>([]);
 const roadPriceOpen = ref(false);
@@ -70,7 +70,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
 });
 
 const searchFormOptions = useI18nFormOptions(() => ({
-  collapsed: false,
+  collapsed: true,
   schema: getCostPickerSearchSchema(pickerMode.value),
   showCollapseButton: true,
   submitOnChange: false,
@@ -88,6 +88,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
     checkboxConfig: {
       highlight: true,
       reserve: true,
+      showReserveStatus: true,
     },
     columns: getCostPickerColumns(pickerMode.value),
     height: '100%',
@@ -130,6 +131,7 @@ function applyPickerRestrictions() {
       checkMethod: ({ row }: { row: { id: number } }) => !isCostRefUsed(row.id),
       highlight: true,
       reserve: true,
+      showReserveStatus: true,
     },
     rowClassName: ({ row }: { row: { id: number } }) =>
       isCostRefUsed(row.id) ? 'quote-cost-picker-row--used' : '',
@@ -137,7 +139,16 @@ function applyPickerRestrictions() {
 }
 
 function getSelectedRows<T>() {
-  return (gridApi.grid?.getCheckboxRecords?.() ?? []) as T[];
+  const current = (gridApi.grid?.getCheckboxRecords?.() ?? []) as T[];
+  const reserved = (gridApi.grid?.getCheckboxReserveRecords?.() ?? []) as T[];
+  const map = new Map<number, T>();
+  for (const row of [...current, ...reserved]) {
+    const id = (row as { id?: number }).id;
+    if (typeof id === 'number') {
+      map.set(id, row);
+    }
+  }
+  return [...map.values()];
 }
 
 function syncSelection() {
@@ -146,6 +157,7 @@ function syncSelection() {
 
 function clearSelection() {
   gridApi.grid?.clearCheckboxRow?.();
+  gridApi.grid?.clearCheckboxReserve?.();
   syncSelection();
 }
 

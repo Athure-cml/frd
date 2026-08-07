@@ -552,6 +552,15 @@
   min-height: 640px;
 }
 
+@media (max-width: 767px) {
+  .quote-cost-picker-modal {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: calc(100dvh - 24px);
+    min-height: 0;
+  }
+}
+
 .quote-cost-picker {
   display: flex;
   flex: 1;

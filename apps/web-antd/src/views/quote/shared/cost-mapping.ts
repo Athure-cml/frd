@@ -27,39 +27,41 @@ export interface LineDraft {
 }
 
 export type RoadPriceField =
-  | 'allIn'
-  | 'allInNonOak'
-  | 'allInOak'
+  | 'allInFmOneWay'
+  | 'allInFmRound'
+  | 'allInNoFm'
   | 'baseFreight'
   | 'chassis'
   | 'fsc'
   | 'nsLift'
-  | 'owTriAxle'
+  | 'otherFee'
   | 'prepull'
   | 'redelivery'
   | 'split'
   | 'stopOff'
+  | 'triTandemAxle'
   | 'waitingFee';
 
-export const DEFAULT_ROAD_PRICE_FIELD: RoadPriceField = 'allIn';
+export const DEFAULT_ROAD_PRICE_FIELD: RoadPriceField = 'allInNoFm';
 
 export const ROAD_PRICE_FIELD_OPTIONS: Array<{
   field: RoadPriceField;
   labelKey: string;
 }> = [
-  { field: 'allIn', labelKey: 'allIn' },
+  { field: 'allInNoFm', labelKey: 'allInNoFm' },
+  { field: 'allInFmOneWay', labelKey: 'allInFmOneWay' },
+  { field: 'allInFmRound', labelKey: 'allInFmRound' },
   { field: 'baseFreight', labelKey: 'baseFreight' },
   { field: 'fsc', labelKey: 'fsc' },
   { field: 'chassis', labelKey: 'chassis' },
-  { field: 'owTriAxle', labelKey: 'owTriAxle' },
+  { field: 'triTandemAxle', labelKey: 'triTandemAxle' },
   { field: 'split', labelKey: 'split' },
   { field: 'stopOff', labelKey: 'stopOff' },
-  { field: 'allInNonOak', labelKey: 'allInNonOak' },
-  { field: 'allInOak', labelKey: 'allInOak' },
   { field: 'waitingFee', labelKey: 'waitingFee' },
   { field: 'redelivery', labelKey: 'redelivery' },
   { field: 'prepull', labelKey: 'prepull' },
   { field: 'nsLift', labelKey: 'nsLift' },
+  { field: 'otherFee', labelKey: 'otherFee' },
 ];
 
 const TRANSPORT_COST_MODE: Record<QuoteTransportMode, QuoteCostMode> = {
@@ -91,41 +93,31 @@ function routeLabel(origin?: string, destination?: string) {
   return `${from} → ${to}`;
 }
 
-function parseQuotePrice(quote?: string, fallback?: number) {
-  if (quote) {
-    const match = quote.match(/^\d+(\.\d+)?/);
-    if (match) {
-      return Number(match[0]);
-    }
-  }
-  return Number(fallback) || 0;
-}
-
 export function fumigationToLineDraft(
   record: FumigationCostRecord,
   sort: number,
 ): LineDraft {
-  const unitPrice = parseQuotePrice(
-    record.nonOakQuoteSummer,
-    record.nonOakOutdoor,
-  );
-  const itemName = [record.port, record.station].filter(Boolean).join(' / ');
+  const unitPrice = Number(record.outdoorNonOak) || 0;
+  const itemName = [record.region, record.station].filter(Boolean).join(' / ');
   return {
     costMode: 'RAIL_REF',
     costRefId: record.id,
     extraJson: {
       costSnapshot: {
+        address: record.address,
         id: record.id,
-        nonOakOutdoor: record.nonOakOutdoor,
-        nonOakQuoteSummer: record.nonOakQuoteSummer,
-        oakOutdoor: record.oakOutdoor,
-        oakQuoteSummer: record.oakQuoteSummer,
-        port: record.port,
+        indoorNonOak: record.indoorNonOak,
+        indoorOak: record.indoorOak,
+        indoorValidity: record.indoorValidity,
+        outdoorNonOak: record.outdoorNonOak,
+        outdoorOak: record.outdoorOak,
+        outdoorValidity: record.outdoorValidity,
+        region: record.region,
         station: record.station,
         updatedAt: record.updatedAt,
       },
       currency: 'USD',
-      priceSource: 'nonOakQuoteSummer',
+      priceSource: 'outdoorNonOak',
       quotedUnitPrice: unitPrice,
     },
     itemName: itemName || `熏蒸 #${record.id}`,
@@ -143,33 +135,35 @@ export function freightToLineDraft(
   costMode: 'RAIL_REF' | 'SEA_REF',
   sort: number,
 ): LineDraft {
-  const unitPrice = Number(record.unitPrice) || 0;
+  const unitPrice = Number(record.allIn ?? record.freight) || 0;
   return {
     costMode,
     costRefId: record.id,
     extraJson: {
       costSnapshot: {
-        carrier: record.carrier,
-        destination: record.destination,
+        agent: record.agent,
+        allIn: record.allIn,
+        buc: record.buc,
+        containerType: record.containerType,
+        freight: record.freight,
+        freightValidDate: record.freightValidDate,
         id: record.id,
-        origin: record.origin,
-        spec: record.spec,
-        unit: record.unit,
-        unitPrice: record.unitPrice,
+        pod: record.pod,
+        pol: record.pol,
+        por: record.por,
+        ssl: record.ssl,
         updatedAt: record.updatedAt,
-        validFrom: record.validFrom,
-        validTo: record.validTo,
       },
-      currency: record.currency,
-      priceSource: 'unitPrice',
+      currency: 'USD',
+      priceSource: 'allIn',
       quotedUnitPrice: unitPrice,
     },
-    itemName: routeLabel(record.origin, record.destination),
+    itemName: routeLabel(record.pol, record.pod),
     key: `line-cost-${record.id}-${Date.now()}-${sort}`,
     quantity: 1,
     sort,
-    spec: record.spec ?? '',
-    unit: record.unit ?? '',
+    spec: record.ssl ?? '',
+    unit: '票',
     unitPrice,
   };
 }
@@ -180,7 +174,7 @@ export function roadToLineDraft(
   sort: number,
 ): LineDraft {
   const unitPrice = Number(record[priceField]) || 0;
-  const itemName = [record.supplier, record.city, record.pol]
+  const itemName = [record.supplier, record.zipCode, record.city, record.state]
     .filter(Boolean)
     .join(' / ');
   return {
@@ -188,13 +182,15 @@ export function roadToLineDraft(
     costRefId: record.id,
     extraJson: {
       costSnapshot: {
-        city: record.city,
         id: record.id,
+        city: record.city,
         pol: record.pol,
+        por: record.por,
         state: record.state,
         supplier: record.supplier,
         updatedAt: record.updatedAt,
         validDate: record.validDate,
+        zipCode: record.zipCode,
         [priceField]: unitPrice,
       },
       currency: 'CNY',
@@ -205,7 +201,7 @@ export function roadToLineDraft(
     key: `line-cost-${record.id}-${Date.now()}-${sort}`,
     quantity: 1,
     sort,
-    spec: record.state ? `${record.state}` : '',
+    spec: record.pol ? `${record.pol}` : '',
     unit: '票',
     unitPrice,
   };
@@ -244,7 +240,11 @@ export function lineDraftToSave(line: LineDraft, index: number) {
 }
 
 export function isCostLine(line: LineDraft) {
-  return line.costMode !== 'MANUAL' && line.costRefId != null;
+  return (
+    line.costMode !== 'MANUAL' &&
+    line.costRefId !== null &&
+    line.costRefId !== undefined
+  );
 }
 
 export function isSnapshotStale(

@@ -32,13 +32,13 @@ export function buildCostSnapshotColumns(
 ): VxeTableGridOptions['columns'] {
   const template = getDefaultTemplate(mode);
   const nameField =
-    mode === 'road' ? 'supplier' : mode === 'sea' ? 'origin' : 'port';
+    mode === 'road' ? 'supplier' : mode === 'sea' ? 'pol' : 'region';
   const nameTitle =
     mode === 'road'
       ? $t('page.costLibrary.roadFields.supplier')
       : mode === 'sea'
         ? $t('page.costLibrary.seaFields.pol')
-        : $t('page.costLibrary.fumigationFields.port');
+        : $t('page.costLibrary.fumigationFields.region');
 
   return (
     buildColumnsFromTemplate({

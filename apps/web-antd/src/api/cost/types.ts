@@ -1,6 +1,6 @@
 export type CostMode = 'fumigation' | 'road' | 'sea';
 
-export type CostStatus = 'active' | 'draft' | 'expired';
+export type CostStatus = 'active' | 'expired';
 
 export interface PageResult<T> {
   items: T[];
@@ -8,8 +8,8 @@ export interface PageResult<T> {
 }
 
 export interface CostImportResult {
-  failed: number;
   errors: string[];
+  failed: number;
   imported: number;
 }
 
@@ -19,89 +19,103 @@ export interface CostBatchUpdatePayload {
 }
 
 export interface FreightCostRecord {
+  agent?: string;
   allIn?: number;
   buc?: number;
-  carrier: string;
-  currency: string;
-  destination: string;
+  bucValidDate?: string;
+  cnShortName?: string;
+  containerType?: string;
+  ebs?: number;
+  ebsValidDate?: string;
+  enProductName?: string;
   extraFields?: Record<string, unknown>;
+  freight?: number;
+  freightValidDate?: string;
+  gri?: number;
+  griValidDate?: string;
   id: number;
-  origin: string;
+  others?: number;
+  othersValidDate?: string;
+  pod: string;
+  pol: string;
+  por?: string;
   remark?: string;
-  spec: string;
-  status: CostStatus;
-  surchargeValidDate?: string;
-  unit: string;
-  unitPrice: number;
-  updatedAt: string;
-  validDate?: string;
-  validFrom: string;
-  validTo: string;
+  ssl: string;
+  status?: CostStatus;
+  updatedAt?: string;
 }
 
 export interface FreightCostSave {
+  agent?: string;
   allIn?: number;
   buc?: number;
-  carrier: string;
-  currency: string;
-  destination: string;
+  bucValidDate?: string;
+  cnShortName?: string;
+  containerType?: string;
+  ebs?: number;
+  ebsValidDate?: string;
+  enProductName?: string;
   extraFields?: Record<string, unknown>;
-  origin: string;
+  freight?: number;
+  freightValidDate?: string;
+  gri?: number;
+  griValidDate?: string;
+  others?: number;
+  othersValidDate?: string;
+  pod: string;
+  pol: string;
+  por?: string;
   remark?: string;
-  spec: string;
-  status: CostStatus;
-  surchargeValidDate?: string;
-  unit: string;
-  unitPrice: number;
-  validDate?: string;
-  validFrom: string;
-  validTo: string;
+  ssl: string;
+  status?: CostStatus;
 }
 
 export interface RoadCostRecord {
-  allIn: number;
-  allInNonOak: number;
-  allInOak: number;
-  baseFreight: number;
-  chassis: number;
+  allInFmOneWay: number;
+  allInFmRound: number;
+  allInNoFm: number;
+  baseFreight?: number;
+  chassis?: number;
   city: string;
   extraFields?: Record<string, unknown>;
-  fsc: number;
+  fsc?: number;
   id: number;
-  logYardNameAddress: string;
-  zipCode?: string;
-  nsLift: number;
-  owTriAxle: number;
+  logYardNameAddress?: string;
+  otherFee?: number;
   pol: string;
   por: string;
-  prepull: number;
-  redelivery: number;
+  prepull?: number;
+  redelivery?: number;
   remark?: string;
-  split: number;
+  split?: number;
   state: string;
-  stopOff: number;
+  status?: CostStatus;
+  stopOff?: number;
   supplier: string;
+  nsLift?: number;
+  triTandemAxle?: number;
   updatedAt?: string;
-  validDate: string;
-  waitingFee: number;
+  validDate?: string;
+  waitingFee?: number;
+  zipCode: string;
 }
 
 export type RoadCostSave = Omit<RoadCostRecord, 'id' | 'updatedAt'>;
 
 export interface FumigationCostRecord {
+  address?: string;
   extraFields?: Record<string, unknown>;
   id: number;
-  nonOakIndoor?: number;
-  nonOakOutdoor?: number;
-  nonOakQuoteSummer?: string;
-  nonOakQuoteWinter?: string;
-  oakIndoor?: number;
-  oakOutdoor?: number;
-  oakQuoteSummer?: string;
-  oakQuoteWinter?: string;
-  port: string;
+  indoorNonOak?: number;
+  indoorOak?: number;
+  indoorValidity?: string;
+  outdoorNonOak?: number;
+  outdoorOak?: number;
+  outdoorValidity?: string;
+  region?: string;
   remark?: string;
-  station: string;
+  station?: string;
+  status?: CostStatus;
   updatedAt?: string;
 }
 

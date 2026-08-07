@@ -62,6 +62,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: 'MasterDataContainerType',
+        path: '/master-data/container-type',
+        component: () => import('#/views/master-data/container-type/index.vue'),
+        meta: {
+          icon: 'lucide:box',
+          title: $t('page.masterData.containerType'),
+        },
+      },
+      {
         name: 'MasterDataInlandPorRedirect',
         path: '/master-data/inland-por',
         redirect: '/master-data/global-port',

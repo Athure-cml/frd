@@ -9,7 +9,7 @@ import { $t } from '#/locales';
 
 import ProfileBase from './base-setting.vue';
 import ProfilePasswordSetting from './password-setting.vue';
-import ProfileAvatarUpload from './profile-avatar-upload.vue';
+import ProfileBadgeCard from './profile-badge-card.vue';
 import { profileContextKey } from './profile-context';
 import ProfileSecuritySetting from './security-setting.vue';
 
@@ -75,8 +75,8 @@ onMounted(reloadProfile);
     :title="$t('page.auth.profile')"
     :user-info="userStore.userInfo"
   >
-    <template #avatar>
-      <ProfileAvatarUpload />
+    <template #header>
+      <ProfileBadgeCard />
     </template>
     <template #content>
       <div class="profile-content" v-loading="loading">

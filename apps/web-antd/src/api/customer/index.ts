@@ -1,5 +1,9 @@
 import type { Recordable } from '@vben/types';
 
+import type { CostImportResult } from '#/api/cost/types';
+
+import { downloadFileFromBlob } from '@vben/utils';
+
 import { requestClient } from '#/api/request';
 
 export namespace CustomerApi {
@@ -34,25 +38,39 @@ export namespace CustomerApi {
   }
 }
 
+const BASE = '/customers';
+
 export async function getCustomerList(params?: Recordable<any>) {
-  return requestClient.get<CustomerApi.PageResult>('/customers', { params });
+  return requestClient.get<CustomerApi.PageResult>(BASE, { params });
 }
 
 export async function getCustomer(id: number) {
-  return requestClient.get<CustomerApi.Customer>(`/customers/${id}`);
+  return requestClient.get<CustomerApi.Customer>(`${BASE}/${id}`);
 }
 
 export async function createCustomer(data: CustomerApi.CustomerSave) {
-  return requestClient.post<CustomerApi.Customer>('/customers', data);
+  return requestClient.post<CustomerApi.Customer>(BASE, data);
 }
 
 export async function updateCustomer(
   id: number,
   data: CustomerApi.CustomerSave,
 ) {
-  return requestClient.put<CustomerApi.Customer>(`/customers/${id}`, data);
+  return requestClient.put<CustomerApi.Customer>(`${BASE}/${id}`, data);
 }
 
 export async function deleteCustomer(id: number) {
-  return requestClient.delete(`/customers/${id}`);
+  return requestClient.delete(`${BASE}/${id}`);
+}
+
+export async function importCustomer(file: File) {
+  return requestClient.upload<CostImportResult>(`${BASE}/import`, { file });
+}
+
+export async function exportCustomer(params: Recordable<any>) {
+  return requestClient.download(`${BASE}/export`, { params });
+}
+
+export async function downloadCustomerExport(blob: Blob, filename: string) {
+  downloadFileFromBlob({ fileName: filename, source: blob });
 }

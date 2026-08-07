@@ -116,6 +116,9 @@ const Switch = defineAsyncComponent(() => import('ant-design-vue/es/switch'));
 const Textarea = defineAsyncComponent(() =>
   import('ant-design-vue/es/input').then((res) => res.Textarea),
 );
+const FormulaBuilder = defineAsyncComponent(
+  () => import('#/views/supplier/list/modules/formula-builder.vue'),
+);
 const TimePicker = defineAsyncComponent(
   () => import('ant-design-vue/es/time-picker'),
 );
@@ -607,6 +610,7 @@ export type ComponentType =
   | 'DatePicker'
   | 'DefaultButton'
   | 'Divider'
+  | 'FormulaBuilder'
   | 'IconPicker'
   | 'Input'
   | 'InputNumber'
@@ -640,6 +644,11 @@ export interface ComponentPropsMap {
   DatePicker: DatePickerProps;
   DefaultButton: ButtonProps;
   Divider: DividerProps;
+  FormulaBuilder: {
+    disabled?: boolean;
+    placeholder?: string;
+    variant?: 'fumigationNonOak' | 'fumigationOak' | 'nonFumigation';
+  };
   IconPicker: IconPickerProps;
   Input: InputProps;
   InputNumber: InputNumberProps;
@@ -696,6 +705,7 @@ async function initComponentAdapter() {
       return h(Button, { ...props, attrs, type: 'default' }, slots);
     },
     Divider,
+    FormulaBuilder,
     IconPicker: withDefaultPlaceholder(IconPicker, 'select', {
       iconSlot: 'addonAfter',
       inputComponent: Input,

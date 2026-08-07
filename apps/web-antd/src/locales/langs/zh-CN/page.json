@@ -1,4 +1,4 @@
-{
+﻿{
   "auth": {
     "login": "登录",
     "register": "注册",
@@ -87,12 +87,12 @@
     "updatePasswordSuccess": "密码已修改"
   },
   "dashboard": {
-    "title": "概览",
+    "title": "工作台",
     "analytics": "报价分析",
     "workspace": "工作台"
   },
   "workspace": {
-    "greetingMorning": "早上好，{0}，开始处理今日报价吧",
+    "greetingMorning": "早上好，{0}，开始处理今日工作吧",
     "greetingAfternoon": "下午好，{0}，继续跟进报价与成本",
     "greetingEvening": "晚上好，{0}，查看待办报价与运价",
     "subtitle": "福瑞多货代报价工作台：报价、成本库与主数据一站触达。",
@@ -117,7 +117,7 @@
       "roadCost": "卡车成本库",
       "seaCost": "海运成本库",
       "fumigationCost": "熏蒸成本库",
-      "customers": "客户管理"
+      "customers": "客商管理"
     },
     "todos": {
       "title": "待办任务",
@@ -203,40 +203,53 @@
     "sea": "海路运输成本库",
     "fumigation": "熏蒸成本库",
     "roadDesc": "维护卡车拖柜运价、堆场与附加费，字段对齐业务 Excel；支持导入导出与批量维护。",
-    "seaDesc": "维护海运航线、箱型与船公司运价，供报价单调取；支持导入导出与批量维护。",
-    "fumigationDesc": "维护 PORT / STATION 及 NON-OAK、OAK 熏蒸报价，表头对齐业务 Excel；支持导入导出与批量维护。",
+    "seaDesc": "维护 POR/POL/POD、箱型与附加费（BUC/EBS/GRI/OTHERS），表头对齐业务 Excel；支持导入导出与批量维护。",
+    "fumigationDesc": "维护 REGION / STATION 及 FM-OUTDOOR、FM-INDOOR 熏蒸报价，表头对齐业务 Excel；支持导入导出与批量维护。",
     "roadRecord": "卡车运价",
     "seaRecord": "海运运价",
     "fumigationRecord": "熏蒸运价",
     "fumigationGroups": {
-      "nonOak": "NON-OAK",
-      "oak": "OAK"
+      "outdoor": "FM-OUTDOOR",
+      "indoor": "FM-INDOOR"
     },
     "fumigationFields": {
-      "port": "PORT",
+      "region": "REGION",
       "station": "STATION",
-      "nonOakOutdoor": "OUTDOOR",
-      "nonOakIndoor": "IN DOOR",
-      "nonOakQuoteSummer": "报价(夏季)",
-      "nonOakQuoteWinter": "报价(冬季)",
-      "oakOutdoor": "OUTDOOR",
-      "oakIndoor": "IN DOOR",
-      "oakQuoteSummer": "报价(夏季)",
-      "oakQuoteWinter": "报价(冬季)",
-      "remark": "备注",
-      "updatedAt": "更新时间"
+      "outdoorNonOak": "NON OAK",
+      "outdoorOak": "OAK",
+      "outdoorValidity": "有效期",
+      "indoorNonOak": "NON OAK",
+      "indoorOak": "OAK",
+      "indoorValidity": "有效期",
+      "address": "ADDRESS"
+    },
+    "seaGroups": {
+      "surcharge": "附加费"
+    },
+    "seaFormula": {
+      "computedBy": "默认自动计算：运费 + BUC + EBS + GRI + OTHERS，也可手动修改"
     },
     "seaFields": {
+      "por": "POR",
       "pol": "POL",
       "pod": "POD",
-      "ofRate": "O/F RATE (USD)",
+      "cnShortName": "中文简称",
+      "enProductName": "英文品名",
+      "containerType": "箱型",
+      "freight": "运费",
+      "freightValidDate": "有效期",
       "buc": "BUC",
-      "surchargeValidDate": "附加费有效期",
-      "allIn": "ALL IN",
-      "ssl": "SSL",
-      "remark": "备注",
-      "validDate": "有效期",
-      "status": "状态"
+      "bucValidDate": "BUC有效期",
+      "ebs": "EBS",
+      "ebsValidDate": "EBS有效期",
+      "gri": "GRI",
+      "griValidDate": "GRI有效期",
+      "others": "OTHERS",
+      "othersValidDate": "OTHERS有效期",
+      "allIn": "ALL IN (小计)",
+      "ssl": "SSL (船公司)",
+      "agent": "AGENT (代理)",
+      "remark": "REMARK 备注"
     },
     "actions": {
       "createRoad": "录入卡车运价",
@@ -254,6 +267,10 @@
       "batchEditSea": "批量修改海运成本",
       "batchEditFumigation": "批量修改熏蒸成本",
       "batchDelete": "批量删除",
+      "createShort": "新增",
+      "templateShort": "模板",
+      "batchEditShort": "批量改",
+      "batchDeleteShort": "批量删",
       "copy": "复制",
       "copyRecord": "复制录入{0}"
     },
@@ -265,7 +282,15 @@
       "selectRows": "请先勾选要操作的记录",
       "selectFile": "请选择要导入的 Excel 文件",
       "importDrop": "点击或拖拽 Excel 文件到此处",
-      "importFormat": "支持 .xlsx / .xls，表头需与导出模板一致",
+      "importFormat": "支持 .xlsx，表头需与导出模板一致",
+      "importPreviewLoading": "正在解析预览…",
+      "importPreviewMeta": "共 {0} 行数据",
+      "importPreviewTotal": "共 {0} 条",
+      "importPreviewCol": "列{0}",
+      "importPreviewLine": "行内容",
+      "importPreviewEmpty": "文件中没有可预览的表格内容",
+      "importPreviewFailed": "无法解析该 Excel，请确认是有效的 .xlsx 文件",
+      "importPreviewClear": "重新选择",
       "importSuccess": "成功导入 {0} 条记录",
       "importPartial": "导入完成：成功 {0} 条，失败 {1} 条",
       "importErrorTitle": "以下行未能导入",
@@ -283,12 +308,12 @@
     "template": {
       "label": "表格视图",
       "defaultName": "标准视图",
-      "manage": "模板管理",
-      "menuTitle": "模板管理",
+      "manage": "视图模板",
+      "menuTitle": "视图模板",
       "roadMenu": "卡车成本库模板",
       "seaMenu": "海运成本库模板",
       "fumigationMenu": "熏蒸成本库模板",
-      "pageTitle": "模板管理",
+      "pageTitle": "视图模板",
       "roadPageDesc": "管理卡车成本库列表的列分组、顺序与默认视图。「使用中」表示本浏览器在卡车成本库当前选中的视图。",
       "seaPageDesc": "管理海运成本库列表的列分组、顺序与默认视图。「使用中」表示本浏览器在海运成本库当前选中的视图。",
       "fumigationPageDesc": "管理熏蒸成本库列表的列分组、顺序与默认视图。「使用中」表示本浏览器在熏蒸成本库当前选中的视图。",
@@ -388,47 +413,58 @@
       "draft": "草稿",
       "expired": "已过期"
     },
+    "statusFilterAll": "全部状态",
+    "statusHelp": "超过有效期将自动变为已过期。",
     "roadGroups": {
-      "basic": "基础信息",
-      "freight": "运费明细",
-      "surcharge": "附加费与备注",
+      "route": "路线与基础运费",
+      "freight": "ALL IN",
+      "extra": "附加费与备注",
+      "meta": "有效期与堆场",
       "custom": "自定义字段"
     },
+    "roadFormula": {
+      "computedBy": "按供应商公式自动计算，可手动改误差：{0}"
+    },
     "roadFields": {
-      "validDate": "VALID DATE",
-      "supplier": "SUPPLIER",
-      "logYardNameAddress": "LOG YARD NAME &ADDRESS",
-      "zipCode": "Zip code",
+      "zipCode": "ZIP CODE",
       "city": "City",
       "state": "State",
       "por": "POR",
       "pol": "POL",
+      "supplier": "SUPPLIER",
       "baseFreight": "BASE FREIGHT",
-      "fsc": "FSC",
+      "fsc": "FSC (%)",
       "chassis": "CHASSIS",
-      "owTriAxle": "OW/TRI-AXCEL",
+      "triTandemAxle": "OW/TRI-AXCEL",
       "split": "SPLIT",
       "stopOff": "STOP OFF",
-      "allIn": "ALL IN",
-      "allInNonOak": "ALL IN (NON OAK)",
-      "allInOak": "ALL IN (OAK)",
+      "allInNoFm": "ALL IN - NO FM",
+      "allInFmOneWay": "ALL IN - FM (NON OAK)",
+      "allInFmRound": "ALL IN - FM (OAK)",
       "waitingFee": "WAITING FEE",
-      "redelivery": "REDILEVEY",
+      "redelivery": "REDELIVERY",
       "prepull": "PREPULL",
       "nsLift": "NS LIFT",
-      "remark": "REMARK"
+      "otherFee": "OTHER FEE",
+      "remark": "REMARK",
+      "validDate": "有效期",
+      "logYardNameAddress": "LOG YARD NAME & ADDRESS"
     }
   },
   "customer": {
-    "title": "客户管理",
+    "title": "客商管理",
     "list": "客户列表",
     "hint": {
       "list": "维护客户主数据；报价单通过选择客户引用，避免手填误差。",
-      "codeAuto": "保存后系统自动分配客户编码。"
+      "codeAuto": "保存后系统自动分配客户编码。",
+      "exporting": "正在导出…",
+      "exportSuccess": "导出完成"
     },
     "actions": {
       "create": "新建客户",
-      "edit": "编辑客户"
+      "edit": "编辑客户",
+      "import": "导入",
+      "export": "导出"
     },
     "fields": {
       "code": "客户编码",
@@ -437,6 +473,125 @@
       "phone": "电话",
       "email": "邮箱",
       "address": "地址",
+      "remark": "备注",
+      "status": "状态",
+      "createdBy": "创建人",
+      "updatedAt": "更新时间"
+    },
+    "status": {
+      "enabled": "启用",
+      "disabled": "停用"
+    }
+  },
+  "supplier": {
+    "title": "供应商列表",
+    "list": "供应商列表",
+    "hint": {
+      "list": "维护供应商名称、邮箱、备注及打包价公式，供成本与报价引用。",
+      "codeAuto": "保存后系统自动分配供应商编码。",
+      "formulaTokens": "可用字段：BASE FREIGHT、FSC、CHASSIS、OW/TRI-AXCEL（或 TRI/TANDEM AXLE）、SPLIT、STOP OFF、WAITING FEE、REDELIVERY、PREPULL、NS LIFT、OTHER FEE。支持 + - * / 与括号。",
+      "formulaExample": "示例：BASE FREIGHT+FSC+CHASSIS+OW/TRI-AXCEL+SPLIT+STOP OFF",
+      "exporting": "正在导出…",
+      "exportSuccess": "导出完成"
+    },
+    "formula": {
+      "help": "点选费用字段插入，运算符与数字在输入框中自行填写。",
+      "placeholder": "点选字段后，自行输入 + - * / () 与数字，例如 BASE FREIGHT+FSC*1.1",
+      "fields": "费用字段（点击插入）",
+      "operators": "运算符与数字",
+      "number": "数字",
+      "insertNumber": "插入数字",
+      "undo": "撤销末项",
+      "clear": "清空",
+      "empty": "尚未填写公式（可选）",
+      "valid": "公式有效",
+      "invalid": "公式有误：{0}",
+      "invalidShort": "公式格式不正确",
+      "typeOpsHint": "运算符（+ - * /）与括号、数字请直接在上方输入框中输入。",
+      "refNonFumigationHint": "可点选「非熏蒸打包价」引用上一条公式结果；运算符与数字请自行输入。",
+      "refFumigationNonOakHint": "可点选「熏蒸打包价（非橡木）」引用上一条公式结果；运算符与数字请自行输入。"
+    },
+    "actions": {
+      "create": "新建供应商",
+      "edit": "编辑供应商",
+      "import": "导入",
+      "export": "导出"
+    },
+    "fields": {
+      "code": "供应商编码",
+      "name": "供应商名称",
+      "types": "类型",
+      "email": "邮箱",
+      "remark": "备注",
+      "nonFumigationPackageFormula": "非熏蒸打包价公式",
+      "fumigationNonOakPackageFormula": "熏蒸打包价（非橡木）公式",
+      "fumigationOakPackageFormula": "熏蒸打包价（橡木）公式",
+      "status": "状态",
+      "createdBy": "创建人",
+      "updatedAt": "更新时间"
+    },
+    "types": {
+      "bookingAgent": "订舱代理",
+      "fleet": "车队",
+      "customsBroker": "报关行",
+      "warehouse": "仓库",
+      "dedicatedLine": "专线",
+      "containerLeasing": "租箱公司",
+      "other": "其他"
+    },
+    "status": {
+      "enabled": "启用",
+      "disabled": "停用"
+    }
+  },
+  "shippingLine": {
+    "title": "船公司列表",
+    "list": "船公司列表",
+    "hint": {
+      "list": "维护船公司名称、邮箱与备注，供海运成本与报价引用。",
+      "codeAuto": "保存后系统自动分配船公司编码。",
+      "exporting": "正在导出…",
+      "exportSuccess": "导出完成"
+    },
+    "actions": {
+      "create": "新建船公司",
+      "edit": "编辑船公司",
+      "import": "导入",
+      "export": "导出"
+    },
+    "fields": {
+      "code": "船公司编码",
+      "name": "船公司名称",
+      "email": "邮箱",
+      "remark": "备注",
+      "status": "状态",
+      "createdBy": "创建人",
+      "updatedAt": "更新时间"
+    },
+    "status": {
+      "enabled": "启用",
+      "disabled": "停用"
+    }
+  },
+  "agent": {
+    "title": "代理商列表",
+    "list": "代理商列表",
+    "hint": {
+      "list": "维护代理商名称、邮箱与备注，供海运成本与报价引用。",
+      "codeAuto": "保存后系统自动分配代理商编码。",
+      "exporting": "正在导出…",
+      "exportSuccess": "导出完成"
+    },
+    "actions": {
+      "create": "新建代理商",
+      "edit": "编辑代理商",
+      "import": "导入",
+      "export": "导出"
+    },
+    "fields": {
+      "code": "代理商编码",
+      "name": "代理商名称",
+      "email": "邮箱",
       "remark": "备注",
       "status": "状态",
       "createdBy": "创建人",
@@ -611,6 +766,7 @@
     "exchangeRate": "汇率管理",
     "usStateZip": "美国州邮政编码",
     "globalPort": "全球港口档案",
+    "containerType": "箱型管理",
     "inlandPor": "内陆提货点 POR",
     "baseTag": "基准币",
     "hint": {
@@ -619,8 +775,8 @@
       "rateMeaning": "1 单位源币种 = 汇率 × 目标币种",
       "usStateZip": "维护美国州、城市与邮政编码（State / City / Zip code），供运价录入与报价使用。",
       "usStateZipEmpty": "暂无邮政编码数据，可上传 GeoNames US.txt 全量导入，或使用 Excel 导入 / 手工新建。",
-      "usStateZipImportTemplate": "支持 GeoNames US.txt（Tab 分隔，从 geonames.org 下载 US.zip 解压）或 Excel（表头 State、City、Zip code）。已存在的数据会自动跳过。",
-      "usStateZipImportFormat": "支持 .xlsx / .xls / .txt",
+      "usStateZipImportTemplate": "Excel：表头 State / City / Zip code（可先导出再改）。也可上传 GeoNames US.txt（Tab 分隔）。同州同城同邮编会更新，文件内重复行会失败。",
+      "usStateZipImportFormat": "支持 .xlsx 或 GeoNames .txt",
       "selectFile": "请选择 Excel 文件",
       "importDrop": "点击或拖拽文件到此处",
       "importFormat": "支持 .xlsx / .xls",
@@ -635,6 +791,7 @@
       "syncingUnlocodeImporting": "正在写入港口档案，请耐心等待…",
       "syncUnlocodeSuccess": "同步完成：新增 {0} 条，更新 {1} 条",
       "syncUnlocodeFailed": "同步失败，请稍后重试",
+      "containerType": "维护集装箱箱型（如 20GP、40HQ），供海运成本与报价选用。",
       "inlandPor": "维护内陆提货点 POR，关联 POL，供美国线运价录入时选择。",
       "exporting": "正在导出…",
       "exportSuccess": "导出成功"
@@ -657,6 +814,8 @@
       "editGlobalPort": "编辑港口",
       "importGlobalPort": "导入港口档案",
       "syncUnlocode": "同步 UN/LOCODE",
+      "createContainerType": "新建箱型",
+      "editContainerType": "编辑箱型",
       "createInlandPor": "新建提货点",
       "editInlandPor": "编辑提货点",
       "importInlandPor": "导入内陆 POR"
@@ -668,6 +827,7 @@
       "decimalPlaces": "小数位",
       "base": "基准币",
       "sort": "排序",
+      "remark": "备注",
       "fromCurrency": "源币种",
       "toCurrency": "目标币种",
       "rate": "汇率",
@@ -704,29 +864,25 @@
     },
     "moduleLabels": {
       "sys": "系统管理",
-      "dashboard": "概览",
+      "dashboard": "工作台",
       "cost": "成本库",
-      "template": "模板库",
-      "customer": "客户",
-      "currency": "币种",
-      "exchange_rate": "汇率",
-      "md_dest_address": "美国州邮政编码",
-      "md_global_port": "全球港口",
-      "md_inland_por": "内陆 POR",
-      "quote": "报价单",
-      "report": "报表"
+      "template": "视图模板",
+      "customer": "客商管理",
+      "masterData": "主数据",
+      "quote": "报价管理",
+      "ai": "AI助手"
     },
     "permissionGroups": {
-      "roadCost": "卡车成本",
-      "seaCost": "海运成本",
-      "fumigationCost": "熏蒸成本",
-      "roadTemplate": "卡车模板",
-      "seaTemplate": "海运模板",
-      "fumigationTemplate": "熏蒸模板",
-      "customer": "客户",
-      "dept": "部门",
-      "user": "用户",
-      "role": "角色"
+      "roadCost": "卡车运输成本库",
+      "seaCost": "海路运输成本库",
+      "fumigationCost": "熏蒸成本库",
+      "roadTemplate": "卡车成本库模板",
+      "seaTemplate": "海运成本库模板",
+      "fumigationTemplate": "熏蒸成本库模板",
+      "dept": "部门管理",
+      "user": "用户管理",
+      "role": "角色权限",
+      "operation_log": "操作日志"
     },
     "permissionTree": {
       "expandAll": "展开全部",
@@ -785,16 +941,23 @@
         "sysUser": "用户",
         "sysRole": "角色",
         "customer": "客户",
+        "supplier": "供应商",
+        "shippingLine": "船公司",
+        "agent": "代理商",
         "quote": "报价单",
         "costRoad": "卡车成本",
         "costSea": "海运成本",
         "costFumigation": "熏蒸成本",
+        "costRail": "铁路成本",
         "costTemplate": "表格模板",
         "currency": "币种",
         "exchangeRate": "汇率",
         "mdDestAddress": "美国州邮政编码",
         "mdGlobalPort": "全球港口",
-        "mdInlandPor": "内陆 POR"
+        "mdInlandPor": "内陆 POR",
+        "mdContainerType": "箱型",
+        "mdUsState": "美国州",
+        "unknown": "未知模块"
       },
       "fields": {
         "keyword": "关键词",
@@ -816,5 +979,45 @@
     "confirm": {
       "statusChange": "确认将「{0}」的状态改为「{1}」吗？"
     }
+  },
+  "ai": {
+    "title": "小福瑞",
+    "tabChat": "对话",
+    "tabParse": "文档解析",
+    "chatPlaceholder": "问系统用法、查成本，或说：帮我新增一条卡车成本…",
+    "parsePlaceholder": "粘贴客户邮件或询价文本…",
+    "parseHint": "可选提示，例如：提取路线与箱型",
+    "emptyHint": "可以问字段含义、报价流程，查成本，或让小福瑞帮填卡车/海运/熏蒸成本录入表单（你确认后才保存）。",
+    "greeting": "你好呀！我是小福瑞，福瑞多报价系统的 AI 助手。\n我可以帮你：\n· 解答系统用法和字段含义（比如 POR / POL）\n· 查询卡车、海运、熏蒸成本\n· 帮你打开成本录入表并预填数据（你确认后才保存）\n· 解析邮件 / Excel / PDF 里的询价信息\n有什么需要，随时叫我～",
+    "send": "发送",
+    "sendHint": "Enter 发送 · Shift+Enter 换行",
+    "clear": "清空会话",
+    "thinking": "思考中…",
+    "requestFailed": "AI 请求失败",
+    "notConfigured": "AI 未配置，请联系管理员设置 QUOTE_AI_API_KEY",
+    "applyToQuote": "应用到报价",
+    "applyQueued": "已写入待应用队列；若当前不在报价编辑页，将打开新建报价以便导入（不会自动保存）",
+    "uploadFile": "上传 Excel/PDF",
+    "parse": "解析文本",
+    "parsePreview": "结构化预览（未入库）",
+    "copyJson": "复制 JSON",
+    "copied": "已复制",
+    "copyFailed": "复制失败",
+    "proposeReview": "打开成本库填写",
+    "proposeModalTitle": "确认新增卡车成本",
+    "proposeModalTip": "以下为 AI 生成的草稿，确认后才会写入成本库（会记入操作日志）。",
+    "proposeConfirm": "确认写入",
+    "proposeCancel": "放弃",
+    "proposeConfirmed": "已确认写入",
+    "proposeDismissed": "已放弃",
+    "proposeOpened": "已打开录入表单",
+    "proposeOpenForm": "已打开成本录入表单，请核对后点击确认保存",
+    "proposeNoEditPermission": "没有对应成本库编辑权限，无法打开录入表单",
+    "proposeOnlyRoad": "当前仅支持卡车成本拟新增",
+    "proposeUnsupported": "暂不支持该类型成本拟新增",
+    "openPageNoPermission": "没有该页面权限，无法通过 AI 跳转",
+    "proposeSaved": "已新增卡车成本 #{0}",
+    "proposeSavedChat": "已按你的确认写入卡车成本库，记录 ID：{0}。",
+    "proposeSaveFailed": "写入成本库失败，请核对必填项后重试"
   }
 }

@@ -11,7 +11,11 @@ import { h } from 'vue';
 import { $t } from '#/locales';
 
 import { formatAmount } from '../road/formatters';
-import { appendCostOperationColumn, buildCostCheckboxColumn } from './columns';
+import {
+  appendCostOperationColumn,
+  appendCostStatusColumn,
+  buildCostCheckboxColumn,
+} from './columns';
 import { getFieldCatalog, toFieldCatalogMap } from './field-catalog';
 import {
   customFieldColumnPath,
@@ -22,43 +26,32 @@ import {
 } from './template-field-model';
 
 const PRIMARY_HEADER = 'fumigation-header-primary';
-const QUOTE_HEADER = 'fumigation-header-quote';
+const VALIDITY_HEADER = 'fumigation-header-quote';
 
-const NON_OAK_FIELDS = new Set([
-  'nonOakIndoor',
-  'nonOakOutdoor',
-  'nonOakQuoteSummer',
-  'nonOakQuoteWinter',
+const OUTDOOR_FIELDS = new Set([
+  'outdoorNonOak',
+  'outdoorOak',
+  'outdoorValidity',
 ]);
-const OAK_FIELDS = new Set([
-  'oakIndoor',
-  'oakOutdoor',
-  'oakQuoteSummer',
-  'oakQuoteWinter',
-]);
-const QUOTE_FIELDS = new Set([
-  'nonOakQuoteSummer',
-  'nonOakQuoteWinter',
-  'oakQuoteSummer',
-  'oakQuoteWinter',
-]);
+const INDOOR_FIELDS = new Set(['indoorNonOak', 'indoorOak', 'indoorValidity']);
+const VALIDITY_FIELDS = new Set(['indoorValidity', 'outdoorValidity']);
 
 export const FUMIGATION_GROUP_DEFS = {
-  nonOak: {
+  indoor: {
     headerClassName: PRIMARY_HEADER,
-    key: 'nonOak',
-    labelKey: 'page.costLibrary.fumigationGroups.nonOak',
+    key: 'indoor',
+    labelKey: 'page.costLibrary.fumigationGroups.indoor',
   },
-  oak: {
+  outdoor: {
     headerClassName: PRIMARY_HEADER,
-    key: 'oak',
-    labelKey: 'page.costLibrary.fumigationGroups.oak',
+    key: 'outdoor',
+    labelKey: 'page.costLibrary.fumigationGroups.outdoor',
   },
 } as const;
 
 export type FumigationColumnSegment =
   | { field: string; type: 'leaf' }
-  | { fields: string[]; groupKey: 'nonOak' | 'oak'; type: 'group' };
+  | { fields: string[]; groupKey: 'indoor' | 'outdoor'; type: 'group' };
 
 function resolveFumigationFieldOrder(layout: CostTableTemplateLayout) {
   if (layout.fieldOrder?.length) {
@@ -82,7 +75,7 @@ export function resolveFumigationColumnSegments(
 
   const collectGroup = (
     startIndex: number,
-    groupKey: 'nonOak' | 'oak',
+    groupKey: 'indoor' | 'outdoor',
     allowed: Set<string>,
   ) => {
     const fields: string[] = [];
@@ -115,13 +108,13 @@ export function resolveFumigationColumnSegments(
       continue;
     }
 
-    if (NON_OAK_FIELDS.has(field)) {
-      index = collectGroup(index, 'nonOak', NON_OAK_FIELDS);
+    if (OUTDOOR_FIELDS.has(field)) {
+      index = collectGroup(index, 'outdoor', OUTDOOR_FIELDS);
       continue;
     }
 
-    if (OAK_FIELDS.has(field)) {
-      index = collectGroup(index, 'oak', OAK_FIELDS);
+    if (INDOOR_FIELDS.has(field)) {
+      index = collectGroup(index, 'indoor', INDOOR_FIELDS);
       continue;
     }
 
@@ -134,13 +127,13 @@ export function resolveFumigationColumnSegments(
 }
 
 function resolveHeaderClass(field: string, groupClassName?: string) {
-  if (QUOTE_FIELDS.has(field)) {
-    return QUOTE_HEADER;
+  if (VALIDITY_FIELDS.has(field)) {
+    return VALIDITY_HEADER;
   }
   if (groupClassName) {
     return groupClassName;
   }
-  if (NON_OAK_FIELDS.has(field) || OAK_FIELDS.has(field)) {
+  if (OUTDOOR_FIELDS.has(field) || INDOOR_FIELDS.has(field)) {
     return PRIMARY_HEADER;
   }
   return undefined;
@@ -247,8 +240,8 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
   const {
     canEdit = false,
     includeOperation = true,
-    nameField = 'port',
-    nameTitle = $t('page.costLibrary.fumigationFields.port'),
+    nameField = 'region',
+    nameTitle = $t('page.costLibrary.fumigationFields.region'),
     onActionClick = () => {},
     seqWidth = 56,
   } = options;
@@ -276,7 +269,9 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
   const dataColumns = resolveFumigationColumnSegments(layout)
     .map((segment) => {
       if (segment.type === 'leaf') {
-        const headerClassName = ['port', 'station'].includes(segment.field)
+        const headerClassName = ['address', 'region', 'station'].includes(
+          segment.field,
+        )
           ? PRIMARY_HEADER
           : undefined;
         return buildFieldColumn(
@@ -305,7 +300,7 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
     .filter(Boolean);
 
   const columns = [
-    ...(canEdit ? [buildCostCheckboxColumn()] : []),
+    buildCostCheckboxColumn(),
     {
       fixed: 'left' as const,
       title: '#',
@@ -316,8 +311,11 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
   ] as VxeTableGridOptions<T>['columns'];
 
   if (!includeOperation) {
+    appendCostStatusColumn(columns);
     return columns;
   }
+
+  appendCostStatusColumn(columns);
 
   return appendCostOperationColumn(
     columns,

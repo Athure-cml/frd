@@ -6,6 +6,89 @@
   color: hsl(var(--foreground));
 }
 
+.profile-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 20px 8px;
+  text-align: center;
+}
+
+.profile-badge__logo {
+  display: inline-flex;
+  gap: 0.28em;
+  align-items: baseline;
+  margin-bottom: 20px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.5rem;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.profile-badge__logo-letter {
+  color: #006fe6;
+}
+
+.profile-badge__identity {
+  margin-top: 18px;
+}
+
+.profile-badge__name {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: hsl(var(--foreground));
+  text-wrap: balance;
+}
+
+.profile-badge__username {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: hsl(var(--foreground));
+}
+
+.profile-badge__divider {
+  width: 56%;
+  height: 1px;
+  margin: 16px 0;
+  background: hsl(var(--border));
+}
+
+.profile-badge__title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.profile-badge__role {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: hsl(var(--foreground));
+}
+
+.profile-badge__role-en {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: hsl(var(--foreground) / 65%);
+}
+
+.profile-badge__company {
+  margin: 20px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: hsl(var(--foreground));
+}
+
 .profile-avatar-upload {
   position: relative;
   display: block;
@@ -14,7 +97,12 @@
   cursor: pointer;
   background: transparent;
   border: none;
-  border-radius: 9999px;
+  border-radius: 12px;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.profile-avatar-upload:hover {
+  transform: translateY(-1px);
 }
 
 .profile-avatar-upload:focus-visible {
@@ -24,7 +112,17 @@
 
 .profile-avatar-upload__image {
   display: block;
+  overflow: hidden;
   border: 1px solid hsl(var(--border));
+  border-radius: 12px !important;
+}
+
+.profile-avatar-upload__image.ant-avatar-square {
+  border-radius: 12px;
+}
+
+.profile-avatar-upload__image img {
+  border-radius: 12px;
 }
 
 .profile-avatar-upload__mask {
@@ -37,7 +135,7 @@
   justify-content: center;
   color: #fff;
   background: rgb(0 0 0 / 45%);
-  border-radius: 9999px;
+  border-radius: 12px;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -45,6 +143,17 @@
 .profile-avatar-upload:hover .profile-avatar-upload__mask,
 .profile-avatar-upload:focus-visible .profile-avatar-upload__mask {
   opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-avatar-upload,
+  .profile-avatar-upload__mask {
+    transition: none;
+  }
+
+  .profile-avatar-upload:hover {
+    transform: none;
+  }
 }
 
 .profile-avatar-upload__icon {

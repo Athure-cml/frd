@@ -128,14 +128,16 @@ function patchOverride(
   const cleaned = Object.fromEntries(
     Object.entries(current).filter(([, value]) => value !== undefined),
   ) as CostTableFieldOverride;
-  if (Object.keys(cleaned).length === 0) {
-    delete overrides[field];
-  } else {
-    overrides[field] = cleaned;
-  }
+  const nextOverrides =
+    Object.keys(cleaned).length === 0
+      ? Object.fromEntries(
+          Object.entries(overrides).filter(([key]) => key !== field),
+        )
+      : { ...overrides, [field]: cleaned };
   return {
     ...layout,
-    fieldOverrides: Object.keys(overrides).length > 0 ? overrides : undefined,
+    fieldOverrides:
+      Object.keys(nextOverrides).length > 0 ? nextOverrides : undefined,
   };
 }
 
@@ -225,6 +227,10 @@ export function applyLayoutFieldItems(
     return applyFumigationGroupsFromOrder(fieldOrder, nextLayout);
   }
 
+  if (mode === 'sea') {
+    return applySeaGroupsFromOrder(fieldOrder, nextLayout);
+  }
+
   return {
     ...nextLayout,
     fields: fieldOrder,
@@ -232,7 +238,7 @@ export function applyLayoutFieldItems(
 }
 
 const ROAD_CUSTOM_GROUP = {
-  headerClassName: 'road-header-green',
+  headerClassName: 'road-header-extra',
   key: 'custom',
   labelKey: 'page.costLibrary.roadGroups.custom',
 } as const;
@@ -251,7 +257,7 @@ function applyRoadGroupsFromOrder(
       grouped.set(ROAD_CUSTOM_GROUP.key, list);
       continue;
     }
-    const group = catalogMap.get(field)?.group ?? 'basic';
+    const group = catalogMap.get(field)?.group ?? 'route';
     const list = grouped.get(group) ?? [];
     list.push(field);
     grouped.set(group, list);
@@ -259,10 +265,10 @@ function applyRoadGroupsFromOrder(
 
   const groups = [
     {
-      fields: grouped.get('basic') ?? [],
-      headerClassName: 'road-header-green',
-      key: 'basic',
-      labelKey: 'page.costLibrary.roadGroups.basic',
+      fields: grouped.get('route') ?? [],
+      headerClassName: 'road-header-route',
+      key: 'route',
+      labelKey: 'page.costLibrary.roadGroups.route',
     },
     {
       fields: grouped.get('freight') ?? [],
@@ -271,10 +277,16 @@ function applyRoadGroupsFromOrder(
       labelKey: 'page.costLibrary.roadGroups.freight',
     },
     {
-      fields: grouped.get('surcharge') ?? [],
-      headerClassName: 'road-header-green',
-      key: 'surcharge',
-      labelKey: 'page.costLibrary.roadGroups.surcharge',
+      fields: grouped.get('extra') ?? [],
+      headerClassName: 'road-header-extra',
+      key: 'extra',
+      labelKey: 'page.costLibrary.roadGroups.extra',
+    },
+    {
+      fields: grouped.get('meta') ?? [],
+      headerClassName: 'road-header-meta',
+      key: 'meta',
+      labelKey: 'page.costLibrary.roadGroups.meta',
     },
   ];
 
@@ -307,28 +319,54 @@ function applyFumigationGroupsFromOrder(
     fields: fieldOrder,
     groups: [
       {
-        fields: pick([
-          'nonOakOutdoor',
-          'nonOakIndoor',
-          'nonOakQuoteSummer',
-          'nonOakQuoteWinter',
-        ]),
+        fields: pick(['outdoorNonOak', 'outdoorOak', 'outdoorValidity']),
         headerClassName: 'fumigation-header-primary',
-        key: 'nonOak',
-        labelKey: 'page.costLibrary.fumigationGroups.nonOak',
+        key: 'outdoor',
+        labelKey: 'page.costLibrary.fumigationGroups.outdoor',
       },
       {
-        fields: pick([
-          'oakOutdoor',
-          'oakIndoor',
-          'oakQuoteSummer',
-          'oakQuoteWinter',
-        ]),
+        fields: pick(['indoorNonOak', 'indoorOak', 'indoorValidity']),
         headerClassName: 'fumigation-header-primary',
-        key: 'oak',
-        labelKey: 'page.costLibrary.fumigationGroups.oak',
+        key: 'indoor',
+        labelKey: 'page.costLibrary.fumigationGroups.indoor',
       },
     ].filter((group) => group.fields.length > 0),
+  };
+}
+
+function applySeaGroupsFromOrder(
+  fieldOrder: string[],
+  layout: CostTableTemplateLayout,
+): CostTableTemplateLayout {
+  const pick = (allowed: readonly string[]) =>
+    fieldOrder.filter((field) => allowed.includes(field));
+
+  const surchargeFields = pick([
+    'buc',
+    'bucValidDate',
+    'ebs',
+    'ebsValidDate',
+    'gri',
+    'griValidDate',
+    'others',
+    'othersValidDate',
+  ]);
+
+  return {
+    ...layout,
+    fieldOrder,
+    fields: fieldOrder,
+    groups:
+      surchargeFields.length > 0
+        ? [
+            {
+              fields: surchargeFields,
+              headerClassName: 'sea-header-surcharge',
+              key: 'surcharge',
+              labelKey: 'page.costLibrary.seaGroups.surcharge',
+            },
+          ]
+        : [],
   };
 }
 

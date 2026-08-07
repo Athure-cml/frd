@@ -1,7 +1,9 @@
 <script lang="ts" setup>
+import type { CostLibraryRecord } from '../shared/sheet-cost-import';
+
 import type { QuoteApi, QuoteCostType, QuoteStatus } from '#/api/quote';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
@@ -23,6 +25,7 @@ import {
 } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
+import { fumigationCostApi, getRoadCost, seaCostApi } from '#/api/cost';
 import { getEnabledCurrencyOptions } from '#/api/currency';
 import { getCustomerList } from '#/api/customer';
 import { createQuote, getQuoteDetail, updateQuote } from '#/api/quote';
@@ -34,7 +37,6 @@ import CostSourceTables from '../shared/cost-source-tables.vue';
 import { QUOTE_ROUTE_KEY_FIELDS } from '../shared/sheet-columns';
 import {
   applyCostToSheet,
-  type CostLibraryRecord,
   recordToCostMatchItem,
 } from '../shared/sheet-cost-import';
 import ZipCodeFields from '../shared/zip-code-fields.vue';
@@ -43,6 +45,11 @@ import '../shared/quote.css';
 
 /** 美国林场→中国固定多式联运，后端字段保留默认值，前端不展示 */
 const DEFAULT_TRANSPORT_MODE = 'SEA' as const;
+
+type AiApplyPayload = {
+  id: number;
+  type: 'fumigation' | 'road' | 'sea';
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -202,6 +209,49 @@ function onCostPicked(type: QuoteCostType, record: CostLibraryRecord) {
   message.success($t('page.quote.message.costImportedType', [label]));
 }
 
+async function applyAiCitedCost(payload: AiApplyPayload) {
+  try {
+    if (payload.type === 'road') {
+      const record = await getRoadCost(payload.id);
+      onCostPicked('ROAD', record);
+      return;
+    }
+    if (payload.type === 'sea') {
+      const record = await seaCostApi.get(payload.id);
+      onCostPicked('SEA', record);
+      return;
+    }
+    const record = await fumigationCostApi.get(payload.id);
+    onCostPicked('FUMIGATION', record);
+  } catch {
+    message.error($t('page.ai.requestFailed'));
+  }
+}
+
+function onAiApplyEvent(event: Event) {
+  const detail = (event as CustomEvent<AiApplyPayload>).detail;
+  if (!detail?.id || !detail.type) {
+    return;
+  }
+  void applyAiCitedCost(detail);
+}
+
+function consumeAiApplyFromStorage() {
+  const raw = sessionStorage.getItem('ai-apply-cost');
+  if (!raw) {
+    return;
+  }
+  sessionStorage.removeItem('ai-apply-cost');
+  try {
+    const payload = JSON.parse(raw) as AiApplyPayload;
+    if (payload?.id && payload.type) {
+      void applyAiCitedCost(payload);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 function buildPayload(): QuoteApi.QuoteSave {
   const customer = customerOptions.value.find(
     (c) => c.value === customerId.value,
@@ -232,7 +282,11 @@ async function onSave() {
       router.replace({ name: 'QuoteDetail', params: { id: created.id } });
       return;
     }
-    const updated = await updateQuote(quoteId.value!, buildPayload());
+    const id = quoteId.value;
+    if (!id) {
+      return;
+    }
+    const updated = await updateQuote(id, buildPayload());
     message.success($t('ui.actionMessage.updateSuccess', [updated.quoteNo]));
     await loadDetail();
   } finally {
@@ -249,7 +303,13 @@ function goBack() {
 }
 
 onMounted(async () => {
+  window.addEventListener('ai-apply-cost', onAiApplyEvent);
   await Promise.all([loadCustomers(), loadCurrencies(), loadDetail()]);
+  consumeAiApplyFromStorage();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('ai-apply-cost', onAiApplyEvent);
 });
 </script>
 

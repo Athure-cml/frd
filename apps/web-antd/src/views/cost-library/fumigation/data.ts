@@ -6,6 +6,7 @@ import { $t } from '#/locales';
 
 import { buildFumigationColumnsFromLayout } from '../shared/build-fumigation-columns';
 import { getDefaultTemplate } from '../shared/default-templates';
+import { createCostStatusSearchField } from '../shared/status-search';
 
 const f = (key: string) => $t(`page.costLibrary.fumigationFields.${key}`);
 
@@ -14,8 +15,8 @@ export function useFumigationSearchSchema(): VbenFormSchema[] {
     {
       component: 'Input',
       componentProps: { autocomplete: 'off' },
-      fieldName: 'port',
-      label: f('port'),
+      fieldName: 'region',
+      label: f('region'),
     },
     {
       component: 'Input',
@@ -23,6 +24,7 @@ export function useFumigationSearchSchema(): VbenFormSchema[] {
       fieldName: 'station',
       label: f('station'),
     },
+    createCostStatusSearchField(),
   ];
 }
 
@@ -40,7 +42,7 @@ export function useFumigationColumns(
 }
 
 export function getFumigationRowName(row: FumigationCostRecord) {
-  return `${row.port} / ${row.station}`;
+  return `${row.region} / ${row.station}`;
 }
 
 export function useFumigationBatchSchema(): VbenFormSchema[] {
@@ -48,8 +50,8 @@ export function useFumigationBatchSchema(): VbenFormSchema[] {
     {
       component: 'Textarea',
       componentProps: { rows: 3 },
-      fieldName: 'remark',
-      label: f('remark'),
+      fieldName: 'address',
+      label: f('address'),
     },
   ];
 }

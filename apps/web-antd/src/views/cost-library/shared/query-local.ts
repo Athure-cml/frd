@@ -10,19 +10,29 @@ export function queryLocalCosts(
   page: PageQuery,
   filters: CostQueryForm = {},
 ) {
-  const keywordMatch = (value: string, keyword?: string) => {
+  const keywordMatch = (value: string | undefined, keyword?: string) => {
     if (!keyword?.trim()) {
       return true;
     }
-    return value.toLowerCase().includes(keyword.trim().toLowerCase());
+    return (value ?? '').toLowerCase().includes(keyword.trim().toLowerCase());
   };
 
   const filtered = source.filter((item) => {
+    const row = item as Record<string, unknown>;
     return (
-      keywordMatch(item.origin, filters.origin) &&
-      keywordMatch(item.destination, filters.destination) &&
-      keywordMatch(item.carrier, filters.carrier) &&
-      (!filters.status || item.status === filters.status)
+      keywordMatch(String(row.por ?? ''), filters.por) &&
+      keywordMatch(
+        String(row.pol ?? row.origin ?? ''),
+        filters.pol ?? filters.origin,
+      ) &&
+      keywordMatch(
+        String(row.pod ?? row.destination ?? ''),
+        filters.pod ?? filters.destination,
+      ) &&
+      keywordMatch(
+        String(row.supplier ?? row.ssl ?? row.carrier ?? ''),
+        filters.supplier ?? filters.ssl ?? filters.carrier,
+      )
     );
   });
 

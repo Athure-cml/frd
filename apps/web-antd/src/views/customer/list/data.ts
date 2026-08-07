@@ -4,7 +4,10 @@ import type { CustomerApi } from '#/api/customer';
 
 import { $t } from '#/locales';
 
-import { buildOperationColumn } from '../../system/shared/columns';
+import {
+  buildCheckboxColumn,
+  buildOperationColumn,
+} from '../../system/shared/columns';
 import { statusTagOptions } from '../../system/shared/tags';
 
 const t = (key: string) => $t(`page.customer.${key}`);
@@ -149,7 +152,9 @@ export function useCustomerColumns(
     },
   );
 
-  const columns: VxeTableGridOptions<CustomerApi.Customer>['columns'] = [];
+  const columns: VxeTableGridOptions<CustomerApi.Customer>['columns'] = [
+    buildCheckboxColumn(),
+  ];
   if (showInternalCode) {
     columns.push({
       field: 'code',

@@ -20,6 +20,7 @@ import {
 import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { getDashboardNotifications } from '#/api/dashboard';
+import AiAssistantFab from '#/components/ai-assistant/ai-assistant-fab.vue';
 import { FRD_LOGO_SRC, FRD_LOGO_SRC_DARK } from '#/constants/brand';
 import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
@@ -215,6 +216,7 @@ watch(
       />
     </template>
     <template #extra>
+      <AiAssistantFab />
       <AuthenticationLoginExpiredModal
         v-model:open="accessStore.loginExpired"
         :avatar

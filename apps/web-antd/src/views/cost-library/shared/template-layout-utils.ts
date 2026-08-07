@@ -14,9 +14,9 @@ import {
 
 export const ROAD_GROUP_META = [
   {
-    headerClassName: 'road-header-green',
-    key: 'basic',
-    labelKey: 'page.costLibrary.roadGroups.basic',
+    headerClassName: 'road-header-route',
+    key: 'route',
+    labelKey: 'page.costLibrary.roadGroups.route',
   },
   {
     headerClassName: 'road-header-freight',
@@ -24,9 +24,14 @@ export const ROAD_GROUP_META = [
     labelKey: 'page.costLibrary.roadGroups.freight',
   },
   {
-    headerClassName: 'road-header-green',
-    key: 'surcharge',
-    labelKey: 'page.costLibrary.roadGroups.surcharge',
+    headerClassName: 'road-header-extra',
+    key: 'extra',
+    labelKey: 'page.costLibrary.roadGroups.extra',
+  },
+  {
+    headerClassName: 'road-header-meta',
+    key: 'meta',
+    labelKey: 'page.costLibrary.roadGroups.meta',
   },
 ] as const;
 
@@ -89,39 +94,29 @@ export function setFieldTitleOverride(
   const defaultLabel = getFieldLabel(mode, field);
   const overrides = { ...layout.fieldOverrides };
 
+  let nextOverrides = overrides;
   if (!normalized || normalized === defaultLabel) {
-    if (overrides[field]) {
-      const { title: _removed, ...rest } = overrides[field]!;
+    const current = overrides[field];
+    if (current) {
+      const { title: _removed, ...rest } = current;
       if (Object.keys(rest).length === 0) {
-        delete overrides[field];
+        const { [field]: _omit, ...remaining } = overrides;
+        nextOverrides = remaining;
       } else {
-        overrides[field] = rest;
+        nextOverrides = { ...overrides, [field]: rest };
       }
     }
   } else {
-    overrides[field] = { ...overrides[field], title: normalized };
+    nextOverrides = {
+      ...overrides,
+      [field]: { ...overrides[field], title: normalized },
+    };
   }
 
   return {
     ...layout,
-    fieldOverrides: Object.keys(overrides).length > 0 ? overrides : undefined,
-  };
-}
-
-function pruneFieldOverrides(
-  layout: CostTableTemplateLayout,
-  activeFields: string[],
-): CostTableTemplateLayout {
-  if (!layout.fieldOverrides) {
-    return layout;
-  }
-  const active = new Set(activeFields);
-  const overrides = Object.fromEntries(
-    Object.entries(layout.fieldOverrides).filter(([key]) => active.has(key)),
-  );
-  return {
-    ...layout,
-    fieldOverrides: Object.keys(overrides).length > 0 ? overrides : undefined,
+    fieldOverrides:
+      Object.keys(nextOverrides).length > 0 ? nextOverrides : undefined,
   };
 }
 
@@ -166,7 +161,10 @@ export function moveField(fields: string[], field: string, direction: -1 | 1) {
   }
   const next = [...fields];
   const [item] = next.splice(index, 1);
-  next.splice(target, 0, item!);
+  if (item === undefined) {
+    return fields;
+  }
+  next.splice(target, 0, item);
   return next;
 }
 

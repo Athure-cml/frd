@@ -72,7 +72,8 @@ async function handleBeforeUpload(file: File) {
     >
       <Avatar
         class="profile-avatar-upload__image"
-        :size="80"
+        shape="square"
+        :size="120"
         :src="avatarSrc"
       />
       <span class="profile-avatar-upload__mask">

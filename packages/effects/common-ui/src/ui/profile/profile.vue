@@ -28,20 +28,22 @@ const tabsValue = defineModel<string>('modelValue');
   <Page auto-content-height>
     <div class="flex size-full">
       <Card class="w-1/6 flex-none">
-        <div class="mt-4 flex-col-center gap-4">
-          <slot name="avatar" :user-info="userInfo">
-            <VbenAvatar
-              :src="userInfo?.avatar ?? preferences.app.defaultAvatar"
-              class="size-20"
-            />
-          </slot>
-          <span class="text-lg font-semibold">
-            {{ userInfo?.realName ?? '' }}
-          </span>
-          <span class="text-sm text-foreground/80">
-            {{ userInfo?.username ?? '' }}
-          </span>
-        </div>
+        <slot name="header" :user-info="userInfo">
+          <div class="mt-4 flex-col-center gap-4">
+            <slot name="avatar" :user-info="userInfo">
+              <VbenAvatar
+                :src="userInfo?.avatar ?? preferences.app.defaultAvatar"
+                class="size-20"
+              />
+            </slot>
+            <span class="text-lg font-semibold">
+              {{ userInfo?.realName ?? '' }}
+            </span>
+            <span class="text-sm text-foreground/80">
+              {{ userInfo?.username ?? '' }}
+            </span>
+          </div>
+        </slot>
         <Separator class="my-4" />
         <Tabs v-model="tabsValue" orientation="vertical" class="m-4">
           <TabsList class="grid w-full grid-cols-1 bg-card">

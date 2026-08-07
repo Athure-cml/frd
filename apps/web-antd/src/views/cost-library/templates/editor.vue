@@ -181,15 +181,14 @@ async function onExport() {
     const blob = templateId.value
       ? await exportCostTableTemplate(templateId.value)
       : await exportCostTableTemplatePreview(payload);
-    const exportBase = canViewInternalCodes.value
-      ? code.value || mode.value
-      : resolveTemplateDisplayName(
-          name.value.trim() || rawTemplateName.value,
-        ) || mode.value;
+    const modeFilenameMap: Record<string, string> = {
+      fumigation: '熏蒸成本模板',
+      road: '卡车成本模板',
+      sea: '海运成本模板',
+    };
+    const baseName = modeFilenameMap[mode.value] || `${mode.value}成本模板`;
     downloadFileFromBlob({
-      fileName: templateId.value
-        ? `${exportBase}-template.xlsx`
-        : `${mode.value}-template-preview.xlsx`,
+      fileName: templateId.value ? `${baseName}.xlsx` : `${baseName}预览.xlsx`,
       source: blob as Blob,
     });
     message.success($t('page.costLibrary.template.exportSuccess'));

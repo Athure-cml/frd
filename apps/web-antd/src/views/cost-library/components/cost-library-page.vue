@@ -7,21 +7,41 @@ import type {
   VxeTableGridOptions,
 } from '#/adapter/vxe-table';
 import type { CostMode, CostTableTemplate } from '#/api/cost';
+import type {
+  AiCostPrefillMode,
+  AiCostPrefillPayload,
+} from '#/components/ai-assistant/ai-prefill-cost';
 
-import { computed, nextTick, onActivated, onMounted, ref } from 'vue';
+import {
+  computed,
+  nextTick,
+  onActivated,
+  onDeactivated,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { ArrowUpToLine, Download, Plus, Settings } from '@vben/icons';
+import { usePreferences } from '@vben/preferences';
 
 import { Button, message, Modal, Tag } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { downloadCostExport, getCostApi } from '#/api/cost';
+import {
+  aiPrefillEventName,
+  consumeAiCostPrefill,
+} from '#/components/ai-assistant/ai-prefill-cost';
 import { $t } from '#/locales';
 
+import { buildListExportParams } from '../../shared/export-params';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
+import { adaptCostColumnsForViewport } from '../shared/columns';
 import { getDefaultTemplate } from '../shared/default-templates';
 import { toCopyDrawerData } from '../shared/drawer-data';
 import {
@@ -59,8 +79,18 @@ const props = defineProps<{
 const api = getCostApi(props.mode);
 const router = useRouter();
 const { hasAccessByCodes } = useAccess();
+const { isMobile } = usePreferences();
 const canEdit = hasAccessByCodes([props.editPermission]);
 const canViewTemplates = hasAccessByCodes([`cost:${props.mode}:template:view`]);
+const toolbarSize = computed(() => (isMobile.value ? 'small' : 'middle'));
+const pageDescription = computed(() =>
+  isMobile.value ? undefined : props.description,
+);
+
+/** Guard async writes after leave; avoid loadColumn on disposed KeepAlive grid. */
+let pageAlive = true;
+let templateRequestId = 0;
+let mobileAdaptTimer: null | ReturnType<typeof setTimeout> = null;
 
 const importModalRef = ref<InstanceType<typeof ImportModal>>();
 const batchModalRef = ref<InstanceType<typeof BatchEditModal>>();
@@ -76,24 +106,45 @@ const activeTemplate = computed(
 );
 
 function resolveColumns() {
-  return props.columns(onActionClick, canEdit, activeTemplate.value);
+  return adaptCostColumnsForViewport(
+    props.columns(onActionClick, canEdit, activeTemplate.value),
+  );
 }
 
 function applyTemplate() {
+  if (!pageAlive) {
+    return;
+  }
   const columns = resolveColumns();
-  gridApi.setGridOptions({
-    columns,
-    id: getGridStorageId(
-      props.mode,
-      activeTemplateId.value,
-      activeTemplate.value.layout,
-    ),
-  });
+  try {
+    gridApi.setGridOptions({
+      columns,
+      id: getGridStorageId(
+        props.mode,
+        activeTemplateId.value,
+        activeTemplate.value.layout,
+      ),
+    });
+  } catch {
+    return;
+  }
   void nextTick(() => {
-    const $grid = gridApi.grid as {
+    if (!pageAlive) {
+      return;
+    }
+    const $grid = gridApi.grid as null | {
       loadColumn?: (cols: typeof columns) => void;
+      recalculate?: (refull?: boolean) => void;
     };
-    $grid?.loadColumn?.(columns);
+    if (!$grid) {
+      return;
+    }
+    try {
+      $grid.loadColumn?.(columns);
+      $grid.recalculate?.(true);
+    } catch {
+      // grid may already be disposed during KeepAlive switch
+    }
   });
 }
 
@@ -104,8 +155,12 @@ function onManageTemplates() {
 }
 
 async function refreshTemplates() {
+  const requestId = ++templateRequestId;
   try {
     const loaded = await loadTableTemplates(props.mode);
+    if (!pageAlive || requestId !== templateRequestId) {
+      return;
+    }
     templates.value = loaded;
     const active = resolveActiveTemplate(loaded, props.mode);
     if (active) {
@@ -114,12 +169,9 @@ async function refreshTemplates() {
       applyTemplate();
     }
   } catch {
-    // 使用内置默认模板
+    // keep default template when fetch fails
   }
 }
-
-onMounted(refreshTemplates);
-onActivated(refreshTemplates);
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: props.formComponent,
@@ -133,6 +185,66 @@ const [FormDrawer, formDrawerApi] = useVbenDrawer({
 function onCreate() {
   formDrawerApi.setData({ template: activeTemplate.value }).open();
 }
+
+function openCreateWithPrefill(fields: Record<string, unknown>) {
+  if (!canEdit) {
+    message.warning($t('page.ai.proposeNoEditPermission'));
+    return;
+  }
+  formDrawerApi
+    .setData({
+      ...fields,
+      aiPrefill: true,
+      template: activeTemplate.value,
+    })
+    .open();
+}
+
+function applyAiCostPrefill(payload: AiCostPrefillPayload | null) {
+  if (!payload?.fields || payload.mode !== props.mode) {
+    return;
+  }
+  void nextTick(() => openCreateWithPrefill(payload.fields));
+}
+
+function onAiCostPrefillEvent() {
+  applyAiCostPrefill(consumeAiCostPrefill(props.mode as AiCostPrefillMode));
+}
+
+onMounted(() => {
+  pageAlive = true;
+  refreshTemplates();
+  applyAiCostPrefill(consumeAiCostPrefill(props.mode as AiCostPrefillMode));
+  window.addEventListener(aiPrefillEventName(props.mode), onAiCostPrefillEvent);
+});
+
+onActivated(() => {
+  pageAlive = true;
+  refreshTemplates();
+  applyAiCostPrefill(consumeAiCostPrefill(props.mode as AiCostPrefillMode));
+});
+
+onDeactivated(() => {
+  pageAlive = false;
+  templateRequestId += 1;
+  if (mobileAdaptTimer) {
+    clearTimeout(mobileAdaptTimer);
+    mobileAdaptTimer = null;
+  }
+});
+
+onUnmounted(() => {
+  pageAlive = false;
+  templateRequestId += 1;
+  if (mobileAdaptTimer) {
+    clearTimeout(mobileAdaptTimer);
+    mobileAdaptTimer = null;
+  }
+  window.removeEventListener(
+    aiPrefillEventName(props.mode),
+    onAiCostPrefillEvent,
+  );
+});
 
 function onEdit(row: any) {
   formDrawerApi.setData({ ...row, template: activeTemplate.value }).open();
@@ -175,8 +287,15 @@ function onActionClick(params: OnActionClickParams<any>) {
 }
 
 function getSelectedIds() {
-  const records = gridApi.grid?.getCheckboxRecords?.() ?? [];
-  return records.map((row: { id: number }) => row.id);
+  const current = gridApi.grid?.getCheckboxRecords?.() ?? [];
+  const reserved = gridApi.grid?.getCheckboxReserveRecords?.() ?? [];
+  const ids = new Set<number>();
+  for (const row of [...current, ...reserved] as Array<{ id?: number }>) {
+    if (typeof row?.id === 'number') {
+      ids.add(row.id);
+    }
+  }
+  return [...ids];
 }
 
 function syncSelection() {
@@ -185,6 +304,7 @@ function syncSelection() {
 
 function clearSelection() {
   gridApi.grid?.clearCheckboxRow?.();
+  gridApi.grid?.clearCheckboxReserve?.();
   syncSelection();
 }
 
@@ -224,10 +344,11 @@ async function onExport() {
   });
   try {
     const formValues = await gridApi.formApi?.getLatestSubmissionValues?.();
-    const blob = await api.export({
-      ...formValues,
-      templateId: activeTemplateId.value,
-    });
+    const blob = await api.export(
+      buildListExportParams(formValues, getSelectedIds(), {
+        templateId: activeTemplateId.value,
+      }),
+    );
     await downloadCostExport(blob as Blob, props.exportFilename);
     message.success({
       content: $t('page.costLibrary.hint.exportSuccess'),
@@ -249,12 +370,17 @@ function onBatchSuccess() {
   onRefresh();
 }
 
-const searchFormOptions = useI18nFormOptions(() => ({
-  collapsed: false,
-  schema: props.searchSchema(),
-  showCollapseButton: true,
-  submitOnChange: false,
-}));
+const searchFormOptions = useI18nFormOptions(() => {
+  void isMobile.value;
+  return {
+    // collapse search by default
+    collapsed: true,
+    collapsedRows: 1,
+    schema: props.searchSchema(),
+    showCollapseButton: true,
+    submitOnChange: false,
+  };
+});
 
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
@@ -263,12 +389,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
     checkboxChange: syncSelection,
   },
   gridOptions: {
-    checkboxConfig: canEdit
-      ? {
-          highlight: true,
-          reserve: true,
-        }
-      : undefined,
+    checkboxConfig: {
+      highlight: true,
+      // cross-page reserve; header shows indeterminate when reserved
+      reserve: true,
+      showReserveStatus: true,
+    },
     columns: resolveColumns(),
     height: 'auto',
     id: getGridStorageId(
@@ -297,11 +423,58 @@ const [Grid, gridApi] = useVbenVxeGrid({
     toolbarConfig: {
       custom: true,
       refresh: true,
-      search: true,
-      zoom: true,
+      // hide circular search on mobile to avoid clutter
+      search: !isMobile.value,
+      zoom: !isMobile.value,
     },
   } as VxeTableGridOptions,
 });
+
+watch(isMobile, (mobile) => {
+  if (!pageAlive) {
+    return;
+  }
+  gridApi.setGridOptions({
+    toolbarConfig: {
+      custom: true,
+      refresh: true,
+      search: !mobile,
+      zoom: !mobile,
+    },
+  });
+  // debounce: avoid loadColumn thrash when resizing / navigating
+  if (mobileAdaptTimer) {
+    clearTimeout(mobileAdaptTimer);
+  }
+  mobileAdaptTimer = setTimeout(() => {
+    mobileAdaptTimer = null;
+    if (!pageAlive) {
+      return;
+    }
+    applyTemplate();
+  }, 120);
+});
+
+const createBtnLabel = computed(() =>
+  isMobile.value
+    ? $t('page.costLibrary.actions.createShort')
+    : props.createLabel,
+);
+const templateBtnLabel = computed(() =>
+  isMobile.value
+    ? $t('page.costLibrary.actions.templateShort')
+    : $t('page.costLibrary.template.manage'),
+);
+const batchEditBtnLabel = computed(() =>
+  isMobile.value
+    ? $t('page.costLibrary.actions.batchEditShort')
+    : $t('page.costLibrary.actions.batchEdit'),
+);
+const batchDeleteBtnLabel = computed(() =>
+  isMobile.value
+    ? $t('page.costLibrary.actions.batchDeleteShort')
+    : $t('page.costLibrary.actions.batchDelete'),
+);
 
 function onRefresh() {
   gridApi.query();
@@ -309,7 +482,7 @@ function onRefresh() {
 </script>
 
 <template>
-  <Page auto-content-height :description="description">
+  <Page :auto-content-height="!isMobile" :description="pageDescription">
     <FormDrawer @success="onRefresh" />
     <ImportModal
       ref="importModalRef"
@@ -331,20 +504,29 @@ function onRefresh() {
       <template #toolbar-tools>
         <div class="cost-toolbar">
           <div class="cost-toolbar__group">
-            <Button v-if="canViewTemplates" @click="onManageTemplates">
-              <Settings class="size-4" />
-              {{ $t('page.costLibrary.template.manage') }}
+            <Button
+              v-if="canViewTemplates"
+              :size="toolbarSize"
+              @click="onManageTemplates"
+            >
+              <Settings class="size-3.5" />
+              {{ templateBtnLabel }}
             </Button>
-            <Button v-if="canEdit" type="primary" @click="onCreate">
-              <Plus class="size-4" />
-              {{ createLabel }}
+            <Button
+              v-if="canEdit"
+              :size="toolbarSize"
+              type="primary"
+              @click="onCreate"
+            >
+              <Plus class="size-3.5" />
+              {{ createBtnLabel }}
             </Button>
-            <Button v-if="canEdit" @click="onImport">
-              <ArrowUpToLine class="size-4" />
+            <Button v-if="canEdit" :size="toolbarSize" @click="onImport">
+              <ArrowUpToLine class="size-3.5" />
               {{ $t('page.costLibrary.actions.import') }}
             </Button>
-            <Button :loading="exporting" @click="onExport">
-              <Download class="size-4" />
+            <Button :loading="exporting" :size="toolbarSize" @click="onExport">
+              <Download class="size-3.5" />
               {{ $t('page.costLibrary.actions.export') }}
             </Button>
           </div>
@@ -355,15 +537,20 @@ function onRefresh() {
             <Tag v-if="selectedCount > 0" class="m-0" color="processing">
               {{ $t('page.costLibrary.hint.selectedCount', [selectedCount]) }}
             </Tag>
-            <Button :disabled="selectedCount === 0" @click="onBatchEdit">
-              {{ $t('page.costLibrary.actions.batchEdit') }}
+            <Button
+              :disabled="selectedCount === 0"
+              :size="toolbarSize"
+              @click="onBatchEdit"
+            >
+              {{ batchEditBtnLabel }}
             </Button>
             <Button
               danger
               :disabled="selectedCount === 0"
+              :size="toolbarSize"
               @click="onBatchDelete"
             >
-              {{ $t('page.costLibrary.actions.batchDelete') }}
+              {{ batchDeleteBtnLabel }}
             </Button>
           </div>
         </div>

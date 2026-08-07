@@ -6,6 +6,15 @@ import { statusTagOptions } from './tags';
 
 const t = (key: string) => $t(`page.system.${key}`);
 
+/** 列表勾选列（导出选中 / 批量操作） */
+export function buildCheckboxColumn() {
+  return {
+    fixed: 'left' as const,
+    type: 'checkbox' as const,
+    width: 48,
+  };
+}
+
 export function buildStatusColumn<T>(
   canManage: boolean,
   onStatusChange?: (newStatus: number, row: T) => Promise<boolean | undefined>,

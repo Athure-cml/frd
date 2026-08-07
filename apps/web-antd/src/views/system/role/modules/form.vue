@@ -18,9 +18,13 @@ import { useInternalCodeVisibility } from '#/utils/internal-code-access';
 
 import {
   buildPermissionTree,
+  collapseTreeKeysToPermissionCodes,
   collectPermissionLeafCodes,
   collectPermissionTreeExpandableKeys,
-  filterCheckedPermissionCodes,
+  collectPermissionTreeLeafKeys,
+  collectTreePermissionCodes,
+  expandPermissionCodesToTreeKeys,
+  mergePermissionCodesWithHidden,
 } from '../../shared/permission-tree';
 import {
   rowToRoleFormValues,
@@ -41,8 +45,8 @@ const showPermissionCodes = ref(false);
 
 const permissionTree = computed(() => buildPermissionTree(permissions.value));
 
-const leafCodeSet = computed(
-  () => new Set(collectPermissionLeafCodes(permissions.value)),
+const leafKeySet = computed(
+  () => new Set(collectPermissionTreeLeafKeys(permissionTree.value)),
 );
 
 watch(
@@ -79,15 +83,33 @@ async function loadPermissions() {
 }
 
 function isPermissionLeaf(key: Key) {
-  return leafCodeSet.value.has(String(key));
+  return leafKeySet.value.has(String(key));
 }
 
 function onPermissionCheck(
   checked: Key[] | { checked: Key[]; halfChecked: Key[] },
+  currentCodes?: string[],
   onUpdate?: (value: string[]) => void,
 ) {
   const keys = Array.isArray(checked) ? checked : checked.checked;
-  onUpdate?.(filterCheckedPermissionCodes(keys, leafCodeSet.value));
+  const fromTree = collapseTreeKeysToPermissionCodes(
+    keys,
+    permissionTree.value,
+  );
+  onUpdate?.(
+    mergePermissionCodesWithHidden(
+      fromTree,
+      currentCodes ?? [],
+      collectTreePermissionCodes(permissionTree.value),
+    ),
+  );
+}
+
+function treeCheckedKeys(permissionCodes?: string[]) {
+  return expandPermissionCodesToTreeKeys(
+    permissionCodes ?? [],
+    permissionTree.value,
+  );
 }
 
 function expandAllPermissions() {
@@ -100,8 +122,17 @@ function collapseAllPermissions() {
   expandedKeys.value = [];
 }
 
-function selectAllPermissions(onUpdate?: (value: string[]) => void) {
-  onUpdate?.(collectPermissionLeafCodes(permissions.value));
+function selectAllPermissions(
+  currentCodes?: string[],
+  onUpdate?: (value: string[]) => void,
+) {
+  onUpdate?.(
+    mergePermissionCodesWithHidden(
+      collectPermissionLeafCodes(permissions.value),
+      currentCodes ?? [],
+      collectTreePermissionCodes(permissionTree.value),
+    ),
+  );
 }
 
 function clearAllPermissions(onUpdate?: (value: string[]) => void) {
@@ -118,11 +149,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
     try {
       const values = await formApi.getValues();
       const payload = toRoleSavePayload(values);
-      if (roleId.value) {
-        await updateRole(roleId.value, payload);
-      } else {
-        await createRole(payload);
-      }
+      await (roleId.value
+        ? updateRole(roleId.value, payload)
+        : createRole(payload));
       message.success($t('ui.actionMessage.operationSuccess'));
       emit('success');
       drawerApi.close();
@@ -172,7 +201,10 @@ const [Drawer, drawerApi] = useVbenDrawer({
                 size="small"
                 type="link"
                 @click="
-                  selectAllPermissions(componentField['onUpdate:modelValue'])
+                  selectAllPermissions(
+                    componentField.modelValue,
+                    componentField['onUpdate:modelValue'],
+                  )
                 "
               >
                 {{ $t('page.system.permissionTree.selectAll') }}
@@ -200,13 +232,14 @@ const [Drawer, drawerApi] = useVbenDrawer({
                 block-node
                 checkable
                 class="sys-perm-tree"
-                :checked-keys="componentField.modelValue ?? []"
+                :checked-keys="treeCheckedKeys(componentField.modelValue)"
                 :expanded-keys="expandedKeys"
                 :tree-data="permissionTree"
                 @check="
                   (keys) =>
                     onPermissionCheck(
                       keys,
+                      componentField.modelValue,
                       componentField['onUpdate:modelValue'],
                     )
                 "
@@ -228,7 +261,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
                       "
                       class="sys-perm-code"
                     >
-                      ({{ node.key }})
+                      ({{ node.permissionCode || node.key }})
                     </span>
                   </span>
                 </template>

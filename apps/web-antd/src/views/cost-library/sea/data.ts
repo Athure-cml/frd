@@ -5,6 +5,7 @@ import type { CostTableTemplate, FreightCostRecord } from '#/api/cost';
 import { $t } from '#/locales';
 
 import { buildColumnsFromTemplate } from '../shared/build-columns';
+import { createCostStatusSearchField } from '../shared/status-search';
 
 const f = (key: string) => $t(`page.costLibrary.seaFields.${key}`);
 
@@ -13,35 +14,28 @@ export function useSeaSearchSchema(): VbenFormSchema[] {
     {
       component: 'Input',
       componentProps: { autocomplete: 'off' },
-      fieldName: 'origin',
+      fieldName: 'por',
+      label: f('por'),
+    },
+    {
+      component: 'Input',
+      componentProps: { autocomplete: 'off' },
+      fieldName: 'pol',
       label: f('pol'),
     },
     {
       component: 'Input',
       componentProps: { autocomplete: 'off' },
-      fieldName: 'destination',
+      fieldName: 'pod',
       label: f('pod'),
     },
     {
       component: 'Input',
       componentProps: { autocomplete: 'off' },
-      fieldName: 'carrier',
+      fieldName: 'ssl',
       label: f('ssl'),
     },
-    {
-      component: 'Select',
-      componentProps: {
-        allowClear: true,
-        class: 'w-full',
-        options: [
-          { label: $t('page.costLibrary.status.active'), value: 'active' },
-          { label: $t('page.costLibrary.status.draft'), value: 'draft' },
-          { label: $t('page.costLibrary.status.expired'), value: 'expired' },
-        ],
-      },
-      fieldName: 'status',
-      label: f('status'),
-    },
+    createCostStatusSearchField(),
   ];
 }
 
@@ -53,7 +47,7 @@ export function useSeaColumns(
   return buildColumnsFromTemplate({
     canEdit,
     mode: 'sea',
-    nameField: 'origin',
+    nameField: 'pol',
     nameTitle: f('pol'),
     onActionClick,
     seqWidth: 56,
@@ -62,5 +56,5 @@ export function useSeaColumns(
 }
 
 export function getSeaRowName(row: FreightCostRecord) {
-  return `${row.origin} → ${row.destination}`;
+  return [row.por, row.pol, row.pod, row.ssl].filter(Boolean).join(' / ');
 }

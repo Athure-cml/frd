@@ -14,7 +14,11 @@ import { $t } from '#/locales';
 
 import { formatAmount, formatPercent } from '../road/formatters';
 import { buildFumigationColumnsFromLayout } from './build-fumigation-columns';
-import { appendCostOperationColumn, buildCostCheckboxColumn } from './columns';
+import {
+  appendCostOperationColumn,
+  appendCostStatusColumn,
+  buildCostCheckboxColumn,
+} from './columns';
 import { getDefaultTemplate } from './default-templates';
 import { getFieldCatalog, toFieldCatalogMap } from './field-catalog';
 import { formatPrice } from './formatters';
@@ -179,43 +183,75 @@ function buildLayoutColumns(
   catalogMap: Map<string, FieldCatalogEntry>,
   options?: { flattenGroups?: boolean },
 ) {
-  if (
-    layout.fieldOrder?.length ||
-    layout.fields?.length ||
-    !layout.groups?.length
-  ) {
+  const order = resolveLayoutFieldOrder(mode, layout);
+  const groups = layout.groups ?? [];
+
+  if (options?.flattenGroups || groups.length === 0 || order.length === 0) {
     return resolveFieldColumns(mode, layout, catalogMap);
   }
 
-  if (layout.groups?.length) {
-    if (options?.flattenGroups) {
-      return resolveFieldColumns(mode, layout, catalogMap);
+  // fieldOrder + groups：按顺序输出叶子列，连续同组字段合并为二级表头
+  const fieldToGroup = new Map<string, (typeof groups)[number]>();
+  groups.forEach((group) => {
+    group.fields?.forEach((field) => fieldToGroup.set(field, group));
+  });
+
+  const columns: Record<string, unknown>[] = [];
+  let index = 0;
+  while (index < order.length) {
+    const field = order[index];
+    if (!field || !isFieldVisibleInLayout(layout, field)) {
+      index += 1;
+      continue;
     }
-    return layout.groups
-      .map((group) => {
-        const children = group.fields
-          .filter((field) => isFieldVisibleInLayout(layout, field))
-          .map((field) => {
-            const entry = catalogMap.get(field);
-            if (!entry) return null;
-            return buildLeafColumn(entry, {
-              override: layout.fieldOverrides?.[field],
-              required: isFieldRequiredInLayout(layout, field),
-              title: resolveFieldTitle(mode, field, layout),
-            });
-          })
-          .filter(Boolean);
-        if (children.length === 0) return null;
-        return {
-          children,
-          headerClassName: group.headerClassName,
-          title: $t(group.labelKey),
-        };
-      })
-      .filter(Boolean);
+    const group = fieldToGroup.get(field);
+    if (!group) {
+      const entry = catalogMap.get(field);
+      if (entry) {
+        columns.push(
+          buildLeafColumn(entry, {
+            override: layout.fieldOverrides?.[field],
+            required: isFieldRequiredInLayout(layout, field),
+            title: resolveFieldTitle(mode, field, layout),
+          }) as Record<string, unknown>,
+        );
+      }
+      index += 1;
+      continue;
+    }
+
+    const children: Record<string, unknown>[] = [];
+    while (index < order.length) {
+      const groupedField = order[index];
+      if (
+        !groupedField ||
+        fieldToGroup.get(groupedField)?.key !== group.key ||
+        !isFieldVisibleInLayout(layout, groupedField)
+      ) {
+        break;
+      }
+      const entry = catalogMap.get(groupedField);
+      if (entry) {
+        children.push(
+          buildLeafColumn(entry, {
+            override: layout.fieldOverrides?.[groupedField],
+            required: isFieldRequiredInLayout(layout, groupedField),
+            title: resolveFieldTitle(mode, groupedField, layout),
+          }) as Record<string, unknown>,
+        );
+      }
+      index += 1;
+    }
+    if (children.length > 0) {
+      columns.push({
+        children,
+        headerClassName: group.headerClassName,
+        title: $t(group.labelKey),
+      });
+    }
   }
 
-  return [];
+  return columns;
 }
 
 export function buildColumnsFromTemplate<T extends { id: number }>(
@@ -236,8 +272,8 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
     return buildFumigationColumnsFromLayout(template.layout, {
       canEdit,
       includeOperation,
-      nameField: 'port',
-      nameTitle: $t('page.costLibrary.fumigationFields.port'),
+      nameField: 'region',
+      nameTitle: $t('page.costLibrary.fumigationFields.region'),
       onActionClick,
       seqWidth,
     });
@@ -249,7 +285,7 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
   });
 
   const columns = [
-    ...(canEdit ? [buildCostCheckboxColumn()] : []),
+    buildCostCheckboxColumn(),
     {
       fixed: 'left' as const,
       title: '#',
@@ -258,6 +294,8 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
     },
     ...dataColumns,
   ] as VxeTableGridOptions<T>['columns'];
+
+  appendCostStatusColumn(columns);
 
   return appendCostOperationColumn(
     columns,

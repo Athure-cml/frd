@@ -1,33 +1,36 @@
-/** 卡车成本库行数据（对齐业务 Excel 表头） */
 export interface RoadCostRecord {
-  id: string;
-  validDate: string;
-  supplier: string;
-  logYardNameAddress: string;
-  zipCode?: string;
+  allInFmOneWay: number;
+  allInFmRound: number;
+  allInNoFm: number;
+  baseFreight?: number;
+  chassis?: number;
   city: string;
-  state: string;
-  por: string;
+  extraFields?: Record<string, unknown>;
+  fsc?: number;
+  id: number;
+  logYardNameAddress?: string;
+  otherFee?: number;
   pol: string;
-  baseFreight: number;
-  fsc: number;
-  chassis: number;
-  owTriAxle: number;
-  split: number;
-  stopOff: number;
-  allIn: number;
-  allInNonOak: number;
-  allInOak: number;
-  waitingFee: number;
-  redelivery: number;
-  prepull: number;
-  nsLift: number;
+  por: string;
+  prepull?: number;
+  redelivery?: number;
   remark?: string;
+  split?: number;
+  state: string;
+  stopOff?: number;
+  supplier: string;
+  nsLift?: number;
+  triTandemAxle?: number;
+  updatedAt?: string;
+  validDate?: string;
+  waitingFee?: number;
+  zipCode: string;
 }
 
 export interface RoadCostQueryForm {
   city?: string;
   pol?: string;
+  por?: string;
   state?: string;
   supplier?: string;
   zipCode?: string;

@@ -1,10 +1,8 @@
+import type { LineDraft, QuoteLineExtraJson } from './cost-mapping';
+
 import type { QuoteApi } from '#/api/quote';
 
-import {
-  isCostLine,
-  type LineDraft,
-  type QuoteLineExtraJson,
-} from './cost-mapping';
+import { isCostLine } from './cost-mapping';
 
 /** 客户交付 Excel 一行（15 列，顺序与 QUOTE-EXPORT.md 一致） */
 export interface QuoteExportRow {
@@ -208,15 +206,15 @@ function roadLineToExportRow(line: QuoteApi.QuoteLine): QuoteExportRow {
   const extra = line.extraJson as QuoteLineExtraJson | undefined;
 
   return {
-    city: pickString(snap.city),
+    city: pickString(snap.city, snap.por),
     fmNonOak: pickNumber(snap.fmNonOak, snap.baseFreight),
     fmOak: pickNumber(snap.fmOak),
     pol: pickString(snap.pol),
-    por: pickString(snap.por),
+    por: pickString(snap.por, snap.city),
     remark: pickString(snap.remark),
     state: pickString(snap.state),
-    truckingNonOakUsd: pickNumber(snap.allInNonOak),
-    truckingOakUsd: pickNumber(snap.allInOak),
+    truckingNonOakUsd: pickNumber(snap.allInNoFm, snap.allInNonOak),
+    truckingOakUsd: pickNumber(snap.allInFmOneWay, snap.allInOak),
     zipCode: pickString(snap.zipCode, extra?.costSnapshot?.zipCode),
   };
 }

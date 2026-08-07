@@ -5,19 +5,30 @@ import type {
 } from '#/adapter/vxe-table';
 import type { CustomerApi } from '#/api/customer';
 
-import { watch } from 'vue';
+import { ref, watch } from 'vue';
 
 import { useAccess } from '@vben/access';
 import { Page, useVbenModal } from '@vben/common-ui';
-import { Plus } from '@vben/icons';
+import { ArrowUpToLine, Download, Plus } from '@vben/icons';
 
 import { Button, message } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteCustomer, getCustomerList } from '#/api/customer';
+import {
+  deleteCustomer,
+  downloadCustomerExport,
+  exportCustomer,
+  getCustomerList,
+  importCustomer,
+} from '#/api/customer';
 import { $t } from '#/locales';
 import { useInternalCodeVisibility } from '#/utils/internal-code-access';
 
+import ImportModal from '../../cost-library/components/import-modal.vue';
+import {
+  buildListExportParams,
+  getGridSelectedIds,
+} from '../../shared/export-params';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import { buildCustomerSearchSchema, useCustomerColumns } from './data';
 import Form from './modules/form.vue';
@@ -29,6 +40,10 @@ const { canViewInternalCodes } = useInternalCodeVisibility();
 const canCreate = hasAccessByCodes(['customer:create']);
 const canEdit = hasAccessByCodes(['customer:edit']);
 const canDelete = hasAccessByCodes(['customer:delete']);
+const canView = hasAccessByCodes(['customer:view']);
+
+const importModalRef = ref<InstanceType<typeof ImportModal>>();
+const exporting = ref(false);
 
 const [FormModal, formModalApi] = useVbenModal({
   connectedComponent: Form,
@@ -72,6 +87,30 @@ function onActionClick({
   }
 }
 
+async function onExport() {
+  exporting.value = true;
+  const hideLoading = message.loading({
+    content: $t('page.customer.hint.exporting'),
+    duration: 0,
+    key: 'customer_export_msg',
+  });
+  try {
+    const formValues = await gridApi.formApi?.getLatestSubmissionValues?.();
+    const blob = await exportCustomer(
+      buildListExportParams(formValues, getGridSelectedIds(gridApi)),
+    );
+    await downloadCustomerExport(blob as Blob, '客户.xlsx');
+    message.success({
+      content: $t('page.customer.hint.exportSuccess'),
+      key: 'customer_export_msg',
+    });
+  } catch {
+    hideLoading();
+  } finally {
+    exporting.value = false;
+  }
+}
+
 function buildColumns() {
   return useCustomerColumns(
     onActionClick,
@@ -82,7 +121,7 @@ function buildColumns() {
 }
 
 const searchFormOptions = useI18nFormOptions(() => ({
-  collapsed: false,
+  collapsed: true,
   schema: buildCustomerSearchSchema(canViewInternalCodes.value),
   showCollapseButton: true,
   submitOnChange: false,
@@ -91,6 +130,11 @@ const searchFormOptions = useI18nFormOptions(() => ({
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    checkboxConfig: {
+      highlight: true,
+      reserve: true,
+      showReserveStatus: true,
+    },
     columns: buildColumns(),
     height: 'auto',
     pagerConfig: {},
@@ -133,8 +177,27 @@ function onRefresh() {
     :title="$t('page.customer.list')"
   >
     <FormModal @success="onRefresh" />
+    <ImportModal
+      ref="importModalRef"
+      :import-fn="importCustomer"
+      :title="$t('page.customer.actions.import')"
+      @success="onRefresh"
+    />
     <Grid class="customer-grid" :form-options="searchFormOptions">
       <template #toolbar-tools>
+        <Button v-if="canCreate" class="mr-2" @click="importModalRef?.open()">
+          <ArrowUpToLine class="size-4" />
+          {{ $t('page.customer.actions.import') }}
+        </Button>
+        <Button
+          v-if="canView"
+          :loading="exporting"
+          class="mr-2"
+          @click="onExport"
+        >
+          <Download class="size-4" />
+          {{ $t('page.customer.actions.export') }}
+        </Button>
         <Button v-if="canCreate" type="primary" @click="onCreate">
           <Plus class="size-4" />
           {{ $t('page.customer.actions.create') }}

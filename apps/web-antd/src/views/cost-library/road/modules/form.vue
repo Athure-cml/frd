@@ -19,6 +19,7 @@ import {
 import { getDefaultTemplate } from '../../shared/default-templates';
 import { isCostCopyPayload } from '../../shared/drawer-data';
 import {
+  loadSupplierFormulaCache,
   rowToRoadFormValues,
   toRoadSavePayload,
   useRoadFormSchema,
@@ -63,6 +64,7 @@ function applyTemplateSchema(template?: CostTableTemplate) {
 }
 
 const [Drawer, drawerApi] = useVbenDrawer({
+  class: 'w-full sm:w-[720px]',
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) {
@@ -75,11 +77,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
         ...toRoadSavePayload(values),
         extraFields: extractExtraFields(values),
       };
-      if (recordId.value) {
-        await updateRoadCost(recordId.value, payload);
-      } else {
-        await createRoadCost(payload);
-      }
+      await (recordId.value
+        ? updateRoadCost(recordId.value, payload)
+        : createRoadCost(payload));
       message.success($t('ui.actionMessage.operationSuccess'));
       emit('success');
       drawerApi.close();
@@ -92,23 +92,47 @@ const [Drawer, drawerApi] = useVbenDrawer({
       return;
     }
     const data = drawerApi.getData<
-      RoadCostRecord & { copyFrom?: boolean; template?: CostTableTemplate }
+      RoadCostRecord & {
+        aiPrefill?: boolean;
+        copyFrom?: boolean;
+        template?: CostTableTemplate;
+      }
     >();
-    recordId.value = data?.id;
+    recordId.value = data?.aiPrefill ? undefined : data?.id;
     isCopy.value = isCostCopyPayload(data);
     applyTemplateSchema(data?.template);
     formApi.resetForm();
-    if (data?.id) {
-      formApi.setValues(mergeRecordWithExtraFields(rowToRoadFormValues(data)));
-      return;
-    }
-    if (isCopy.value && data) {
-      formApi.setValues(
-        mergeRecordWithExtraFields(rowToRoadFormValues(data as RoadCostRecord)),
-      );
-      return;
-    }
-    formApi.setValues({ extraFields: {} });
+    void loadSupplierFormulaCache().then(() => {
+      if (data?.aiPrefill) {
+        const {
+          aiPrefill: _ai,
+          template: _tpl,
+          id: _id,
+          status: _status,
+          ...fields
+        } = data as Record<string, unknown>;
+        formApi.setValues({
+          extraFields: {},
+          ...fields,
+        });
+        return;
+      }
+      if (data?.id) {
+        formApi.setValues(
+          mergeRecordWithExtraFields(rowToRoadFormValues(data)),
+        );
+        return;
+      }
+      if (isCopy.value && data) {
+        formApi.setValues(
+          mergeRecordWithExtraFields(
+            rowToRoadFormValues(data as RoadCostRecord),
+          ),
+        );
+        return;
+      }
+      formApi.setValues({ extraFields: {} });
+    });
   },
 });
 </script>

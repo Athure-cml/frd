@@ -146,9 +146,9 @@ function rowClassName({ row }: { row: CostTableTemplate }) {
 }
 
 const searchFormOptions = useI18nFormOptions(() => ({
-  collapsed: false,
+  collapsed: true,
   schema: buildTemplateSearchSchema(canViewInternalCodes.value),
-  showCollapseButton: false,
+  showCollapseButton: true,
   submitOnChange: true,
 }));
 

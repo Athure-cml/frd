@@ -19,7 +19,7 @@ import Form from './modules/form.vue';
     :create-label="$t('page.costLibrary.actions.createFumigation')"
     :description="$t('page.costLibrary.fumigationDesc')"
     edit-permission="cost:fumigation:edit"
-    export-filename="fumigation-cost.xlsx"
+    export-filename="熏蒸成本.xlsx"
     :form-component="Form"
     :get-row-name="getFumigationRowName"
     grid-class="cost-library-grid fumigation-cost-grid"

@@ -63,6 +63,7 @@ function applyTemplateSchema(template?: CostTableTemplate) {
 }
 
 const [Drawer, drawerApi] = useVbenDrawer({
+  class: 'w-full sm:w-[640px]',
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) {
@@ -75,11 +76,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
         ...toFumigationSavePayload(values),
         extraFields: extractExtraFields(values),
       };
-      if (recordId.value) {
-        await fumigationCostApi.update(recordId.value, payload);
-      } else {
-        await fumigationCostApi.create(payload);
-      }
+      await (recordId.value
+        ? fumigationCostApi.update(recordId.value, payload)
+        : fumigationCostApi.create(payload));
       message.success($t('ui.actionMessage.operationSuccess'));
       emit('success');
       drawerApi.close();
@@ -93,14 +92,30 @@ const [Drawer, drawerApi] = useVbenDrawer({
     }
     const data = drawerApi.getData<
       FumigationCostRecord & {
+        aiPrefill?: boolean;
         copyFrom?: boolean;
         template?: CostTableTemplate;
       }
     >();
-    recordId.value = data?.id;
+    recordId.value = data?.aiPrefill ? undefined : data?.id;
     isCopy.value = isCostCopyPayload(data);
     applyTemplateSchema(data?.template);
     formApi.resetForm();
+    if (data?.aiPrefill) {
+      const {
+        aiPrefill: _ai,
+        template: _tpl,
+        id: _id,
+        status: _status,
+        ...fields
+      } = data as Record<string, unknown>;
+      formApi.setValues(
+        mergeRecordWithExtraFields(
+          rowToFumigationFormValues(fields as FumigationCostRecord),
+        ),
+      );
+      return;
+    }
     if (data?.id) {
       formApi.setValues(
         mergeRecordWithExtraFields(rowToFumigationFormValues(data)),
@@ -121,7 +136,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
 </script>
 
 <template>
-  <Drawer :title="getTitle" class="w-full sm:w-[640px]">
+  <Drawer :title="getTitle">
     <Form class="cost-drawer-form px-1" />
   </Drawer>
 </template>

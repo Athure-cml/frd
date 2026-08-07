@@ -24,6 +24,10 @@ import {
 import { $t } from '#/locales';
 
 import ImportModal from '../../cost-library/components/import-modal.vue';
+import {
+  buildListExportParams,
+  getGridSelectedIds,
+} from '../../shared/export-params';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import {
   getInlandPorRowName,
@@ -92,8 +96,10 @@ async function onExport() {
   });
   try {
     const formValues = await gridApi.formApi?.getLatestSubmissionValues?.();
-    const blob = await exportInlandPor(formValues ?? {});
-    await downloadInlandPorExport(blob as Blob, 'inland-por.xlsx');
+    const blob = await exportInlandPor(
+      buildListExportParams(formValues, getGridSelectedIds(gridApi)),
+    );
+    await downloadInlandPorExport(blob as Blob, '内陆提货点POR.xlsx');
     message.success({
       content: $t('page.masterData.hint.exportSuccess'),
       key: 'inland_por_export_msg',
@@ -106,15 +112,20 @@ async function onExport() {
 }
 
 const searchFormOptions = useI18nFormOptions(() => ({
-  collapsed: false,
+  collapsed: true,
   schema: useInlandPorSearchSchema(),
-  showCollapseButton: false,
+  showCollapseButton: true,
   submitOnChange: false,
 }));
 
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    checkboxConfig: {
+      highlight: true,
+      reserve: true,
+      showReserveStatus: true,
+    },
     columns: useInlandPorColumns(onActionClick, canManage),
     height: 'auto',
     pagerConfig: { enabled: true },

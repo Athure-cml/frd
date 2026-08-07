@@ -22,7 +22,12 @@ import {
 } from '#/api/master-data/us-state-zip';
 import { $t } from '#/locales';
 
-import MasterDataImportModal from '../components/import-modal.vue';
+import ImportModal from '../../cost-library/components/import-modal.vue';
+import {
+  buildListExportParams,
+  getGridSelectedIds,
+} from '../../shared/export-params';
+import { buildCheckboxColumn } from '../../system/shared/columns';
 import { useUsStateZipSearchSchema } from './data';
 import Form from './modules/form.vue';
 
@@ -34,7 +39,7 @@ const h = (key: string) => $t(`page.masterData.hint.${key}`);
 const { hasAccessByCodes } = useAccess();
 const canManage = hasAccessByCodes(['md_dest_address:manage']);
 
-const importModalRef = ref<InstanceType<typeof MasterDataImportModal>>();
+const importModalRef = ref<InstanceType<typeof ImportModal>>();
 const exporting = ref(false);
 const isEmpty = ref(false);
 const stateOptions = ref<{ label: string; value: string }[]>([]);
@@ -99,8 +104,11 @@ async function onDelete(row: UsStateZipApi.Row) {
 async function onExport() {
   exporting.value = true;
   try {
-    const blob = await exportUsStateZip();
-    await downloadUsStateZipExport(blob as Blob, 'us-state-zip.xlsx');
+    const formValues = await gridApi.formApi?.getLatestSubmissionValues?.();
+    const blob = await exportUsStateZip(
+      buildListExportParams(formValues, getGridSelectedIds(gridApi)),
+    );
+    await downloadUsStateZipExport(blob as Blob, '美国州邮政编—xlsx');
     message.success(h('exportSuccess'));
   } finally {
     exporting.value = false;
@@ -111,9 +119,9 @@ const { locale } = useI18n();
 const searchFormOptions = computed(() => {
   void locale.value;
   return {
-    collapsed: false,
+    collapsed: true,
     schema: useUsStateZipSearchSchema(stateOptions.value),
-    showCollapseButton: false,
+    showCollapseButton: true,
     submitOnChange: true,
   };
 });
@@ -121,7 +129,13 @@ const searchFormOptions = computed(() => {
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    checkboxConfig: {
+      highlight: true,
+      reserve: true,
+      showReserveStatus: true,
+    },
     columns: [
+      buildCheckboxColumn(),
       {
         field: 'stateCode',
         minWidth: 100,
@@ -173,11 +187,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
 <template>
   <Page auto-content-height :description="h('usStateZip')">
     <FormModal @success="gridApi.query()" />
-    <MasterDataImportModal
+    <ImportModal
       ref="importModalRef"
-      accept=".xlsx,.xls,.txt"
-      hint-key="usStateZipImport"
+      accept=".xlsx,.txt"
+      :format-hint="h('usStateZipImportFormat')"
       :import-fn="importUsStateZipFile"
+      :template-hint="h('usStateZipImportTemplate')"
       :title="$t('page.masterData.actions.importUsStateZip')"
       @success="gridApi.query()"
     />

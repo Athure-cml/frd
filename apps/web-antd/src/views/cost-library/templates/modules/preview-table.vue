@@ -55,8 +55,8 @@ function buildPreviewColumns() {
       props.mode === 'road'
         ? 'supplier'
         : props.mode === 'fumigation'
-          ? 'port'
-          : 'origin',
+          ? 'region'
+          : 'pol',
     nameTitle: $t('page.costLibrary.template.previewTable'),
     onActionClick: () => {},
     seqWidth: 48,
@@ -66,11 +66,21 @@ function buildPreviewColumns() {
 
 const previewColumns = computed(() => buildPreviewColumns());
 
+const previewGridClass = computed(() => {
+  if (props.mode === 'fumigation') {
+    return 'tpl-preview-grid fumigation-cost-grid cost-library-grid';
+  }
+  if (props.mode === 'sea') {
+    return 'tpl-preview-grid sea-cost-grid cost-library-grid';
+  }
+  if (props.mode === 'road') {
+    return 'tpl-preview-grid road-cost-grid cost-library-grid';
+  }
+  return 'tpl-preview-grid cost-library-grid';
+});
+
 const [Grid, gridApi] = useVbenVxeGrid({
-  gridClass:
-    props.mode === 'fumigation'
-      ? 'tpl-preview-grid fumigation-cost-grid cost-library-grid'
-      : 'tpl-preview-grid cost-library-grid',
+  gridClass: previewGridClass.value,
   gridOptions: {
     border: true,
     columnConfig: {

@@ -31,7 +31,11 @@ export function getCostPickerSearchSchema(mode: CostMode): VbenFormSchema[] {
 }
 
 function moneyFormatter({ cellValue }: { cellValue: number }) {
-  if (cellValue == null || Number.isNaN(Number(cellValue))) {
+  if (
+    cellValue === null ||
+    cellValue === undefined ||
+    Number.isNaN(Number(cellValue))
+  ) {
     return '—';
   }
   return Number(cellValue).toLocaleString(undefined, {
@@ -46,16 +50,18 @@ export function getCostPickerColumns(
   if (mode === 'road') {
     return [
       buildCostCheckboxColumn(),
+      { field: 'zipCode', title: roadT('zipCode'), width: 100 },
+      { field: 'city', title: roadT('city'), width: 110 },
+      { field: 'state', title: roadT('state'), width: 80 },
+      { field: 'por', title: roadT('por'), width: 120 },
+      { field: 'pol', title: roadT('pol'), width: 110 },
       { field: 'supplier', minWidth: 140, title: roadT('supplier') },
-      { field: 'city', title: roadT('city'), width: 100 },
-      { field: 'state', title: roadT('state'), width: 72 },
-      { field: 'pol', title: roadT('pol'), width: 100 },
       {
         align: 'right',
-        field: 'allIn',
+        field: 'allInNoFm',
         formatter: moneyFormatter,
-        title: roadT('allIn'),
-        width: 110,
+        title: roadT('allInNoFm'),
+        width: 130,
       },
       { field: 'validDate', title: roadT('validDate'), width: 110 },
     ];
@@ -64,54 +70,59 @@ export function getCostPickerColumns(
   if (mode === 'fumigation') {
     return [
       buildCostCheckboxColumn(),
-      { field: 'port', minWidth: 110, title: fumT('port') },
-      { field: 'station', minWidth: 100, title: fumT('station') },
+      { field: 'region', minWidth: 110, title: fumT('region') },
+      { field: 'station', minWidth: 140, title: fumT('station') },
       {
         align: 'right',
-        field: 'nonOakOutdoor',
+        field: 'outdoorNonOak',
         formatter: ({ cellValue }: { cellValue: number }) =>
           formatAmount(cellValue),
-        title: `NON-OAK ${fumT('nonOakOutdoor')}`,
-        width: 120,
-      },
-      {
-        field: 'nonOakQuoteSummer',
-        title: `NON-OAK ${fumT('nonOakQuoteSummer')}`,
+        title: `FM-OUTDOOR ${fumT('outdoorNonOak')}`,
         width: 130,
       },
       {
         align: 'right',
-        field: 'oakOutdoor',
+        field: 'outdoorOak',
         formatter: ({ cellValue }: { cellValue: number }) =>
           formatAmount(cellValue),
-        title: `OAK ${fumT('oakOutdoor')}`,
+        title: `FM-OUTDOOR ${fumT('outdoorOak')}`,
         width: 120,
       },
       {
-        field: 'oakQuoteSummer',
-        title: `OAK ${fumT('oakQuoteSummer')}`,
-        width: 130,
+        field: 'outdoorValidity',
+        title: `FM-OUTDOOR ${fumT('outdoorValidity')}`,
+        width: 160,
       },
     ];
   }
 
-  const freightT = (key: string) => $t(`page.costLibrary.fields.${key}`);
+  const freightT = (key: string) => $t(`page.costLibrary.seaFields.${key}`);
   return [
     buildCostCheckboxColumn(),
-    { field: 'origin', minWidth: 120, title: freightT('pol') },
-    { field: 'destination', minWidth: 120, title: freightT('pod') },
-    { field: 'carrier', minWidth: 120, title: freightT('carrier') },
-    { field: 'spec', title: freightT('spec'), width: 100 },
-    { field: 'unit', title: freightT('unit'), width: 72 },
+    { field: 'por', minWidth: 100, title: freightT('por') },
+    { field: 'pol', minWidth: 110, title: freightT('pol') },
+    { field: 'pod', minWidth: 120, title: freightT('pod') },
+    { field: 'cnShortName', minWidth: 100, title: freightT('cnShortName') },
+    { field: 'containerType', minWidth: 130, title: freightT('containerType') },
     {
       align: 'right',
-      field: 'unitPrice',
+      field: 'freight',
       formatter: moneyFormatter,
-      title: freightT('unitPrice'),
+      title: freightT('freight'),
       width: 110,
     },
-    { field: 'currency', title: freightT('currency'), width: 72 },
-    { field: 'validFrom', title: freightT('validFrom'), width: 110 },
-    { field: 'validTo', title: freightT('validTo'), width: 110 },
+    {
+      align: 'right',
+      field: 'allIn',
+      formatter: moneyFormatter,
+      title: freightT('allIn'),
+      width: 110,
+    },
+    { field: 'ssl', minWidth: 100, title: freightT('ssl') },
+    {
+      field: 'freightValidDate',
+      title: freightT('freightValidDate'),
+      width: 110,
+    },
   ];
 }

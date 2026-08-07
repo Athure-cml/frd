@@ -12,16 +12,23 @@ function buildModuleOptions() {
     { label: t('modules.sysUser'), value: 'sys:user' },
     { label: t('modules.sysRole'), value: 'sys:role' },
     { label: t('modules.customer'), value: 'customer' },
+    { label: t('modules.supplier'), value: 'supplier' },
+    { label: t('modules.shippingLine'), value: 'shipping_line' },
+    { label: t('modules.agent'), value: 'agent' },
     { label: t('modules.quote'), value: 'quote' },
     { label: t('modules.costRoad'), value: 'cost:road' },
     { label: t('modules.costSea'), value: 'cost:sea' },
     { label: t('modules.costFumigation'), value: 'cost:fumigation' },
+    { label: t('modules.costRail'), value: 'cost:rail' },
     { label: t('modules.costTemplate'), value: 'cost:template' },
     { label: t('modules.currency'), value: 'currency' },
     { label: t('modules.exchangeRate'), value: 'exchange_rate' },
     { label: t('modules.mdDestAddress'), value: 'md_dest_address' },
     { label: t('modules.mdGlobalPort'), value: 'md_global_port' },
     { label: t('modules.mdInlandPor'), value: 'md_inland_por' },
+    { label: t('modules.mdContainerType'), value: 'md_container_type' },
+    { label: t('modules.mdUsState'), value: 'md_us_state' },
+    { label: t('modules.unknown'), value: 'unknown' },
   ];
 }
 

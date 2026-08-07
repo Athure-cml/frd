@@ -32,7 +32,7 @@ function onViewDetail(row: OperationLogApi.OperationLog) {
 }
 
 const searchFormOptions = useI18nFormOptions(() => ({
-  collapsed: false,
+  collapsed: true,
   schema: useOperationLogSearchSchema(),
   showCollapseButton: true,
   submitOnChange: false,

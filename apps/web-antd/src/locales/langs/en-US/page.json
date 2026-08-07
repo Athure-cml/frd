@@ -1,4 +1,4 @@
-{
+﻿{
   "auth": {
     "login": "Login",
     "register": "Register",
@@ -87,12 +87,12 @@
     "updatePasswordSuccess": "Password changed"
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "Workbench",
     "analytics": "Quote Analytics",
     "workspace": "Workbench"
   },
   "workspace": {
-    "greetingMorning": "Good morning, {0}. Ready to quote?",
+    "greetingMorning": "Good morning, {0}. Ready to get to work?",
     "greetingAfternoon": "Good afternoon, {0}. Keep quotes and costs on track.",
     "greetingEvening": "Good evening, {0}. Review open quotes and rates.",
     "subtitle": "Furuiduo freight workbench — quotes, cost library and master data.",
@@ -117,7 +117,7 @@
       "roadCost": "Road Costs",
       "seaCost": "Sea Costs",
       "fumigationCost": "Fumigation Costs",
-      "customers": "Customers"
+      "customers": "Business Partners"
     },
     "todos": {
       "title": "To-dos",
@@ -203,40 +203,53 @@
     "sea": "Sea Transport Cost Library",
     "fumigation": "Fumigation Cost Library",
     "roadDesc": "Manage truck drayage rates aligned with the Excel template; supports import, export, and batch updates.",
-    "seaDesc": "Manage ocean lanes and carrier rates for quotes; supports import, export, and batch updates.",
-    "fumigationDesc": "Manage PORT/STATION fumigation rates for NON-OAK and OAK; aligned with the business Excel template.",
+    "seaDesc": "Manage POR/POL/POD, container types and surcharges (BUC/EBS/GRI/OTHERS); aligned with the business Excel template.",
+    "fumigationDesc": "Manage REGION/STATION fumigation rates for FM-OUTDOOR and FM-INDOOR; aligned with the business Excel template.",
     "roadRecord": "road rate",
     "seaRecord": "ocean rate",
     "fumigationRecord": "fumigation rate",
     "fumigationGroups": {
-      "nonOak": "NON-OAK",
-      "oak": "OAK"
+      "outdoor": "FM-OUTDOOR",
+      "indoor": "FM-INDOOR"
     },
     "fumigationFields": {
-      "port": "PORT",
+      "region": "REGION",
       "station": "STATION",
-      "nonOakOutdoor": "OUTDOOR",
-      "nonOakIndoor": "IN DOOR",
-      "nonOakQuoteSummer": "Quote (Summer)",
-      "nonOakQuoteWinter": "Quote (Winter)",
-      "oakOutdoor": "OUTDOOR",
-      "oakIndoor": "IN DOOR",
-      "oakQuoteSummer": "Quote (Summer)",
-      "oakQuoteWinter": "Quote (Winter)",
-      "remark": "Remark",
-      "updatedAt": "Updated"
+      "outdoorNonOak": "NON OAK",
+      "outdoorOak": "OAK",
+      "outdoorValidity": "Validity",
+      "indoorNonOak": "NON OAK",
+      "indoorOak": "OAK",
+      "indoorValidity": "Validity",
+      "address": "ADDRESS"
+    },
+    "seaGroups": {
+      "surcharge": "Surcharge"
+    },
+    "seaFormula": {
+      "computedBy": "Defaults to Freight + BUC + EBS + GRI + OTHERS; you can edit manually"
     },
     "seaFields": {
+      "por": "POR",
       "pol": "POL",
       "pod": "POD",
-      "ofRate": "O/F RATE (USD)",
+      "cnShortName": "CN Short Name",
+      "enProductName": "Product Name (EN)",
+      "containerType": "Container Type",
+      "freight": "Freight",
+      "freightValidDate": "Valid Date",
       "buc": "BUC",
-      "surchargeValidDate": "Surcharge Validity",
+      "bucValidDate": "BUC Valid Date",
+      "ebs": "EBS",
+      "ebsValidDate": "EBS Valid Date",
+      "gri": "GRI",
+      "griValidDate": "GRI Valid Date",
+      "others": "OTHERS",
+      "othersValidDate": "OTHERS Valid Date",
       "allIn": "ALL IN",
-      "ssl": "SSL",
-      "remark": "Remark",
-      "validDate": "Validity",
-      "status": "Status"
+      "ssl": "SSL (Carrier)",
+      "agent": "AGENT",
+      "remark": "REMARK"
     },
     "actions": {
       "createRoad": "Enter Truck Rate",
@@ -254,6 +267,10 @@
       "batchEditSea": "Batch Edit Ocean Costs",
       "batchEditFumigation": "Batch Edit Fumigation Costs",
       "batchDelete": "Batch Delete",
+      "createShort": "Add",
+      "templateShort": "Template",
+      "batchEditShort": "Edit",
+      "batchDeleteShort": "Delete",
       "copy": "Copy",
       "copyRecord": "Copy & Enter {0}"
     },
@@ -265,7 +282,15 @@
       "selectRows": "Select at least one row first",
       "selectFile": "Please select an Excel file",
       "importDrop": "Click or drag Excel file here",
-      "importFormat": "Supports .xlsx / .xls with export template headers",
+      "importFormat": "Supports .xlsx with export template headers",
+      "importPreviewLoading": "Parsing preview…",
+      "importPreviewMeta": "{0} data row(s)",
+      "importPreviewTotal": "Total {0}",
+      "importPreviewCol": "Col {0}",
+      "importPreviewLine": "Line",
+      "importPreviewEmpty": "No previewable rows found in this file",
+      "importPreviewFailed": "Could not parse this Excel file. Please use a valid .xlsx",
+      "importPreviewClear": "Choose another",
       "importSuccess": "Imported {0} record(s)",
       "importPartial": "Import done: {0} succeeded, {1} failed",
       "importErrorTitle": "Rows that failed to import",
@@ -283,12 +308,12 @@
     "template": {
       "label": "Table view",
       "defaultName": "Standard",
-      "manage": "Template manage",
-      "menuTitle": "Template manage",
+      "manage": "View templates",
+      "menuTitle": "View Templates",
       "roadMenu": "Truck cost templates",
       "seaMenu": "Ocean cost templates",
       "fumigationMenu": "Fumigation cost templates",
-      "pageTitle": "Template manage",
+      "pageTitle": "View Templates",
       "roadPageDesc": "Manage column layout for the truck cost library. \"In use\" is the view selected on the truck cost page in this browser.",
       "seaPageDesc": "Manage column layout for the ocean cost library. \"In use\" is the view selected on the ocean cost page in this browser.",
       "fumigationPageDesc": "Manage column layout for the fumigation cost library. \"In use\" is the view selected on the fumigation cost page in this browser.",
@@ -389,46 +414,58 @@
       "draft": "Draft",
       "expired": "Expired"
     },
+    "statusFilterAll": "All statuses",
+    "statusHelp": "Past validity becomes Expired automatically.",
     "roadGroups": {
-      "basic": "Basic Info",
-      "freight": "Freight",
-      "surcharge": "Surcharges & Notes"
+      "route": "Route & Base Freight",
+      "freight": "ALL IN",
+      "extra": "Surcharges & Notes",
+      "meta": "Validity & Yard",
+      "custom": "Custom Fields"
+    },
+    "roadFormula": {
+      "computedBy": "Auto-calculated by supplier formula (editable): {0}"
     },
     "roadFields": {
-      "validDate": "VALID DATE",
-      "supplier": "SUPPLIER",
-      "logYardNameAddress": "LOG YARD NAME &ADDRESS",
-      "zipCode": "Zip code",
+      "zipCode": "ZIP CODE",
       "city": "City",
       "state": "State",
       "por": "POR",
       "pol": "POL",
+      "supplier": "SUPPLIER",
       "baseFreight": "BASE FREIGHT",
-      "fsc": "FSC",
+      "fsc": "FSC (%)",
       "chassis": "CHASSIS",
-      "owTriAxle": "OW/TRI-AXCEL",
+      "triTandemAxle": "OW/TRI-AXCEL",
       "split": "SPLIT",
       "stopOff": "STOP OFF",
-      "allIn": "ALL IN",
-      "allInNonOak": "ALL IN (NON OAK)",
-      "allInOak": "ALL IN (OAK)",
+      "allInNoFm": "ALL IN - NO FM",
+      "allInFmOneWay": "ALL IN - FM (NON OAK)",
+      "allInFmRound": "ALL IN - FM (OAK)",
       "waitingFee": "WAITING FEE",
-      "redelivery": "REDILEVEY",
+      "redelivery": "REDELIVERY",
       "prepull": "PREPULL",
       "nsLift": "NS LIFT",
-      "remark": "REMARK"
+      "otherFee": "OTHER FEE",
+      "remark": "REMARK",
+      "validDate": "Validity",
+      "logYardNameAddress": "LOG YARD NAME & ADDRESS"
     }
   },
   "customer": {
-    "title": "Customers",
+    "title": "Business Partners",
     "list": "Customer List",
     "hint": {
       "list": "Maintain customer master data. Quotes reference customers by selection to avoid typos.",
-      "codeAuto": "A customer code is assigned automatically on save."
+      "codeAuto": "A customer code is assigned automatically on save.",
+      "exporting": "Exporting…",
+      "exportSuccess": "Export completed"
     },
     "actions": {
       "create": "New Customer",
-      "edit": "Edit Customer"
+      "edit": "Edit Customer",
+      "import": "Import",
+      "export": "Export"
     },
     "fields": {
       "code": "Code",
@@ -437,6 +474,125 @@
       "phone": "Phone",
       "email": "Email",
       "address": "Address",
+      "remark": "Remark",
+      "status": "Status",
+      "createdBy": "Created By",
+      "updatedAt": "Updated At"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    }
+  },
+  "supplier": {
+    "title": "Supplier List",
+    "list": "Supplier List",
+    "hint": {
+      "list": "Maintain supplier name, email, remark, and package price formulas.",
+      "codeAuto": "A supplier code is assigned automatically on save.",
+      "formulaTokens": "Allowed fields: BASE FREIGHT, FSC, CHASSIS, OW/TRI-AXCEL (or TRI/TANDEM AXLE), SPLIT, STOP OFF, WAITING FEE, REDELIVERY, PREPULL, NS LIFT, OTHER FEE. Supports + - * / and parentheses.",
+      "formulaExample": "Example: BASE FREIGHT+FSC+CHASSIS+OW/TRI-AXCEL+SPLIT+STOP OFF",
+      "exporting": "Exporting…",
+      "exportSuccess": "Export completed"
+    },
+    "formula": {
+      "help": "Click fee fields to insert; type operators and numbers yourself.",
+      "placeholder": "Insert fields, then type + - * / () and numbers, e.g. BASE FREIGHT+FSC*1.1",
+      "fields": "Fee fields (click to insert)",
+      "operators": "Operators & numbers",
+      "number": "Number",
+      "insertNumber": "Insert number",
+      "undo": "Undo last",
+      "clear": "Clear",
+      "empty": "No formula yet (optional)",
+      "valid": "Formula is valid",
+      "invalid": "Invalid formula: {0}",
+      "invalidShort": "Invalid formula syntax",
+      "typeOpsHint": "Type operators (+ - * /), parentheses, and numbers directly in the box above.",
+      "refNonFumigationHint": "You can insert “非熏蒸打包价” to reference the previous formula result; type operators and numbers yourself.",
+      "refFumigationNonOakHint": "You can insert “熏蒸打包价（非橡木）” to reference the previous formula result; type operators and numbers yourself."
+    },
+    "actions": {
+      "create": "New Supplier",
+      "edit": "Edit Supplier",
+      "import": "Import",
+      "export": "Export"
+    },
+    "fields": {
+      "code": "Code",
+      "name": "Supplier Name",
+      "types": "Type",
+      "email": "Email",
+      "remark": "Remark",
+      "nonFumigationPackageFormula": "Non-Fumigation Package Formula",
+      "fumigationNonOakPackageFormula": "Fumigation Package Formula (Non-Oak)",
+      "fumigationOakPackageFormula": "Fumigation Package Formula (Oak)",
+      "status": "Status",
+      "createdBy": "Created By",
+      "updatedAt": "Updated At"
+    },
+    "types": {
+      "bookingAgent": "Booking Agent",
+      "fleet": "Fleet",
+      "customsBroker": "Customs Broker",
+      "warehouse": "Warehouse",
+      "dedicatedLine": "Dedicated Line",
+      "containerLeasing": "Container Leasing",
+      "other": "Other"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    }
+  },
+  "shippingLine": {
+    "title": "Shipping Line List",
+    "list": "Shipping Line List",
+    "hint": {
+      "list": "Maintain shipping line name, email, and remark for ocean costs and quotes.",
+      "codeAuto": "A shipping line code is assigned automatically on save.",
+      "exporting": "Exporting…",
+      "exportSuccess": "Export completed"
+    },
+    "actions": {
+      "create": "New Shipping Line",
+      "edit": "Edit Shipping Line",
+      "import": "Import",
+      "export": "Export"
+    },
+    "fields": {
+      "code": "Code",
+      "name": "Shipping Line Name",
+      "email": "Email",
+      "remark": "Remark",
+      "status": "Status",
+      "createdBy": "Created By",
+      "updatedAt": "Updated At"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    }
+  },
+  "agent": {
+    "title": "Agent List",
+    "list": "Agent List",
+    "hint": {
+      "list": "Maintain agent name, email, and remark for ocean costs and quotes.",
+      "codeAuto": "An agent code is assigned automatically on save.",
+      "exporting": "Exporting…",
+      "exportSuccess": "Export completed"
+    },
+    "actions": {
+      "create": "New Agent",
+      "edit": "Edit Agent",
+      "import": "Import",
+      "export": "Export"
+    },
+    "fields": {
+      "code": "Code",
+      "name": "Agent Name",
+      "email": "Email",
       "remark": "Remark",
       "status": "Status",
       "createdBy": "Created By",
@@ -611,6 +767,7 @@
     "exchangeRate": "Exchange Rates",
     "usStateZip": "US State Zip Codes",
     "globalPort": "Global Ports",
+    "containerType": "Container Types",
     "inlandPor": "Inland POR",
     "baseTag": "Base",
     "hint": {
@@ -619,8 +776,8 @@
       "rateMeaning": "1 unit of source currency = rate × target currency",
       "usStateZip": "Maintain US states, cities, and zip codes (State / City / Zip code) for freight and quotes.",
       "usStateZipEmpty": "No zip code data yet. Upload GeoNames US.txt for a full import, or use Excel import / manual entry.",
-      "usStateZipImportTemplate": "Supports GeoNames US.txt (tab-separated, download US.zip from geonames.org) or Excel (headers: State, City, Zip code). Existing records are skipped.",
-      "usStateZipImportFormat": "Supports .xlsx / .xls / .txt",
+      "usStateZipImportTemplate": "Excel: headers State / City / Zip code (export first, then edit). GeoNames US.txt (tab-separated) is also supported. Same state+city+zip updates; duplicate rows in the file fail.",
+      "usStateZipImportFormat": "Supports .xlsx or GeoNames .txt",
       "selectFile": "Please select an Excel file",
       "importDrop": "Click or drag file here",
       "importFormat": "Supports .xlsx / .xls",
@@ -635,6 +792,7 @@
       "syncingUnlocodeImporting": "Importing ports, please wait…",
       "syncUnlocodeSuccess": "Sync done: {0} inserted, {1} updated",
       "syncUnlocodeFailed": "Sync failed, please try again later",
+      "containerType": "Maintain container types (e.g. 20GP, 40HQ) for sea cost and quotes.",
       "inlandPor": "Inland POR points linked to POL for US line rate entry.",
       "exporting": "Exporting…",
       "exportSuccess": "Export completed"
@@ -657,6 +815,8 @@
       "editGlobalPort": "Edit Port",
       "importGlobalPort": "Import Ports",
       "syncUnlocode": "Sync UN/LOCODE",
+      "createContainerType": "New Container Type",
+      "editContainerType": "Edit Container Type",
       "createInlandPor": "New POR",
       "editInlandPor": "Edit POR",
       "importInlandPor": "Import POR"
@@ -668,6 +828,7 @@
       "decimalPlaces": "Decimals",
       "base": "Base Currency",
       "sort": "Sort",
+      "remark": "Remark",
       "fromCurrency": "From",
       "toCurrency": "To",
       "rate": "Rate",
@@ -704,29 +865,25 @@
     },
     "moduleLabels": {
       "sys": "System",
-      "dashboard": "Dashboard",
+      "dashboard": "Workbench",
       "cost": "Cost Library",
-      "template": "Template Library",
-      "customer": "Customers",
-      "currency": "Currencies",
-      "exchange_rate": "Exchange Rates",
-      "md_dest_address": "US State Zip Codes",
-      "md_global_port": "Global Ports",
-      "md_inland_por": "Inland POR",
+      "template": "View Templates",
+      "customer": "Business Partners",
+      "masterData": "Master Data",
       "quote": "Quotes",
-      "report": "Reports"
+      "ai": "AI Assistant"
     },
     "permissionGroups": {
-      "roadCost": "Truck Cost",
-      "seaCost": "Ocean Cost",
-      "fumigationCost": "Fumigation Cost",
-      "roadTemplate": "Truck Templates",
-      "seaTemplate": "Ocean Templates",
-      "fumigationTemplate": "Fumigation Templates",
-      "customer": "Customers",
+      "roadCost": "Truck Cost Library",
+      "seaCost": "Ocean Cost Library",
+      "fumigationCost": "Fumigation Cost Library",
+      "roadTemplate": "Truck Cost Templates",
+      "seaTemplate": "Ocean Cost Templates",
+      "fumigationTemplate": "Fumigation Cost Templates",
       "dept": "Departments",
       "user": "Users",
-      "role": "Roles"
+      "role": "Roles",
+      "operation_log": "Operation Logs"
     },
     "permissionTree": {
       "expandAll": "Expand all",
@@ -785,16 +942,23 @@
         "sysUser": "Users",
         "sysRole": "Roles",
         "customer": "Customers",
+        "supplier": "Suppliers",
+        "shippingLine": "Shipping Lines",
+        "agent": "Agents",
         "quote": "Quotes",
         "costRoad": "Truck Cost",
         "costSea": "Ocean Cost",
         "costFumigation": "Fumigation Cost",
+        "costRail": "Rail Cost",
         "costTemplate": "Templates",
         "currency": "Currencies",
         "exchangeRate": "Exchange Rates",
         "mdDestAddress": "US State Zip Codes",
         "mdGlobalPort": "Global Ports",
-        "mdInlandPor": "Inland POR"
+        "mdInlandPor": "Inland POR",
+        "mdContainerType": "Container Types",
+        "mdUsState": "US States",
+        "unknown": "Unknown"
       },
       "fields": {
         "keyword": "Keyword",
@@ -816,5 +980,45 @@
     "confirm": {
       "statusChange": "Change status of \"{0}\" to \"{1}\"?"
     }
+  },
+  "ai": {
+    "title": "Xiao Furui",
+    "tabChat": "Chat",
+    "tabParse": "Parse",
+    "chatPlaceholder": "Ask about the system or look up costs…",
+    "parsePlaceholder": "Paste email or inquiry text…",
+    "parseHint": "Optional hint, e.g. extract route and container type",
+    "emptyHint": "Ask about fields, quote flow, or let Xiao Furui search the cost library.",
+    "greeting": "Hi! I'm Xiao Furui, the AI assistant for Furuiduo Quote.\nI can help you with:\n· System usage and field meanings (e.g. POR / POL)\n· Truck, ocean, and fumigation cost lookup\n· Parsing inquiry info from email / Excel / PDF\nJust ask anytime!",
+    "send": "Send",
+    "sendHint": "Enter to send · Shift+Enter for newline",
+    "clear": "Clear",
+    "thinking": "Thinking…",
+    "requestFailed": "AI request failed",
+    "notConfigured": "AI is not configured. Ask an admin to set QUOTE_AI_API_KEY.",
+    "applyToQuote": "Apply to quote",
+    "applyQueued": "Cost reference saved. Open a quote editor to apply, or check the cost library.",
+    "uploadFile": "Upload Excel/PDF",
+    "parse": "Parse text",
+    "parsePreview": "Structured preview (not saved)",
+    "copyJson": "Copy JSON",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "proposeReview": "Open cost form",
+    "proposeModalTitle": "Confirm new truck cost",
+    "proposeModalTip": "This is an AI draft. It is saved only after you confirm (operation log recorded).",
+    "proposeConfirm": "Save",
+    "proposeCancel": "Dismiss",
+    "proposeConfirmed": "Saved",
+    "proposeDismissed": "Dismissed",
+    "proposeOpened": "Form opened",
+    "proposeOpenForm": "Opened the cost form. Review and confirm to save.",
+    "proposeNoEditPermission": "No matching cost edit permission; cannot open the form.",
+    "proposeOnlyRoad": "Only truck cost proposals are supported for now",
+    "proposeUnsupported": "This cost type is not supported for AI draft yet",
+    "openPageNoPermission": "No permission to open this page via AI",
+    "proposeSaved": "Truck cost #{0} created",
+    "proposeSavedChat": "Saved to truck cost library. Record ID: {0}.",
+    "proposeSaveFailed": "Failed to save. Check required fields and try again."
   }
 }

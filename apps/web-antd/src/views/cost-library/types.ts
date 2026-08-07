@@ -11,7 +11,12 @@ export interface CostQueryForm {
   carrier?: string;
   destination?: string;
   origin?: string;
+  pod?: string;
+  pol?: string;
+  por?: string;
+  ssl?: string;
   status?: import('#/api/cost').CostStatus;
+  supplier?: string;
 }
 
 /** @deprecated Use FreightCostRecord from #/api/cost */

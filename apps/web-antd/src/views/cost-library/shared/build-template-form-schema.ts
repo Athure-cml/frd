@@ -8,17 +8,25 @@ import {
   isCustomFieldKey,
 } from './template-field-model';
 
-const FUMIGATION_NON_OAK_FIELDS = new Set([
-  'nonOakIndoor',
-  'nonOakOutdoor',
-  'nonOakQuoteSummer',
-  'nonOakQuoteWinter',
+const FUMIGATION_OUTDOOR_FIELDS = new Set([
+  'outdoorNonOak',
+  'outdoorOak',
+  'outdoorValidity',
 ]);
-const FUMIGATION_OAK_FIELDS = new Set([
-  'oakIndoor',
-  'oakOutdoor',
-  'oakQuoteSummer',
-  'oakQuoteWinter',
+const FUMIGATION_INDOOR_FIELDS = new Set([
+  'indoorNonOak',
+  'indoorOak',
+  'indoorValidity',
+]);
+const SEA_SURCHARGE_FIELDS = new Set([
+  'buc',
+  'bucValidDate',
+  'ebs',
+  'ebsValidDate',
+  'gri',
+  'griValidDate',
+  'others',
+  'othersValidDate',
 ]);
 
 export function buildTemplateFormSchema(
@@ -41,8 +49,9 @@ export function buildTemplateFormSchema(
     baseSchema.map((item) => [item.fieldName as string, item]),
   );
   const ordered: VbenFormSchema[] = [];
-  let nonOakDividerAdded = false;
-  let oakDividerAdded = false;
+  let outdoorDividerAdded = false;
+  let indoorDividerAdded = false;
+  let seaSurchargeDividerAdded = false;
 
   for (const item of layoutItems) {
     if (isCustomFieldKey(item.field)) {
@@ -60,20 +69,32 @@ export function buildTemplateFormSchema(
     }
 
     if (mode === 'fumigation') {
-      if (!nonOakDividerAdded && FUMIGATION_NON_OAK_FIELDS.has(item.field)) {
-        const divider = schemaMap.get('nonOakDivider');
+      if (!outdoorDividerAdded && FUMIGATION_OUTDOOR_FIELDS.has(item.field)) {
+        const divider = schemaMap.get('outdoorDivider');
         if (divider) {
           ordered.push(divider);
         }
-        nonOakDividerAdded = true;
+        outdoorDividerAdded = true;
       }
-      if (!oakDividerAdded && FUMIGATION_OAK_FIELDS.has(item.field)) {
-        const divider = schemaMap.get('oakDivider');
+      if (!indoorDividerAdded && FUMIGATION_INDOOR_FIELDS.has(item.field)) {
+        const divider = schemaMap.get('indoorDivider');
         if (divider) {
           ordered.push(divider);
         }
-        oakDividerAdded = true;
+        indoorDividerAdded = true;
       }
+    }
+
+    if (
+      mode === 'sea' &&
+      !seaSurchargeDividerAdded &&
+      SEA_SURCHARGE_FIELDS.has(item.field)
+    ) {
+      const divider = schemaMap.get('surchargeDivider');
+      if (divider) {
+        ordered.push(divider);
+      }
+      seaSurchargeDividerAdded = true;
     }
 
     const base = schemaMap.get(item.field);
@@ -84,7 +105,11 @@ export function buildTemplateFormSchema(
     ordered.push({
       ...base,
       label: item.title,
-      rules: item.required ? 'required' : undefined,
+      rules: item.required
+        ? 'required'
+        : base.rules === 'required'
+          ? 'required'
+          : base.rules,
     });
   }
 

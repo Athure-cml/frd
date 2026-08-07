@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { CostLibraryRecord, QuoteMatchKeys } from './sheet-cost-import';
+
 import type { QuoteCostType } from '#/api/quote';
 
 import { computed, nextTick, ref } from 'vue';
@@ -19,11 +21,7 @@ import {
   buildQuoteCostPickerColumns,
   quoteCostTypeToMode,
 } from './cost-picker-columns';
-import {
-  type CostLibraryRecord,
-  getInitialSearchValues,
-  type QuoteMatchKeys,
-} from './sheet-cost-import';
+import { getInitialSearchValues } from './sheet-cost-import';
 
 import './quote.css';
 
@@ -60,7 +58,7 @@ function resolveSearchSchema() {
 }
 
 const searchFormOptions = useI18nFormOptions(() => ({
-  collapsed: false,
+  collapsed: true,
   schema: resolveSearchSchema(),
   showCollapseButton: true,
   submitOnChange: false,

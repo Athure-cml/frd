@@ -109,7 +109,7 @@ async function onStatusChange(
 }
 
 const searchFormOptions = useI18nFormOptions(() => ({
-  collapsed: false,
+  collapsed: true,
   schema: useUserSearchSchema(),
   showCollapseButton: true,
   submitOnChange: false,

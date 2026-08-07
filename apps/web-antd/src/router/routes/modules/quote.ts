@@ -14,6 +14,15 @@ const routes: RouteRecordRaw[] = [
     redirect: '/quotes/list',
     children: [
       {
+        name: 'Analytics',
+        path: '/analytics',
+        component: () => import('#/views/dashboard/analytics/index.vue'),
+        meta: {
+          icon: 'lucide:area-chart',
+          title: $t('page.dashboard.analytics'),
+        },
+      },
+      {
         name: 'QuoteList',
         path: '/quotes/list',
         component: () => import('#/views/quote/list/index.vue'),

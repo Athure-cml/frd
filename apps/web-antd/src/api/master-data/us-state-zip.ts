@@ -58,6 +58,23 @@ export async function getUsStateZipCityNodes(
   );
 }
 
+/** 熏蒸 REGION 等：按关键词搜索去重城市名 */
+export async function searchDestCityNameOptions(params?: {
+  keyword?: string;
+  limit?: number;
+}) {
+  const list = await requestClient.get<string[]>(`${BASE}/cities/options`, {
+    params: {
+      keyword: params?.keyword || undefined,
+      limit: params?.limit ?? 50,
+    },
+  });
+  return list.map((name) => ({
+    label: name,
+    value: name,
+  }));
+}
+
 export async function createUsStateZipCity(data: {
   name: string;
   stateId: number;
@@ -102,8 +119,8 @@ export async function importUsStateZipFile(file: File) {
   return importUsStateZip(file);
 }
 
-export async function exportUsStateZip() {
-  return requestClient.download(`${BASE}/export`);
+export async function exportUsStateZip(params?: Recordable<any>) {
+  return requestClient.download(`${BASE}/export`, { params });
 }
 
 export async function downloadUsStateZipExport(blob: Blob, filename: string) {

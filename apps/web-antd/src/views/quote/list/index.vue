@@ -116,7 +116,7 @@ async function onBatchExport() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `quotes-export-${Date.now()}.xlsx`;
+    link.download = `报价单-${Date.now()}.xlsx`;
     link.click();
     URL.revokeObjectURL(url);
     message.success($t('page.quote.message.exportSuccess'));

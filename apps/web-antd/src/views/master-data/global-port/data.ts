@@ -4,7 +4,10 @@ import type { GlobalPortApi } from '#/api/master-data/global-port';
 
 import { $t } from '#/locales';
 
-import { buildOperationColumn } from '../../system/shared/columns';
+import {
+  buildCheckboxColumn,
+  buildOperationColumn,
+} from '../../system/shared/columns';
 
 const PORT_TYPE_OPTIONS: { label: string; value: GlobalPortApi.PortType }[] = [
   { label: 'Seaport', value: 'SEAPORT' },
@@ -96,6 +99,7 @@ export function useGlobalPortColumns(
   canManage: boolean,
 ): VxeTableGridOptions<GlobalPortApi.GlobalPort>['columns'] {
   const columns: VxeTableGridOptions<GlobalPortApi.GlobalPort>['columns'] = [
+    buildCheckboxColumn(),
     { field: 'code', minWidth: 100, title: 'Port Code', width: 110 },
     { field: 'nameEn', minWidth: 140, title: 'Name EN' },
     { field: 'nameZh', minWidth: 120, title: 'Name ZH' },

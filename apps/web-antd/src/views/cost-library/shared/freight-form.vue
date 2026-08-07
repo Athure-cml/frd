@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { CostTableTemplate, FreightCostRecord } from '#/api/cost';
 
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 import { useVbenDrawer } from '@vben/common-ui';
 
@@ -9,7 +9,6 @@ import { message } from 'ant-design-vue';
 
 import { useVbenForm } from '#/adapter/form';
 import { seaCostApi } from '#/api/cost';
-import { resolveDefaultCurrencyCode } from '#/api/currency';
 import { $t } from '#/locales';
 
 import {
@@ -18,6 +17,10 @@ import {
   mergeRecordWithExtraFields,
 } from '../shared/build-template-form-schema';
 import {
+  computeSeaAllIn,
+  parsePortNames,
+  prefetchPortNameZh,
+  resolveCnShortNameFromPods,
   rowToFreightFormValues,
   toFreightSavePayload,
   useFreightFormSchema,
@@ -33,10 +36,36 @@ const emit = defineEmits<{ success: [] }>();
 
 const recordId = ref<number>();
 const isCopy = ref(false);
+const hydrating = ref(false);
 const api = seaCostApi;
 const activeTemplate = ref<CostTableTemplate>(getDefaultTemplate(props.mode));
 
+const SEA_ALL_IN_TRIGGER_FIELDS = new Set([
+  'buc',
+  'ebs',
+  'freight',
+  'gri',
+  'others',
+]);
+
 const [Form, formApi] = useVbenForm({
+  handleValuesChange(values, fieldsChanged) {
+    if (hydrating.value) {
+      return;
+    }
+    if (fieldsChanged.includes('pod')) {
+      const cnShortName = resolveCnShortNameFromPods(values.pod);
+      if (cnShortName) {
+        formApi.setFieldValue('cnShortName', cnShortName);
+      }
+    }
+    if (fieldsChanged.some((field) => SEA_ALL_IN_TRIGGER_FIELDS.has(field))) {
+      const allIn = computeSeaAllIn(values);
+      if (allIn !== values.allIn) {
+        formApi.setFieldValue('allIn', allIn);
+      }
+    }
+  },
   layout: 'vertical',
   schema: useFreightFormSchema(),
   showDefaultActions: false,
@@ -68,7 +97,25 @@ function applyTemplateSchema(template?: CostTableTemplate) {
   });
 }
 
+async function hydrateFormValues(
+  row: FreightCostRecord | Record<string, unknown>,
+) {
+  hydrating.value = true;
+  try {
+    const values = mergeRecordWithExtraFields(
+      rowToFreightFormValues(row as FreightCostRecord),
+    );
+    await prefetchPortNameZh(parsePortNames(values.pod as string | string[]));
+    values.allIn = computeSeaAllIn(values);
+    formApi.setValues(values);
+    await nextTick();
+  } finally {
+    hydrating.value = false;
+  }
+}
+
 const [Drawer, drawerApi] = useVbenDrawer({
+  class: 'w-full sm:w-[520px]',
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) {
@@ -81,11 +128,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
         ...toFreightSavePayload(values),
         extraFields: extractExtraFields(values),
       };
-      if (recordId.value) {
-        await api.update(recordId.value, payload);
-      } else {
-        await api.create(payload);
-      }
+      await (recordId.value
+        ? api.update(recordId.value, payload)
+        : api.create(payload));
       message.success($t('ui.actionMessage.operationSuccess'));
       emit('success');
       drawerApi.close();
@@ -99,30 +144,42 @@ const [Drawer, drawerApi] = useVbenDrawer({
     }
     void (async () => {
       const data = drawerApi.getData<
-        FreightCostRecord & { copyFrom?: boolean; template?: CostTableTemplate }
+        FreightCostRecord & {
+          aiPrefill?: boolean;
+          copyFrom?: boolean;
+          template?: CostTableTemplate;
+        }
       >();
-      recordId.value = data?.id;
+      recordId.value = data?.aiPrefill ? undefined : data?.id;
       isCopy.value = isCostCopyPayload(data);
       applyTemplateSchema(data?.template);
       formApi.resetForm();
+      if (data?.aiPrefill) {
+        const {
+          aiPrefill: _ai,
+          template: _tpl,
+          id: _id,
+          status: _status,
+          ...fields
+        } = data as Record<string, unknown>;
+        await hydrateFormValues(fields);
+        return;
+      }
       if (data?.id) {
-        formApi.setValues(
-          mergeRecordWithExtraFields(rowToFreightFormValues(data)),
-        );
+        await hydrateFormValues(data);
         return;
       }
       if (isCopy.value && data) {
-        formApi.setValues(
-          mergeRecordWithExtraFields(
-            rowToFreightFormValues(data as FreightCostRecord),
-          ),
-        );
+        await hydrateFormValues(data as FreightCostRecord);
         return;
       }
-      const defaultCurrency = await resolveDefaultCurrencyCode({
-        mode: props.mode,
-      });
-      formApi.setValues({ currency: defaultCurrency, extraFields: {} });
+      hydrating.value = true;
+      try {
+        formApi.setValues({ extraFields: {} });
+        await nextTick();
+      } finally {
+        hydrating.value = false;
+      }
     })();
   },
 });

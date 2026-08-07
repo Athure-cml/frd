@@ -42,7 +42,7 @@ function onEdit(row: ExchangeRateApi.ExchangeRate) {
 }
 
 function onDelete(row: ExchangeRateApi.ExchangeRate) {
-  const label = `${row.fromCurrency}→${row.toCurrency}`;
+  const label = `${row.fromCurrency}—{row.toCurrency}`;
   const hideLoading = message.loading({
     content: $t('ui.actionMessage.deleting', [label]),
     duration: 0,
@@ -72,9 +72,9 @@ function onActionClick({
 }
 
 const searchFormOptions = useI18nFormOptions(() => ({
-  collapsed: false,
+  collapsed: true,
   schema: useExchangeRateSearchSchema(),
-  showCollapseButton: false,
+  showCollapseButton: true,
   submitOnChange: false,
 }));
 

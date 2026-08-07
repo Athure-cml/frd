@@ -1,7 +1,6 @@
 import type { Recordable } from '@vben/types';
 
-import type { CostImportResult } from '#/api/cost/types';
-import type { PageResult } from '#/api/cost/types';
+import type { CostImportResult, PageResult } from '#/api/cost/types';
 
 import { downloadFileFromBlob } from '@vben/utils';
 
@@ -58,9 +57,92 @@ export async function getGlobalPortOptions(params?: {
     ...params,
   });
   return result.items.map((item) => ({
-    label: `${item.code} · ${item.nameEn}`,
+    label: formatPortOptionLabel(item),
     value: item.id,
   }));
+}
+
+function formatPortOptionLabel(item: GlobalPortApi.GlobalPort) {
+  return item.nameZh
+    ? `${item.code} · ${item.nameZh} · ${item.nameEn}`
+    : `${item.code} · ${item.nameEn}`;
+}
+
+/** 海运录入下拉：value 存英文港名，附带中文名供自动带入 */
+export interface GlobalPortNameOption {
+  label: string;
+  nameZh?: string;
+  value: string;
+}
+
+/** 选中后搜索框可能残留「CODE · 名称」，提取有效检索词 */
+function normalizePortSearchKeyword(keyword?: string) {
+  const raw = keyword?.trim() || '';
+  if (!raw) {
+    return '';
+  }
+  const parts = raw
+    .split('·')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const firstPart = parts[0];
+  if (parts.length >= 2 && firstPart && /^[A-Z0-9]{3,}$/i.test(firstPart)) {
+    return parts.at(-1) || raw;
+  }
+  return raw;
+}
+
+export async function searchGlobalPortNameOptions(params?: {
+  keyword?: string;
+  limit?: number;
+  portTypes?: GlobalPortApi.PortType[];
+}): Promise<GlobalPortNameOption[]> {
+  const limit = params?.limit ?? 50;
+  const keyword = normalizePortSearchKeyword(params?.keyword);
+  const list = await requestClient.get<GlobalPortApi.GlobalPort[]>(
+    `${BASE}/options`,
+    {
+      params: {
+        keyword: keyword || undefined,
+        // 多取一些再按港名去重，避免同名港口挤占下拉
+        limit: Math.min(Math.max(limit * 2, limit), 100),
+        portTypes: params?.portTypes,
+      },
+    },
+  );
+
+  const seenName = new Set<string>();
+  const seenCode = new Set<string>();
+  const options: GlobalPortNameOption[] = [];
+
+  for (const item of list) {
+    const code = item.code?.trim() || '';
+    const nameEn = item.nameEn?.trim() || '';
+    if (!nameEn) {
+      continue;
+    }
+    const nameKey = nameEn.toUpperCase();
+    const codeKey = code.toUpperCase();
+    if (seenName.has(nameKey) || (codeKey && seenCode.has(codeKey))) {
+      continue;
+    }
+    seenName.add(nameKey);
+    if (codeKey) {
+      seenCode.add(codeKey);
+    }
+    options.push({
+      label: item.nameZh?.trim()
+        ? `${code} · ${item.nameZh.trim()} · ${nameEn}`
+        : `${code} · ${nameEn}`,
+      nameZh: item.nameZh?.trim() || undefined,
+      value: nameEn,
+    });
+    if (options.length >= limit) {
+      break;
+    }
+  }
+
+  return options;
 }
 
 export async function getPolPodPortOptions() {
@@ -73,7 +155,9 @@ export async function getPorPortOptions() {
     getGlobalPortList({ page: 1, pageSize: 500, portType: 'RAIL' }),
   ]);
   return [...inland.items, ...rail.items].map((item) => ({
-    label: `${item.code} · ${item.nameEn}`,
+    label: item.nameZh
+      ? `${item.code} · ${item.nameZh} · ${item.nameEn}`
+      : `${item.code} · ${item.nameEn}`,
     value: item.id,
   }));
 }

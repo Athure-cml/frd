@@ -1,6 +1,6 @@
-import type { AnalysisOverviewItem } from '@vben/common-ui';
-
 import { $t } from '#/locales';
+
+export type { AnalysisOverviewItem } from '@vben/common-ui';
 
 export interface WorkspaceNavItem {
   icon: string;
@@ -57,6 +57,11 @@ export function useMasterDataLinks(): WorkspaceLinkItem[] {
       url: '/master-data/global-port',
     },
     {
+      icon: 'lucide:box',
+      title: $t('page.masterData.containerType'),
+      url: '/master-data/container-type',
+    },
+    {
       icon: 'lucide:map-pin',
       title: $t('page.masterData.usStateZip'),
       url: '/master-data/us-state-zip',
@@ -108,5 +113,3 @@ export function resolveGreetingKey(): string {
   }
   return 'page.workspace.greetingEvening';
 }
-
-export type { AnalysisOverviewItem };

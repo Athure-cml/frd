@@ -71,9 +71,9 @@ function onActionClick({
 }
 
 const searchFormOptions = useI18nFormOptions(() => ({
-  collapsed: false,
+  collapsed: true,
   schema: useCurrencySearchSchema(),
-  showCollapseButton: false,
+  showCollapseButton: true,
   submitOnChange: false,
 }));
 

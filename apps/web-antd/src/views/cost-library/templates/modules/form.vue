@@ -110,6 +110,7 @@ const [Form, formApi] = useVbenForm({
 });
 
 const [Drawer, drawerApi] = useVbenDrawer({
+  class: 'w-full sm:w-[720px]',
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) {

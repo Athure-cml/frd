@@ -10,6 +10,17 @@ export default {
   ],
   overrides: [
     {
+      files: ['*.css', '**/*.css'],
+      rules: {
+        'selector-pseudo-class-no-unknown': [
+          true,
+          {
+            ignorePseudoClasses: ['global', 'deep'],
+          },
+        ],
+      },
+    },
+    {
       customSyntax: 'postcss-html',
       files: ['*.(html|vue)', '**/*.(html|vue)'],
       rules: {
