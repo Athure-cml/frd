@@ -121,6 +121,7 @@ const searchFormOptions = useI18nFormOptions(() => ({
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    id: 'md-inland-por-list',
     checkboxConfig: {
       highlight: true,
       reserve: true,

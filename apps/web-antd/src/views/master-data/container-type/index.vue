@@ -79,6 +79,7 @@ const searchFormOptions = useI18nFormOptions(() => ({
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    id: 'md-container-type-list',
     columns: useContainerTypeColumns(onActionClick, canManage),
     height: 'auto',
     pagerConfig: { enabled: false },

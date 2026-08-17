@@ -18,6 +18,25 @@ function createFreightApi(base: string) {
     batchUpdate(data: CostBatchUpdatePayload) {
       return requestClient.patch<{ updated: number }>(`${base}/batch`, data);
     },
+    batchCopy(data: {
+      applyOverrides?: boolean;
+      buc?: number;
+      bucEffDate?: string;
+      bucValidDate?: string;
+      containerType?: string;
+      freight?: number;
+      freightEffDate?: string;
+      freightValidDate?: string;
+      ids: number[];
+      others?: number;
+      othersEffDate?: string;
+      othersValidDate?: string;
+    }) {
+      return requestClient.post<{ created: number }>(
+        `${base}/batch-copy`,
+        data,
+      );
+    },
     create(data: FreightCostSave) {
       return requestClient.post<FreightCostRecord>(base, data);
     },
@@ -27,8 +46,12 @@ function createFreightApi(base: string) {
     export(params: Recordable<any>) {
       return requestClient.download(`${base}/export`, { params });
     },
-    import(file: File) {
-      return requestClient.upload<CostImportResult>(`${base}/import`, { file });
+    importExcel(file: File, templateId?: number, dryRun?: boolean) {
+      return requestClient.upload<CostImportResult>(`${base}/import`, {
+        file,
+        ...(typeof templateId === 'number' ? { templateId } : {}),
+        ...(dryRun ? { dryRun: true } : {}),
+      });
     },
     list(params: Recordable<any>) {
       return requestClient.get<PageResult<FreightCostRecord>>(base, { params });

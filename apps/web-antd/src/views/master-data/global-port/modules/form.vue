@@ -29,7 +29,7 @@ const [Form, formApi] = useVbenForm({
   layout: 'vertical',
   schema: useGlobalPortFormSchema(false),
   showDefaultActions: false,
-  wrapperClass: 'grid-cols-1 sm:grid-cols-2',
+  wrapperClass: 'grid-cols-1',
 });
 
 const [Modal, modalApi] = useVbenModal({
@@ -42,11 +42,9 @@ const [Modal, modalApi] = useVbenModal({
     try {
       const values = await formApi.getValues();
       const payload = toGlobalPortSavePayload(values);
-      if (recordId.value) {
-        await updateGlobalPort(recordId.value, payload);
-      } else {
-        await createGlobalPort(payload);
-      }
+      await (recordId.value
+        ? updateGlobalPort(recordId.value, payload)
+        : createGlobalPort(payload));
       message.success($t('ui.actionMessage.operationSuccess'));
       emit('success');
       modalApi.close();

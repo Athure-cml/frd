@@ -27,7 +27,10 @@ import {
   createDefaultLayout,
   resolveTemplateDisplayName,
 } from '../shared/template-layout-utils';
-import { saveTemplateId } from '../shared/use-table-templates';
+import {
+  invalidateTableTemplateCache,
+  saveTemplateId,
+} from '../shared/use-table-templates';
 import FieldPanel from './modules/field-panel.vue';
 import PreviewTable from './modules/preview-table.vue';
 
@@ -244,6 +247,7 @@ async function persistTemplate() {
     if (payload.isDefault && savedId) {
       saveTemplateId(mode.value, savedId);
     }
+    invalidateTableTemplateCache(mode.value);
     initialSnapshot = takeSnapshot();
     return true;
   } catch (error) {
@@ -270,6 +274,7 @@ async function applyTemplateAsDefault() {
   try {
     await setDefaultCostTableTemplate(templateId.value);
     saveTemplateId(mode.value, templateId.value);
+    invalidateTableTemplateCache(mode.value);
     isDefault.value = true;
     if (initialSnapshot) {
       initialSnapshot = { ...initialSnapshot, isDefault: true };

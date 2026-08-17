@@ -1,6 +1,7 @@
 import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { CostTableTemplate, RoadCostRecord } from '#/api/cost';
+import type { GlobalPortApi } from '#/api/master-data/global-port';
 
 import { reactive } from 'vue';
 
@@ -16,6 +17,35 @@ import { buildColumnsFromTemplate } from '../shared/build-columns';
 import { createCostStatusSearchField } from '../shared/status-search';
 
 const t = (key: string) => $t(`page.costLibrary.roadFields.${key}`);
+
+const ROAD_PORT_TYPES: GlobalPortApi.PortType[] = ['SEAPORT', 'RAIL', 'INLAND'];
+
+function createPortSearchProps() {
+  const params = reactive({ keyword: '' });
+  const setKeyword = useDebounceFn((keyword: string) => {
+    params.keyword = keyword.trim();
+  }, 280);
+  return {
+    allowClear: true,
+    api: async (p: { keyword?: string }) => {
+      const items = await searchGlobalPortNameOptions({
+        keyword: p?.keyword,
+        limit: 50,
+        portTypes: ROAD_PORT_TYPES,
+      });
+      return items.map(({ label, value }) => ({ label, value }));
+    },
+    class: 'w-full',
+    filterOption: false,
+    immediate: false,
+    onSearch: (keyword: string) => {
+      setKeyword(keyword);
+    },
+    optionFilterProp: 'label',
+    params,
+    showSearch: true,
+  };
+}
 
 function createZipSearchProps() {
   const params = reactive({ keyword: '' });
@@ -37,6 +67,7 @@ function createZipSearchProps() {
     },
     class: 'w-full',
     filterOption: false,
+    immediate: false,
     optionFilterProp: 'label',
     params,
     showSearch: true,
@@ -51,13 +82,19 @@ function createCitySearchProps() {
   }, 280);
   return {
     allowClear: true,
-    api: async (p: { keyword?: string }) =>
-      searchDestCityNameOptions({
-        keyword: p?.keyword,
+    api: async (p: { keyword?: string }) => {
+      const keyword = p?.keyword?.trim() || '';
+      if (!keyword) {
+        return [];
+      }
+      return searchDestCityNameOptions({
+        keyword,
         limit: 50,
-      }),
+      });
+    },
     class: 'w-full',
     filterOption: false,
+    immediate: false,
     optionFilterProp: 'label',
     params,
     showSearch: true,
@@ -76,35 +113,9 @@ function createStateSearchProps() {
       }));
     },
     class: 'w-full',
+    immediate: false,
     optionFilterProp: 'label',
     showSearch: true,
-  };
-}
-
-function createPortSearchProps() {
-  const params = reactive({ keyword: '' });
-  const setKeyword = useDebounceFn((keyword: string) => {
-    params.keyword = keyword.trim();
-  }, 280);
-  return {
-    allowClear: true,
-    api: async (p: { keyword?: string }) => {
-      const items = await searchGlobalPortNameOptions({
-        keyword: p?.keyword,
-        limit: 50,
-        portTypes: ['SEAPORT', 'RAIL', 'INLAND'],
-      });
-      return items.map(({ label, value }) => ({ label, value }));
-    },
-    class: 'w-full',
-    filterOption: false,
-    optionFilterProp: 'label',
-    params,
-    showSearch: true,
-    virtual: false,
-    onSearch: (keyword: string) => {
-      setKeyword(keyword);
-    },
   };
 }
 
@@ -130,21 +141,32 @@ export function useRoadSearchSchema(): VbenFormSchema[] {
     },
     {
       component: 'ApiSelect',
-      componentProps: createCitySearchProps(),
+      componentProps: createPortSearchProps(),
       fieldName: 'por',
       label: t('por'),
-    },
-    {
-      component: 'ApiSelect',
-      componentProps: createPortSearchProps(),
-      fieldName: 'pol',
-      label: t('pol'),
     },
     {
       component: 'Input',
       componentProps: { autocomplete: 'off' },
       fieldName: 'supplier',
       label: t('supplier'),
+    },
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'redelivery',
+      label: t('redelivery'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: {
+        allowClear: true,
+        class: 'w-full',
+        format: 'YYYY-MM-DD',
+        valueFormat: 'YYYY-MM-DD',
+      },
+      fieldName: 'validDate',
+      label: t('validDate'),
     },
     createCostStatusSearchField(),
   ];

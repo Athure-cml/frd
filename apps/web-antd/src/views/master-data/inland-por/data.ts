@@ -7,6 +7,7 @@ import { getGlobalPortOptions } from '#/api/master-data/global-port';
 import {
   buildCheckboxColumn,
   buildOperationColumn,
+  buildSeqColumn,
 } from '../../system/shared/columns';
 
 export function useInlandPorFormSchema(): VbenFormSchema[] {
@@ -51,6 +52,7 @@ export function useInlandPorColumns(
 ): VxeTableGridOptions<InlandPorApi.InlandPor>['columns'] {
   const columns: VxeTableGridOptions<InlandPorApi.InlandPor>['columns'] = [
     buildCheckboxColumn(),
+    buildSeqColumn(),
     { field: 'name', minWidth: 140, title: 'POR' },
     { field: 'polCode', minWidth: 100, title: 'POL', width: 110 },
     { field: 'polNameEn', minWidth: 140, title: 'POL Name EN' },

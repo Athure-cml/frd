@@ -4,9 +4,12 @@ import type { AgentApi } from '#/api/agent';
 
 import { $t } from '#/locales';
 
+import { buildDragSortColumn } from '../../shared/party-row-drag';
 import {
+  appendPinOperationOptions,
   buildCheckboxColumn,
   buildOperationColumn,
+  buildSeqColumn,
 } from '../../system/shared/columns';
 import { statusTagOptions } from '../../system/shared/tags';
 
@@ -32,6 +35,24 @@ export function useAgentFormSchema(
       fieldName: 'name',
       label: t('fields.name'),
       rules: 'required',
+    },
+    {
+      component: 'Input',
+      componentProps: { maxlength: 64 },
+      fieldName: 'shortName',
+      label: t('fields.shortName'),
+    },
+    {
+      component: 'Input',
+      componentProps: { maxlength: 64 },
+      fieldName: 'contactName',
+      label: t('fields.contactName'),
+    },
+    {
+      component: 'Input',
+      componentProps: { maxlength: 64 },
+      fieldName: 'phone',
+      label: t('fields.phone'),
     },
     {
       component: 'Input',
@@ -114,6 +135,10 @@ export function useAgentColumns(
 ): VxeTableGridOptions<AgentApi.Agent>['columns'] {
   const operationOptions: Array<Record<string, any> | string> = [];
   if (canEdit) {
+    appendPinOperationOptions(operationOptions, {
+      pin: t('actions.pin'),
+      unpin: t('actions.unpin'),
+    });
     operationOptions.push({ code: 'edit', text: $t('common.edit') });
   }
   if (canDelete) {
@@ -131,12 +156,18 @@ export function useAgentColumns(
       nameField: 'name',
       nameTitle: t('fields.name'),
       operationOptions,
+      width: canEdit ? 220 : 168,
     },
   );
 
   const columns: VxeTableGridOptions<AgentApi.Agent>['columns'] = [
     buildCheckboxColumn(),
+    buildSeqColumn(),
   ];
+  const dragColumn = buildDragSortColumn(canEdit);
+  if (dragColumn) {
+    columns.push(dragColumn);
+  }
   if (showInternalCode) {
     columns.push({
       field: 'code',
@@ -148,10 +179,29 @@ export function useAgentColumns(
   }
   columns.push(
     {
+      className: 'party-name-col',
       field: 'name',
       fixed: showInternalCode ? undefined : 'left',
+      headerClassName: 'party-name-col',
       minWidth: 160,
+      showOverflow: 'ellipsis',
+      slots: { default: 'name' },
       title: t('fields.name'),
+    },
+    {
+      field: 'shortName',
+      minWidth: 120,
+      title: t('fields.shortName'),
+    },
+    {
+      field: 'contactName',
+      minWidth: 110,
+      title: t('fields.contactName'),
+    },
+    {
+      field: 'phone',
+      minWidth: 120,
+      title: t('fields.phone'),
     },
     {
       field: 'email',
@@ -192,9 +242,12 @@ export function toAgentSavePayload(
   values: Record<string, any>,
 ): AgentApi.AgentSave {
   return {
+    contactName: values.contactName?.trim() || undefined,
     email: values.email?.trim() || undefined,
     name: values.name,
+    phone: values.phone?.trim() || undefined,
     remark: values.remark?.trim() || undefined,
+    shortName: values.shortName?.trim() || undefined,
     status: values.status ?? 1,
   };
 }

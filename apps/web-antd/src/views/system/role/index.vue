@@ -161,6 +161,7 @@ const searchFormOptions = useI18nFormOptions(() => ({
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    id: 'system-role-list',
     columns: buildColumns(),
     height: 'auto',
     pagerConfig: {

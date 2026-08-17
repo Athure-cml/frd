@@ -11,15 +11,19 @@ import { useAccess } from '@vben/access';
 import { Page, useVbenModal } from '@vben/common-ui';
 import { ArrowUpToLine, Download, Plus } from '@vben/icons';
 
-import { Button, message } from 'ant-design-vue';
+import { Button, message, Modal, Tag } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import {
+  batchDeleteShippingLine,
   deleteShippingLine,
   downloadShippingLineExport,
   exportShippingLine,
   getShippingLineList,
   importShippingLine,
+  pinShippingLine,
+  reorderShippingLine,
+  unpinShippingLine,
 } from '#/api/shipping-line';
 import { $t } from '#/locales';
 import { useInternalCodeVisibility } from '#/utils/internal-code-access';
@@ -29,6 +33,10 @@ import {
   buildListExportParams,
   getGridSelectedIds,
 } from '../../shared/export-params';
+import {
+  buildPartyRowDragGridOptions,
+  collectGridRowIds,
+} from '../../shared/party-row-drag';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import { buildShippingLineSearchSchema, useShippingLineColumns } from './data';
 import Form from './modules/form.vue';
@@ -75,6 +83,52 @@ function onDelete(row: ShippingLineApi.ShippingLine) {
     .catch(() => hideLoading());
 }
 
+function clearSelection() {
+  gridApi.grid?.clearCheckboxRow?.();
+  gridApi.grid?.clearCheckboxReserve?.();
+}
+
+function onBatchDelete() {
+  const ids = getGridSelectedIds(gridApi);
+  if (ids.length === 0) {
+    message.warning($t('page.shippingLine.hint.selectRows'));
+    return;
+  }
+  Modal.confirm({
+    content: $t('page.shippingLine.confirm.batchDelete', [ids.length]),
+    onOk: async () => {
+      await batchDeleteShippingLine(ids);
+      message.success($t('ui.actionMessage.operationSuccess'));
+      clearSelection();
+      gridApi.query();
+    },
+    title: $t('common.prompt'),
+  });
+}
+
+function onTogglePin(row: ShippingLineApi.ShippingLine, pinned: boolean) {
+  const key = 'shipping_line_pin_msg';
+  const hideLoading = message.loading({
+    content: pinned
+      ? $t('page.shippingLine.hint.pinning')
+      : $t('page.shippingLine.hint.unpinning'),
+    duration: 0,
+    key,
+  });
+  const request = pinned ? pinShippingLine(row.id) : unpinShippingLine(row.id);
+  request
+    .then(() => {
+      message.success({
+        content: pinned
+          ? $t('page.shippingLine.hint.pinSuccess', [row.name])
+          : $t('page.shippingLine.hint.unpinSuccess', [row.name]),
+        key,
+      });
+      gridApi.query();
+    })
+    .catch(() => hideLoading());
+}
+
 function onActionClick({
   code,
   row,
@@ -84,6 +138,12 @@ function onActionClick({
   }
   if (code === 'delete') {
     onDelete(row);
+  }
+  if (code === 'pin') {
+    onTogglePin(row, true);
+  }
+  if (code === 'unpin') {
+    onTogglePin(row, false);
   }
 }
 
@@ -111,6 +171,33 @@ async function onExport() {
   }
 }
 
+async function onRowDragend() {
+  if (!canEdit) {
+    return;
+  }
+  const ids = collectGridRowIds(gridApi.grid);
+  if (ids.length === 0) {
+    return;
+  }
+  const key = 'shipping_line_reorder_msg';
+  const hideLoading = message.loading({
+    content: $t('page.shippingLine.hint.reordering'),
+    duration: 0,
+    key,
+  });
+  try {
+    await reorderShippingLine(ids);
+    message.success({
+      content: $t('page.shippingLine.hint.reorderSuccess'),
+      key,
+    });
+  } catch {
+    hideLoading();
+  } finally {
+    gridApi.query();
+  }
+}
+
 function buildColumns() {
   return useShippingLineColumns(
     onActionClick,
@@ -129,7 +216,11 @@ const searchFormOptions = useI18nFormOptions(() => ({
 
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
+  gridEvents: {
+    rowDragend: onRowDragend,
+  },
   gridOptions: {
+    id: 'shipping-line-list',
     checkboxConfig: {
       highlight: true,
       reserve: true,
@@ -149,9 +240,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
         },
       },
     },
-    rowConfig: {
-      keyField: 'id',
-    },
+    ...buildPartyRowDragGridOptions(canEdit, 'page.shippingLine'),
     toolbarConfig: {
       custom: true,
       refresh: true,
@@ -198,6 +287,9 @@ function onRefresh() {
           <Download class="size-4" />
           {{ $t('page.shippingLine.actions.export') }}
         </Button>
+        <Button v-if="canDelete" class="mr-2" danger @click="onBatchDelete">
+          {{ $t('page.shippingLine.actions.batchDelete') }}
+        </Button>
         <Button v-if="canCreate" type="primary" @click="onCreate">
           <Plus class="size-4" />
           {{ $t('page.shippingLine.actions.create') }}
@@ -205,6 +297,14 @@ function onRefresh() {
       </template>
       <template v-if="canViewInternalCodes" #code="{ row }">
         <span class="customer-code">{{ row.code }}</span>
+      </template>
+      <template #name="{ row }">
+        <span class="party-name-cell">
+          <span class="party-name-text" :title="row.name">{{ row.name }}</span>
+          <Tag v-if="row.pinnedAt" class="party-pin-tag" color="processing">
+            {{ $t('page.shippingLine.badge.pinned') }}
+          </Tag>
+        </span>
       </template>
     </Grid>
   </Page>

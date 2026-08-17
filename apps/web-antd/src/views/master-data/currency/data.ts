@@ -4,7 +4,10 @@ import type { CurrencyApi } from '#/api/currency';
 
 import { $t } from '#/locales';
 
-import { buildOperationColumn } from '../../system/shared/columns';
+import {
+  buildOperationColumn,
+  buildSeqColumn,
+} from '../../system/shared/columns';
 import { statusTagOptions } from '../../system/shared/tags';
 
 const t = (key: string) => $t(`page.masterData.${key}`);
@@ -92,6 +95,7 @@ export function useCurrencyColumns(
   canManage: boolean,
 ): VxeTableGridOptions<CurrencyApi.Currency>['columns'] {
   const columns: VxeTableGridOptions<CurrencyApi.Currency>['columns'] = [
+    buildSeqColumn(),
     {
       align: 'left',
       className: 'col-sys-code',

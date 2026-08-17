@@ -9,20 +9,27 @@ import { requestClient } from '#/api/request';
 export namespace AgentApi {
   export interface Agent {
     code: string;
+    contactName?: string;
     createdAt: string;
     createdByName?: string;
     email?: string;
     id: number;
     name: string;
+    phone?: string;
+    pinnedAt?: null | string;
     remark?: string;
+    shortName?: string;
     status: 0 | 1;
     updatedAt: string;
   }
 
   export interface AgentSave {
+    contactName?: string;
     email?: string;
     name: string;
+    phone?: string;
     remark?: string;
+    shortName?: string;
     status: 0 | 1;
   }
 
@@ -52,6 +59,22 @@ export async function updateAgent(id: number, data: AgentApi.AgentSave) {
 
 export async function deleteAgent(id: number) {
   return requestClient.delete(`${BASE}/${id}`);
+}
+
+export async function batchDeleteAgent(ids: number[]) {
+  return requestClient.post(`${BASE}/batch-delete`, { ids });
+}
+
+export async function pinAgent(id: number) {
+  return requestClient.post<AgentApi.Agent>(`${BASE}/${id}/pin`);
+}
+
+export async function unpinAgent(id: number) {
+  return requestClient.post<AgentApi.Agent>(`${BASE}/${id}/unpin`);
+}
+
+export async function reorderAgent(ids: number[]) {
+  return requestClient.put(`${BASE}/reorder`, { ids });
 }
 
 export async function importAgent(file: File) {

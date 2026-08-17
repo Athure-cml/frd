@@ -1,4 +1,4 @@
-﻿{
+{
   "auth": {
     "login": "登录",
     "register": "注册",
@@ -218,9 +218,11 @@
       "outdoorNonOak": "NON OAK",
       "outdoorOak": "OAK",
       "outdoorValidity": "有效期",
+      "outdoorValiditySearch": "FM-OUT有效期",
       "indoorNonOak": "NON OAK",
       "indoorOak": "OAK",
       "indoorValidity": "有效期",
+      "indoorValiditySearch": "FM-IN有效期",
       "address": "ADDRESS"
     },
     "seaGroups": {
@@ -238,14 +240,18 @@
       "containerType": "箱型",
       "freight": "运费",
       "freightValidDate": "有效期",
-      "buc": "BUC",
-      "bucValidDate": "BUC有效期",
+      "freightValidDateSearch": "运费有效期",
+      "freightEffDate": "运费生效期",
+      "effectiveDate": "生效期",
+      "buc": "燃油附加费",
+      "bucValidDate": "有效期",
       "ebs": "EBS",
       "ebsValidDate": "EBS有效期",
       "gri": "GRI",
       "griValidDate": "GRI有效期",
       "others": "OTHERS",
-      "othersValidDate": "OTHERS有效期",
+      "othersSurcharge": "附加费 OTHERS",
+      "othersValidDate": "有效期",
       "allIn": "ALL IN (小计)",
       "ssl": "SSL (船公司)",
       "agent": "AGENT (代理)",
@@ -266,13 +272,19 @@
       "batchEditRoad": "批量修改卡车成本",
       "batchEditSea": "批量修改海运成本",
       "batchEditFumigation": "批量修改熏蒸成本",
+      "batchCopy": "批量复制",
+      "batchCopyShort": "批量复制",
+      "batchCopyApply": "确认修改",
+      "batchCopySkip": "暂不修改",
       "batchDelete": "批量删除",
       "createShort": "新增",
       "templateShort": "模板",
       "batchEditShort": "批量改",
       "batchDeleteShort": "批量删",
       "copy": "复制",
-      "copyRecord": "复制录入{0}"
+      "copyRecord": "复制录入{0}",
+      "renew": "续期",
+      "renewRecord": "续期录入{0}"
     },
     "confirm": {
       "batchDelete": "确认删除选中的 {0} 条记录？此操作不可恢复。"
@@ -282,6 +294,11 @@
       "selectRows": "请先勾选要操作的记录",
       "selectFile": "请选择要导入的 Excel 文件",
       "importDrop": "点击或拖拽 Excel 文件到此处",
+      "renewDesc": "将基于当前运价新建一版；填写新生效期后保存，系统会把「新生效期 − 1 天」写入原记录的有效期。",
+      "renewEffRequired": "续期须填写生效期（EFFECTIVE TIME）",
+      "renewSourceMissing": "缺少源记录，无法续期",
+      "renewValidBeforeEff": "有效期不能早于生效期",
+      "renewSuccess": "续期成功，已回写原记录有效期",
       "importFormat": "支持 .xlsx，表头需与导出模板一致",
       "importPreviewLoading": "正在解析预览…",
       "importPreviewMeta": "共 {0} 行数据",
@@ -291,16 +308,36 @@
       "importPreviewEmpty": "文件中没有可预览的表格内容",
       "importPreviewFailed": "无法解析该 Excel，请确认是有效的 .xlsx 文件",
       "importPreviewClear": "重新选择",
-      "importSuccess": "成功导入 {0} 条记录",
-      "importPartial": "导入完成：成功 {0} 条，失败 {1} 条",
-      "importErrorTitle": "以下行未能导入",
+      "importDedupeSummary": "已去除 {0} 条重复行（库中已有 {1} 条，文件内重复 {2} 条）",
+      "importDedupeExistingRow": "第 {0} 行：已有该行数据（{1}）",
+      "importDedupeFileDupRow": "第 {0} 行：与文件中其它行重复（{1}）",
+      "importZipEnrichFilled": "已根据 City+State 自动补全 {0} 行 ZIP CODE",
+      "importZipEnrichPartial": "已自动补全 {0} 行 ZIP；另有 {1} 行无法唯一匹配，确认导入时将整行失败",
+      "importZipEnrichIssues": "有 {0} 行无法根据 City+State 唯一确定 ZIP，确认导入时将整行失败",
+      "importZipEnrichFailed": "自动补全 ZIP 失败，仍可确认导入（将由服务端再次尝试）",
+      "importFailedDownload": "下载全部数据（问题行已标红）",
+      "importFailedDownloadEmpty": "没有可下载的数据",
+      "importFailedDownloadSuccess": "已下载全部 {0} 行（其中 {1} 行有问题，已标红）。改好后删除「校验问题」列，再一次导入即可",
+      "importBlockedHint": "有错误时不会写入数据库。请下载全部数据（问题行标红并写明原因），改好后删除「校验问题」列再一次导入。",
+      "importBlockedNeedFix": "请先修复校验问题后再导入",
+      "importValidating": "正在校验全部数据…",
+      "importValidateOk": "校验通过，共 {0} 条可导入",
+      "importValidateFailed": "预校验请求失败，请稍后重试",
+      "importErrorColumn": "校验问题",
+      "importErrorFallback": "该行校验未通过",
+      "importErrorTitle": "校验问题",
       "importTemplate": "建议先使用「导出」获取表头模板，按相同列名填写后再导入。",
       "exporting": "正在导出…",
       "exportSuccess": "导出完成",
       "selectedCount": "已选 {0} 条",
       "batchFill": "仅填写需要批量更新的字段，留空项不会修改。",
       "batchEmpty": "请至少填写一个要批量修改的字段",
-      "batchSelected": "已选择 {0} 条记录"
+      "batchSelected": "已选择 {0} 条记录",
+      "batchCopyPrompt": "复制选中记录时，可选择是否统一修改燃油、有效期；选择「确认修改」时请至少填写其中一项。",
+      "batchCopyPromptSea": "复制选中记录时，可统一修改运费、箱型、燃油附加费、OTHERS 及其生效期/有效期；选择「确认修改」时请至少填写其中一项。留空字段沿用原值，ALL IN 由系统按公式自动计算。",
+      "batchCopyNeedFields": "确认修改时请至少填写燃油或有效期",
+      "batchCopyNeedFieldsSea": "确认修改时请至少填写一项要覆盖的字段",
+      "batchCopySuccess": "已复制 {0} 条记录"
     },
     "search": {
       "zipCodePlaceholder": "输入 Zip code 模糊查询"
@@ -332,6 +369,8 @@
       "customFieldNamePlaceholder": "请输入字段名称",
       "customFieldTag": "自定义",
       "requiredField": "必填",
+      "sortableField": "表头排序",
+      "sortableFieldHint": "勾选后列表表头可升/降序（当前页）",
       "editColumn": "编辑",
       "hideColumn": "隐藏",
       "showColumn": "显示",
@@ -354,6 +393,14 @@
       "showAll": "全部显示",
       "visible": "显示",
       "columnWidth": "列宽",
+      "columnBgColor": "列底色",
+      "bgPrimary": "淡蓝",
+      "bgAmber": "淡黄",
+      "bgGreen": "淡绿",
+      "bgGray": "浅灰",
+      "bgRose": "淡红",
+      "bgCustom": "自定义颜色",
+      "bgClear": "清除颜色",
       "noAvailableFields": "暂无可选字段",
       "noSearchResults": "无匹配字段",
       "fixedLeft": "左侧固定",
@@ -427,48 +474,66 @@
     },
     "roadFields": {
       "zipCode": "ZIP CODE",
-      "city": "City",
-      "state": "State",
+      "city": "CITY",
+      "state": "STATE",
       "por": "POR",
       "pol": "POL",
       "supplier": "SUPPLIER",
-      "baseFreight": "BASE FREIGHT",
-      "fsc": "FSC (%)",
+      "baseFreight": "BASE",
+      "fsc": "FSC",
       "chassis": "CHASSIS",
-      "triTandemAxle": "OW/TRI-AXCEL",
+      "triTandemAxle": "OW",
       "split": "SPLIT",
       "stopOff": "STOP OFF",
-      "allInNoFm": "ALL IN - NO FM",
-      "allInFmOneWay": "ALL IN - FM (NON OAK)",
-      "allInFmRound": "ALL IN - FM (OAK)",
-      "waitingFee": "WAITING FEE",
+      "allInNoFm": "ALL IN",
+      "allInFmOneWay": "ALL IN FM NON OAK",
+      "allInFmRound": "ALL IN FM OAK",
+      "waitingFee": "WAITING",
       "redelivery": "REDELIVERY",
       "prepull": "PREPULL",
-      "nsLift": "NS LIFT",
-      "otherFee": "OTHER FEE",
+      "nsLift": "LIFT",
+      "otherFee": "OTHERS",
       "remark": "REMARK",
-      "validDate": "有效期",
-      "logYardNameAddress": "LOG YARD NAME & ADDRESS"
+      "validDate": "VALID TIME",
+      "logYardNameAddress": "PICK UP ADDRESS"
     }
   },
   "customer": {
     "title": "客商管理",
     "list": "客户列表",
     "hint": {
-      "list": "维护客户主数据；报价单通过选择客户引用，避免手填误差。",
+      "list": "维护客户主数据；报价单通过选择客户引用，避免手填误差。常用客户可置顶到列表最前。",
       "codeAuto": "保存后系统自动分配客户编码。",
       "exporting": "正在导出…",
-      "exportSuccess": "导出完成"
+      "exportSuccess": "导出完成",
+      "pinning": "正在置顶…",
+      "unpinning": "正在取消置顶…",
+      "pinSuccess": "已置顶：{0}",
+      "unpinSuccess": "已取消置顶：{0}",
+      "dragCrossPin": "请在置顶或非置顶分组内拖拽排序",
+      "reordering": "正在保存排序…",
+      "reorderSuccess": "排序已更新",
+      "selectRows": "请先勾选要删除的记录"
+    },
+    "badge": {
+      "pinned": "置顶"
+    },
+    "confirm": {
+      "batchDelete": "确认删除选中的 {0} 条记录？此操作不可恢复。"
     },
     "actions": {
       "create": "新建客户",
       "edit": "编辑客户",
       "import": "导入",
-      "export": "导出"
+      "export": "导出",
+      "batchDelete": "批量删除",
+      "pin": "置顶",
+      "unpin": "取消置顶"
     },
     "fields": {
       "code": "客户编码",
       "name": "客户名称",
+      "shortName": "简称",
       "contactName": "联系人",
       "phone": "电话",
       "email": "邮箱",
@@ -484,19 +549,41 @@
     }
   },
   "supplier": {
-    "title": "供应商列表",
-    "list": "供应商列表",
+    "title": "供应商",
+    "list": "卡车供应商列表",
+    "truckList": "卡车供应商列表",
+    "fumigationList": "熏蒸供应商列表",
+    "yardList": "仓库堆场列表",
+    "otherList": "其他供应商列表",
     "hint": {
-      "list": "维护供应商名称、邮箱、备注及打包价公式，供成本与报价引用。",
+      "list": "维护卡车供应商及打包价公式，供卡车成本与报价引用。",
+      "truckList": "维护卡车供应商名称、联系方式及打包价公式，供卡车成本与报价引用。",
+      "fumigationList": "维护熏蒸供应商主数据，供熏蒸相关业务引用。",
+      "yardList": "维护仓库/堆场主数据。",
+      "otherList": "维护其他供应商；可按类型筛选，并支持新增/删除类型（已使用的类型不可删除）。",
       "codeAuto": "保存后系统自动分配供应商编码。",
-      "formulaTokens": "可用字段：BASE FREIGHT、FSC、CHASSIS、OW/TRI-AXCEL（或 TRI/TANDEM AXLE）、SPLIT、STOP OFF、WAITING FEE、REDELIVERY、PREPULL、NS LIFT、OTHER FEE。支持 + - * / 与括号。",
-      "formulaExample": "示例：BASE FREIGHT+FSC+CHASSIS+OW/TRI-AXCEL+SPLIT+STOP OFF",
+      "formulaTokens": "可用字段：BASE、FSC、CHASSIS、OW、SPLIT、STOP OFF、WAITING、REDELIVERY、YARD STORAGE、EXTRA CHASSIS、PREPULL、LIFT、OTHERS。支持 + - * / 与括号。",
+      "formulaExample": "示例：BASE+FSC+CHASSIS+OW+SPLIT+STOP OFF+YARD STORAGE+EXTRA CHASSIS",
       "exporting": "正在导出…",
-      "exportSuccess": "导出完成"
+      "exportSuccess": "导出完成",
+      "pinning": "正在置顶…",
+      "unpinning": "正在取消置顶…",
+      "pinSuccess": "已置顶：{0}",
+      "unpinSuccess": "已取消置顶：{0}",
+      "dragCrossPin": "请在置顶或非置顶分组内拖拽排序",
+      "reordering": "正在保存排序…",
+      "reorderSuccess": "排序已更新",
+      "selectRows": "请先勾选要删除的记录"
+    },
+    "badge": {
+      "pinned": "置顶"
+    },
+    "confirm": {
+      "batchDelete": "确认删除选中的 {0} 条记录？此操作不可恢复。"
     },
     "formula": {
       "help": "点选费用字段插入，运算符与数字在输入框中自行填写。",
-      "placeholder": "点选字段后，自行输入 + - * / () 与数字，例如 BASE FREIGHT+FSC*1.1",
+      "placeholder": "点选字段后，自行输入 + - * / () 与数字，例如 BASE+FSC*1.1",
       "fields": "费用字段（点击插入）",
       "operators": "运算符与数字",
       "number": "数字",
@@ -512,15 +599,21 @@
       "refFumigationNonOakHint": "可点选「熏蒸打包价（非橡木）」引用上一条公式结果；运算符与数字请自行输入。"
     },
     "actions": {
-      "create": "新建供应商",
-      "edit": "编辑供应商",
+      "create": "新建",
+      "edit": "编辑",
       "import": "导入",
-      "export": "导出"
+      "export": "导出",
+      "batchDelete": "批量删除",
+      "pin": "置顶",
+      "unpin": "取消置顶"
     },
     "fields": {
       "code": "供应商编码",
       "name": "供应商名称",
+      "shortName": "简称",
       "types": "类型",
+      "contactName": "联系人",
+      "phone": "电话",
       "email": "邮箱",
       "remark": "备注",
       "nonFumigationPackageFormula": "非熏蒸打包价公式",
@@ -528,16 +621,19 @@
       "fumigationOakPackageFormula": "熏蒸打包价（橡木）公式",
       "status": "状态",
       "createdBy": "创建人",
-      "updatedAt": "更新时间"
+      "updatedAt": "更新时间",
+      "operation": "操作"
     },
-    "types": {
-      "bookingAgent": "订舱代理",
-      "fleet": "车队",
-      "customsBroker": "报关行",
-      "warehouse": "仓库",
-      "dedicatedLine": "专线",
-      "containerLeasing": "租箱公司",
-      "other": "其他"
+    "type": {
+      "manage": "类型管理",
+      "add": "新增类型",
+      "name": "类型名称",
+      "namePlaceholder": "输入类型名称",
+      "nameRequired": "请输入类型名称",
+      "usage": "使用情况",
+      "inUse": "已使用",
+      "unused": "未使用",
+      "inUseCannotDelete": "该类型已被使用，无法删除"
     },
     "status": {
       "enabled": "启用",
@@ -548,20 +644,40 @@
     "title": "船公司列表",
     "list": "船公司列表",
     "hint": {
-      "list": "维护船公司名称、邮箱与备注，供海运成本与报价引用。",
+      "list": "维护船公司名称、邮箱与备注，供海运成本与报价引用。常用船公司可置顶到列表最前。",
       "codeAuto": "保存后系统自动分配船公司编码。",
       "exporting": "正在导出…",
-      "exportSuccess": "导出完成"
+      "exportSuccess": "导出完成",
+      "pinning": "正在置顶…",
+      "unpinning": "正在取消置顶…",
+      "pinSuccess": "已置顶：{0}",
+      "unpinSuccess": "已取消置顶：{0}",
+      "dragCrossPin": "请在置顶或非置顶分组内拖拽排序",
+      "reordering": "正在保存排序…",
+      "reorderSuccess": "排序已更新",
+      "selectRows": "请先勾选要删除的记录"
+    },
+    "badge": {
+      "pinned": "置顶"
+    },
+    "confirm": {
+      "batchDelete": "确认删除选中的 {0} 条记录？此操作不可恢复。"
     },
     "actions": {
       "create": "新建船公司",
       "edit": "编辑船公司",
       "import": "导入",
-      "export": "导出"
+      "export": "导出",
+      "batchDelete": "批量删除",
+      "pin": "置顶",
+      "unpin": "取消置顶"
     },
     "fields": {
       "code": "船公司编码",
       "name": "船公司名称",
+      "shortName": "简称",
+      "contactName": "联系人",
+      "phone": "电话",
       "email": "邮箱",
       "remark": "备注",
       "status": "状态",
@@ -577,20 +693,40 @@
     "title": "代理商列表",
     "list": "代理商列表",
     "hint": {
-      "list": "维护代理商名称、邮箱与备注，供海运成本与报价引用。",
+      "list": "维护代理商名称、邮箱与备注，供海运成本与报价引用。常用代理商可置顶到列表最前。",
       "codeAuto": "保存后系统自动分配代理商编码。",
       "exporting": "正在导出…",
-      "exportSuccess": "导出完成"
+      "exportSuccess": "导出完成",
+      "pinning": "正在置顶…",
+      "unpinning": "正在取消置顶…",
+      "pinSuccess": "已置顶：{0}",
+      "unpinSuccess": "已取消置顶：{0}",
+      "dragCrossPin": "请在置顶或非置顶分组内拖拽排序",
+      "reordering": "正在保存排序…",
+      "reorderSuccess": "排序已更新",
+      "selectRows": "请先勾选要删除的记录"
+    },
+    "badge": {
+      "pinned": "置顶"
+    },
+    "confirm": {
+      "batchDelete": "确认删除选中的 {0} 条记录？此操作不可恢复。"
     },
     "actions": {
       "create": "新建代理商",
       "edit": "编辑代理商",
       "import": "导入",
-      "export": "导出"
+      "export": "导出",
+      "batchDelete": "批量删除",
+      "pin": "置顶",
+      "unpin": "取消置顶"
     },
     "fields": {
       "code": "代理商编码",
       "name": "代理商名称",
+      "shortName": "简称",
+      "contactName": "联系人",
+      "phone": "电话",
       "email": "邮箱",
       "remark": "备注",
       "status": "状态",
@@ -718,6 +854,7 @@
       "noCostMatch": "无对应成本数据，请先维护成本库",
       "costImported": "已引入成本库数据，可手动调整后保存",
       "selectExport": "请先勾选要导出的报价单",
+      "exporting": "正在导出…",
       "exportSuccess": "导出成功",
       "voidSuccess": "已作废",
       "submitSuccess": "已提交生效",
@@ -764,6 +901,7 @@
     "title": "主数据",
     "currency": "币种管理",
     "exchangeRate": "汇率管理",
+    "unit": "单位管理",
     "usStateZip": "美国州邮政编码",
     "globalPort": "全球港口档案",
     "containerType": "箱型管理",
@@ -772,6 +910,8 @@
     "hint": {
       "currency": "维护报价与成本使用的币种；基准币用于汇率折算。",
       "exchangeRate": "按生效日期维护外币兑基准币汇率，保存报价时自动快照。",
+      "unit": "维护费用单位（如 day、hours）；金额与单位分开存，页面展示可拼成 20/hours。",
+      "unitCodeHelp": "编码用于展示拼接，如 hours → 20/hours",
       "rateMeaning": "1 单位源币种 = 汇率 × 目标币种",
       "usStateZip": "维护美国州、城市与邮政编码（State / City / Zip code），供运价录入与报价使用。",
       "usStateZipEmpty": "暂无邮政编码数据，可上传 GeoNames US.txt 全量导入，或使用 Excel 导入 / 手工新建。",
@@ -780,12 +920,13 @@
       "selectFile": "请选择 Excel 文件",
       "importDrop": "点击或拖拽文件到此处",
       "importFormat": "支持 .xlsx / .xls",
+      "globalPortImportTemplate": "Excel 表头：名称 / 类型 / 国家。名称+类型+国家一致时，导入预览会自动去重并提示已有该行数据。",
       "importing": "正在导入，大文件可能需要数分钟，请耐心等待…",
       "importPartial": "成功 {0} 条，失败 {1} 条",
       "importSuccess": "成功导入 {0} 条",
       "importErrorTitle": "部分行导入失败",
       "deleteCityCascade": "删除该城市将同时删除其下所有 Zip code，确认继续？",
-      "globalPort": "POL / POD / POR 共用港口档案（UNECE UN/LOCODE）。海港用于 POL/POD；POR 请按 Port Type 筛选 Inland / Rail。",
+      "globalPort": "维护港口名称、类型与国家，供运价录入与报价选用。",
       "syncingUnlocode": "正在从 UNECE 同步港口数据…",
       "syncingUnlocodeLoading": "正在下载并解析 UN/LOCODE 数据包…",
       "syncingUnlocodeImporting": "正在写入港口档案，请耐心等待…",
@@ -801,6 +942,8 @@
       "editCurrency": "编辑币种",
       "createExchangeRate": "新建汇率",
       "editExchangeRate": "编辑汇率",
+      "createUnit": "新建单位",
+      "editUnit": "编辑单位",
       "import": "导入",
       "export": "导出",
       "createCity": "新建城市",
@@ -834,7 +977,7 @@
       "effectiveDate": "生效日期"
     },
     "portType": {
-      "SEAPORT": "海港",
+      "SEAPORT": "港口",
       "INLAND": "内陆点",
       "RAIL": "铁路场站",
       "AIRPORT": "机场",
@@ -952,6 +1095,7 @@
         "costTemplate": "表格模板",
         "currency": "币种",
         "exchangeRate": "汇率",
+        "unit": "单位",
         "mdDestAddress": "美国州邮政编码",
         "mdGlobalPort": "全球港口",
         "mdInlandPor": "内陆 POR",

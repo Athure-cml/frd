@@ -28,8 +28,12 @@ export const fumigationCostApi = {
   export(params: Recordable<any>) {
     return requestClient.download(`${base}/export`, { params });
   },
-  import(file: File) {
-    return requestClient.upload<CostImportResult>(`${base}/import`, { file });
+  importExcel(file: File, templateId?: number, dryRun?: boolean) {
+    return requestClient.upload<CostImportResult>(`${base}/import`, {
+      file,
+      ...(typeof templateId === 'number' ? { templateId } : {}),
+      ...(dryRun ? { dryRun: true } : {}),
+    });
   },
   list(params: Recordable<any>) {
     return requestClient.get<PageResult<FumigationCostRecord>>(base, {

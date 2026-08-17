@@ -16,6 +16,7 @@ const freightBatchSchema = useFreightBatchSchema();
     :columns="useSeaColumns"
     :create-label="$t('page.costLibrary.actions.createSea')"
     :description="$t('page.costLibrary.seaDesc')"
+    enable-batch-copy
     edit-permission="cost:sea:edit"
     export-filename="海运成本.xlsx"
     :form-component="Form"
@@ -23,6 +24,7 @@ const freightBatchSchema = useFreightBatchSchema();
     grid-class="cost-library-grid sea-cost-grid"
     :import-title="$t('page.costLibrary.actions.importSea')"
     mode="sea"
+    scroll-x
     :search-schema="useSeaSearchSchema"
   />
 </template>

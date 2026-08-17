@@ -7,14 +7,25 @@ import { $t } from '#/locales';
 import { buildFumigationColumnsFromLayout } from '../shared/build-fumigation-columns';
 import { getDefaultTemplate } from '../shared/default-templates';
 import { createCostStatusSearchField } from '../shared/status-search';
+import { createCitySelectProps } from './form-schema';
 
 const f = (key: string) => $t(`page.costLibrary.fumigationFields.${key}`);
 
+function dateSearchProps() {
+  return {
+    allowClear: true,
+    class: 'w-full',
+    format: 'YYYY-MM-DD',
+    valueFormat: 'YYYY-MM-DD',
+  };
+}
+
+/** 搜索栏顺序对齐表头：REGION→STATION→FM-OUT有效期→FM-IN有效期，状态最后 */
 export function useFumigationSearchSchema(): VbenFormSchema[] {
   return [
     {
-      component: 'Input',
-      componentProps: { autocomplete: 'off' },
+      component: 'ApiSelect',
+      componentProps: createCitySelectProps(),
       fieldName: 'region',
       label: f('region'),
     },
@@ -23,6 +34,18 @@ export function useFumigationSearchSchema(): VbenFormSchema[] {
       componentProps: { autocomplete: 'off' },
       fieldName: 'station',
       label: f('station'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: dateSearchProps(),
+      fieldName: 'outdoorValidity',
+      label: f('outdoorValiditySearch'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: dateSearchProps(),
+      fieldName: 'indoorValidity',
+      label: f('indoorValiditySearch'),
     },
     createCostStatusSearchField(),
   ];

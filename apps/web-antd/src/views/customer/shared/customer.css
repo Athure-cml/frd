@@ -8,3 +8,52 @@
 .customer-grid :deep(.col-customer-muted) {
   color: hsl(var(--muted-foreground));
 }
+
+/* 名称列：强制单行 + 省略号（自定义 slot 时全局 showOverflow 不生效） */
+.customer-grid :deep(.party-name-col .vxe-cell) {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.customer-grid .party-name-cell {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.customer-grid .party-name-text {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+.customer-grid .party-pin-tag {
+  flex: 0 0 auto;
+  margin-inline-end: 0;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* 拖拽把手列：关闭全局 showOverflow 带来的省略号 */
+.customer-grid :deep(.party-drag-col .vxe-cell) {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.customer-grid :deep(.party-drag-col .vxe-cell--drag-handle) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

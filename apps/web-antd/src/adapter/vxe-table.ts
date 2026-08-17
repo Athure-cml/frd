@@ -28,6 +28,10 @@ setupVbenVxeTable({
         columnConfig: {
           resizable: true,
         },
+        // 列自定义（显隐/排序/固定/列宽）本地记忆；需配合表格 id
+        customConfig: {
+          storage: true,
+        },
         minHeight: 180,
         formConfig: {
           enabled: false,

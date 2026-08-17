@@ -1,4 +1,10 @@
+import type { CostMode } from './types';
+
 import { downloadFileFromBlob } from '@vben/utils';
+
+import { seaCostApi } from './freight';
+import { fumigationCostApi } from './fumigation';
+import * as roadApi from './road';
 
 export { seaCostApi } from './freight';
 export { fumigationCostApi } from './fumigation';
@@ -6,21 +12,16 @@ export * from './road';
 export * from './templates';
 export * from './types';
 
-import type { CostMode } from './types';
-
-import { seaCostApi } from './freight';
-import { fumigationCostApi } from './fumigation';
-import * as roadApi from './road';
-
 export const costApiMap = {
   fumigation: fumigationCostApi,
   road: {
+    batchCopy: roadApi.batchCopyRoadCost,
     batchDelete: roadApi.batchDeleteRoadCost,
     batchUpdate: roadApi.batchUpdateRoadCost,
     create: roadApi.createRoadCost,
     delete: roadApi.deleteRoadCost,
     export: roadApi.exportRoadCost,
-    import: roadApi.importRoadCost,
+    importExcel: roadApi.importRoadCost,
     list: roadApi.getRoadCostList,
     update: roadApi.updateRoadCost,
   },

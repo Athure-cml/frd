@@ -23,12 +23,13 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
-        name: 'SupplierList',
+        name: 'SupplierTruckList',
         path: '/customers/suppliers',
         component: () => import('#/views/supplier/list/index.vue'),
         meta: {
           icon: 'lucide:truck',
-          title: $t('page.supplier.list'),
+          supplierCategory: 'TRUCK',
+          title: $t('page.supplier.truckList'),
         },
       },
       {
@@ -41,12 +42,42 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: 'SupplierFumigationList',
+        path: '/customers/fumigation-suppliers',
+        component: () => import('#/views/supplier/list/index.vue'),
+        meta: {
+          icon: 'lucide:flame',
+          supplierCategory: 'FUMIGATION',
+          title: $t('page.supplier.fumigationList'),
+        },
+      },
+      {
         name: 'AgentList',
         path: '/customers/agents',
         component: () => import('#/views/agent/list/index.vue'),
         meta: {
           icon: 'lucide:handshake',
           title: $t('page.agent.list'),
+        },
+      },
+      {
+        name: 'SupplierYardList',
+        path: '/customers/yard-suppliers',
+        component: () => import('#/views/supplier/list/index.vue'),
+        meta: {
+          icon: 'lucide:warehouse',
+          supplierCategory: 'YARD',
+          title: $t('page.supplier.yardList'),
+        },
+      },
+      {
+        name: 'SupplierOtherList',
+        path: '/customers/other-suppliers',
+        component: () => import('#/views/supplier/list/index.vue'),
+        meta: {
+          icon: 'lucide:boxes',
+          supplierCategory: 'OTHER',
+          title: $t('page.supplier.otherList'),
         },
       },
     ],

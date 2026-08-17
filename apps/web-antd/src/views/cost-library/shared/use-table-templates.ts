@@ -9,6 +9,12 @@ import { listCostTableTemplates } from '#/api/cost/templates';
 import { getBuiltinTemplates } from './default-templates';
 
 const STORAGE_PREFIX = 'cost-library:active-template:';
+const TEMPLATE_CACHE_TTL_MS = 60_000;
+
+const templateCache = new Map<
+  CostMode,
+  { at: number; templates: CostTableTemplate[] }
+>();
 
 function storageKey(mode: CostMode) {
   return `${STORAGE_PREFIX}${mode}`;
@@ -20,14 +26,28 @@ function hashLayoutColumns(layout?: CostTableTemplateLayout) {
     layout?.fields?.join(',') ??
     layout?.groups?.flatMap((group) => group.fields ?? []).join(',') ??
     '';
-  if (!order) {
+  const overrides = JSON.stringify(layout?.fieldOverrides ?? {});
+  const signature = `${order}|${overrides}`;
+  if (!signature || signature === '|{}') {
     return '';
   }
   let hash = 0;
-  for (let index = 0; index < order.length; index += 1) {
-    hash = (hash * 31 + order.codePointAt(index)) | 0;
+  for (let index = 0; index < signature.length; index += 1) {
+    hash = Math.trunc(hash * 31 + (signature.codePointAt(index) ?? 0));
   }
   return Math.abs(hash).toString(36);
+}
+
+/** 列布局签名：用于判断是否需要二次 loadColumn */
+export function getTemplateLayoutSignature(template: CostTableTemplate) {
+  const layout = template.layout;
+  const order =
+    layout?.fieldOrder?.join(',') ??
+    layout?.fields?.join(',') ??
+    layout?.groups?.flatMap((group) => group.fields ?? []).join(',') ??
+    '';
+  const overrides = JSON.stringify(layout?.fieldOverrides ?? {});
+  return `${template.id}|${template.createdAt ?? ''}|${order}|${overrides}`;
 }
 
 export function getSavedTemplateId(mode: CostMode) {
@@ -59,19 +79,42 @@ export function resolveActiveTemplate(
   return pool[0];
 }
 
+export function invalidateTableTemplateCache(mode?: CostMode) {
+  if (mode) {
+    templateCache.delete(mode);
+    return;
+  }
+  templateCache.clear();
+}
+
 export async function loadTableTemplates(
   mode: CostMode,
+  options?: { force?: boolean },
 ): Promise<CostTableTemplate[]> {
+  const force = options?.force === true;
+  const cached = templateCache.get(mode);
+  if (
+    !force &&
+    cached &&
+    Date.now() - cached.at < TEMPLATE_CACHE_TTL_MS &&
+    cached.templates.length > 0
+  ) {
+    return cached.templates;
+  }
+
   try {
     const remote = await listCostTableTemplates(mode);
     const scoped = remote?.filter((item) => item.mode === mode) ?? [];
     if (scoped.length > 0) {
+      templateCache.set(mode, { at: Date.now(), templates: scoped });
       return scoped;
     }
   } catch {
     // 后端未就绪时使用内置默认模板
   }
-  return getBuiltinTemplates(mode);
+  const builtin = getBuiltinTemplates(mode);
+  templateCache.set(mode, { at: Date.now(), templates: builtin });
+  return builtin;
 }
 
 export function getGridStorageId(
@@ -81,6 +124,6 @@ export function getGridStorageId(
 ) {
   const layoutHash = hashLayoutColumns(layout);
   return layoutHash
-    ? `cost-library-${mode}-${templateId}-${layoutHash}`
-    : `cost-library-${mode}-${templateId}`;
+    ? `cost-library-${mode}-${templateId}-w12-${layoutHash}`
+    : `cost-library-${mode}-${templateId}-w12`;
 }

@@ -17,7 +17,9 @@ export namespace CustomerApi {
     id: number;
     name: string;
     phone?: string;
+    pinnedAt?: null | string;
     remark?: string;
+    shortName?: string;
     status: 0 | 1;
     updatedAt: string;
   }
@@ -29,6 +31,7 @@ export namespace CustomerApi {
     name: string;
     phone?: string;
     remark?: string;
+    shortName?: string;
     status: 0 | 1;
   }
 
@@ -61,6 +64,22 @@ export async function updateCustomer(
 
 export async function deleteCustomer(id: number) {
   return requestClient.delete(`${BASE}/${id}`);
+}
+
+export async function batchDeleteCustomer(ids: number[]) {
+  return requestClient.post(`${BASE}/batch-delete`, { ids });
+}
+
+export async function pinCustomer(id: number) {
+  return requestClient.post<CustomerApi.Customer>(`${BASE}/${id}/pin`);
+}
+
+export async function unpinCustomer(id: number) {
+  return requestClient.post<CustomerApi.Customer>(`${BASE}/${id}/unpin`);
+}
+
+export async function reorderCustomer(ids: number[]) {
+  return requestClient.put(`${BASE}/reorder`, { ids });
 }
 
 export async function importCustomer(file: File) {

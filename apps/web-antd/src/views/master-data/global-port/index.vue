@@ -20,7 +20,6 @@ import {
   exportGlobalPort,
   getGlobalPortList,
   importGlobalPort,
-  waitForGlobalPortSync,
 } from '#/api/master-data/global-port';
 import { $t } from '#/locales';
 
@@ -35,6 +34,10 @@ import {
   useGlobalPortColumns,
   useGlobalPortSearchSchema,
 } from './data';
+import {
+  buildGlobalPortDedupeKeyFromRecord,
+  GLOBAL_PORT_IMPORT_DEDUPE_HEADERS,
+} from './import-dedupe';
 import Form from './modules/form.vue';
 
 import '../../system/shared/system.css';
@@ -44,7 +47,23 @@ const canManage = hasAccessByCodes(['md_global_port:manage']);
 
 const importModalRef = ref<InstanceType<typeof ImportModal>>();
 const exporting = ref(false);
-const syncing = ref(false);
+
+async function loadGlobalPortImportDedupeKeys() {
+  const keys: string[] = [];
+  let page = 1;
+  const pageSize = 200;
+  while (page <= 50) {
+    const result = await getGlobalPortList({ page, pageSize });
+    for (const item of result.items) {
+      keys.push(buildGlobalPortDedupeKeyFromRecord(item));
+    }
+    if (keys.length >= result.total || result.items.length === 0) {
+      break;
+    }
+    page += 1;
+  }
+  return keys;
+}
 
 const [FormModal, formModalApi] = useVbenModal({
   connectedComponent: Form,
@@ -113,47 +132,6 @@ async function onExport() {
   }
 }
 
-async function onSyncUnlocode() {
-  syncing.value = true;
-  message.loading({
-    content: $t('page.masterData.hint.syncingUnlocode'),
-    duration: 0,
-    key: 'global_port_sync_msg',
-  });
-  try {
-    const result = await waitForGlobalPortSync((phase) => {
-      if (phase === 'LOADING') {
-        message.loading({
-          content: $t('page.masterData.hint.syncingUnlocodeLoading'),
-          duration: 0,
-          key: 'global_port_sync_msg',
-        });
-      } else if (phase === 'IMPORTING') {
-        message.loading({
-          content: $t('page.masterData.hint.syncingUnlocodeImporting'),
-          duration: 0,
-          key: 'global_port_sync_msg',
-        });
-      }
-    });
-    message.success({
-      content: $t('page.masterData.hint.syncUnlocodeSuccess', [
-        result.inserted,
-        result.updated,
-      ]),
-      key: 'global_port_sync_msg',
-    });
-    gridApi.query();
-  } catch (error: any) {
-    message.error({
-      content: error?.message ?? $t('page.masterData.hint.syncUnlocodeFailed'),
-      key: 'global_port_sync_msg',
-    });
-  } finally {
-    syncing.value = false;
-  }
-}
-
 const searchFormOptions = useI18nFormOptions(() => ({
   collapsed: true,
   schema: useGlobalPortSearchSchema(),
@@ -164,6 +142,7 @@ const searchFormOptions = useI18nFormOptions(() => ({
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    id: 'md-global-port-list',
     checkboxConfig: {
       highlight: true,
       reserve: true,
@@ -198,20 +177,16 @@ const [Grid, gridApi] = useVbenVxeGrid({
     <FormModal @success="gridApi.query()" />
     <ImportModal
       ref="importModalRef"
+      :dedupe-key-headers="GLOBAL_PORT_IMPORT_DEDUPE_HEADERS"
+      :format-hint="$t('page.masterData.hint.importFormat')"
       :import-fn="importGlobalPort"
+      :load-existing-dedupe-keys="loadGlobalPortImportDedupeKeys"
+      :template-hint="$t('page.masterData.hint.globalPortImportTemplate')"
       :title="$t('page.masterData.actions.importGlobalPort')"
       @success="gridApi.query()"
     />
     <Grid class="system-grid" :form-options="searchFormOptions">
       <template #toolbar-tools>
-        <Button
-          v-if="canManage"
-          :loading="syncing"
-          class="mr-2"
-          @click="onSyncUnlocode"
-        >
-          {{ $t('page.masterData.actions.syncUnlocode') }}
-        </Button>
         <Button v-if="canManage" class="mr-2" @click="importModalRef?.open()">
           <ArrowUpToLine class="size-4" />
           {{ $t('page.masterData.actions.import') }}

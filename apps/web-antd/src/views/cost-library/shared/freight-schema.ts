@@ -8,8 +8,10 @@ import { useDebounceFn } from '@vueuse/core';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 
+import { getAgentList } from '#/api/agent';
 import { getEnabledContainerTypeOptions } from '#/api/master-data/container-type';
 import { searchGlobalPortNameOptions } from '#/api/master-data/global-port';
+import { getShippingLineList } from '#/api/shipping-line';
 import { $t } from '#/locales';
 
 dayjs.extend(customParseFormat);
@@ -31,6 +33,15 @@ const DATE_FIELD_KEYS = [
   'ebsValidDate',
   'griValidDate',
   'othersValidDate',
+] as const;
+
+const SEA_EFF_EXTRA_FIELD_KEYS = [
+  'cf_sea_freight_eff',
+  'cf_sea_bunker_eff',
+  'cf_sea_others_eff',
+  'cf_seaFreightEff',
+  'cf_seaBunkerEff',
+  'cf_seaOthersEff',
 ] as const;
 
 /** 英文港名 → 中文名（下拉加载时缓存，供 POD 自动带入） */
@@ -106,7 +117,7 @@ function containerTypeSelectProps() {
   };
 }
 
-function createPortSelectProps(options: {
+export function createPortSelectProps(options: {
   multiple?: boolean;
   portTypes?: GlobalPortApi.PortType[];
 }) {
@@ -126,11 +137,14 @@ function createPortSelectProps(options: {
       for (const item of items) {
         rememberPortNameZh(item.value, item.nameZh);
       }
+      // label：下拉显示「名称/类型」；value：存名称；optionLabelProp 使选中后只显示名称
       return items.map(({ label, value }) => ({ label, value }));
     },
     class: 'w-full',
     filterOption: false,
     optionFilterProp: 'label',
+    // 选中后输入框只展示 value（港口名称），下拉仍展示 label（名称/类型）
+    optionLabelProp: 'value',
     params,
     showSearch: true,
     virtual: false,
@@ -154,6 +168,58 @@ function createPortSelectProps(options: {
     };
   }
   return base;
+}
+
+/** 船公司 / 代理：从客商列表选名称，下拉可搜，选中后只显示名称 */
+function createPartyNameSelectProps(options: {
+  fetch: (params: {
+    name?: string;
+    page: number;
+    pageSize: number;
+    status: number;
+  }) => Promise<{ items: Array<{ name: string }> }>;
+}) {
+  const params = reactive({ keyword: '' });
+  const setKeyword = useDebounceFn((keyword: string) => {
+    params.keyword = keyword.trim();
+  }, 280);
+
+  return {
+    allowClear: true,
+    api: async (p: { keyword?: string }) => {
+      const result = await options.fetch({
+        name: p?.keyword?.trim() || undefined,
+        page: 1,
+        pageSize: 50,
+        status: 1,
+      });
+      const seen = new Set<string>();
+      const list: Array<{ label: string; value: string }> = [];
+      for (const item of result.items) {
+        const name = String(item.name ?? '').trim();
+        if (!name) {
+          continue;
+        }
+        const key = name.toUpperCase();
+        if (seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+        list.push({ label: name, value: name });
+      }
+      return list;
+    },
+    class: 'w-full',
+    filterOption: false,
+    optionFilterProp: 'label',
+    optionLabelProp: 'value',
+    params,
+    showSearch: true,
+    virtual: false,
+    onSearch: (keyword: string) => {
+      setKeyword(keyword);
+    },
+  };
 }
 
 /** 兼容历史 Excel 日期格式，供 DatePicker 使用 */
@@ -339,12 +405,18 @@ export function useFreightFormSchema(): VbenFormSchema[] {
       help: () => $t('page.costLibrary.seaFormula.computedBy'),
     },
     {
-      component: 'Input',
+      component: 'ApiSelect',
+      componentProps: createPartyNameSelectProps({
+        fetch: getShippingLineList,
+      }),
       fieldName: 'ssl',
       label: f('ssl'),
     },
     {
-      component: 'Input',
+      component: 'ApiSelect',
+      componentProps: createPartyNameSelectProps({
+        fetch: getAgentList,
+      }),
       fieldName: 'agent',
       label: f('agent'),
     },
@@ -358,13 +430,31 @@ export function useFreightFormSchema(): VbenFormSchema[] {
   ];
 }
 
+/** 海运批量修改字段与批量复制弹窗一致 */
 export function useFreightBatchSchema(): VbenFormSchema[] {
+  return useSeaBatchCopySchema();
+}
+
+/** 海运批量复制/批量修改可覆盖字段（运费区 / 附加费分区换行） */
+export function useSeaBatchCopySchema(): VbenFormSchema[] {
   return [
     {
-      component: 'Textarea',
-      componentProps: { maxlength: 255, rows: 2 },
-      fieldName: 'remark',
-      label: f('remark'),
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'freight',
+      label: f('freight'),
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: containerTypeSelectProps(),
+      fieldName: 'containerType',
+      label: f('containerType'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'freightEffDate',
+      label: f('effectiveDate'),
     },
     {
       component: 'DatePicker',
@@ -373,10 +463,23 @@ export function useFreightBatchSchema(): VbenFormSchema[] {
       label: f('freightValidDate'),
     },
     {
+      component: 'Divider',
+      fieldName: 'bunkerDivider',
+      formItemClass: 'col-span-full !my-1',
+      hideLabel: true,
+    },
+    {
       component: 'InputNumber',
       componentProps: { class: 'w-full', min: 0, precision: 2 },
       fieldName: 'buc',
+      formItemClass: 'col-span-full',
       label: f('buc'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'bucEffDate',
+      label: f('effectiveDate'),
     },
     {
       component: 'DatePicker',
@@ -385,9 +488,29 @@ export function useFreightBatchSchema(): VbenFormSchema[] {
       label: f('bucValidDate'),
     },
     {
-      component: 'Input',
-      fieldName: 'agent',
-      label: f('agent'),
+      component: 'Divider',
+      fieldName: 'othersDivider',
+      formItemClass: 'col-span-full !my-1',
+      hideLabel: true,
+    },
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'others',
+      formItemClass: 'col-span-full',
+      label: f('othersSurcharge'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'othersEffDate',
+      label: f('effectiveDate'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'othersValidDate',
+      label: f('othersValidDate'),
     },
   ];
 }
@@ -401,6 +524,13 @@ export function rowToFreightFormValues(row: FreightCostRecord) {
   for (const key of DATE_FIELD_KEYS) {
     values[key] = normalizeCostDate(row[key]);
   }
+  const extra = { ...row.extraFields } as Record<string, unknown>;
+  for (const key of SEA_EFF_EXTRA_FIELD_KEYS) {
+    if (extra[key] !== undefined && extra[key] !== null && extra[key] !== '') {
+      extra[key] = normalizeCostDate(String(extra[key]));
+    }
+  }
+  values.extraFields = extra;
   return values;
 }
 

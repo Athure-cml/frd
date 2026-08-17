@@ -4,9 +4,12 @@ import type { CustomerApi } from '#/api/customer';
 
 import { $t } from '#/locales';
 
+import { buildDragSortColumn } from '../../shared/party-row-drag';
 import {
+  appendPinOperationOptions,
   buildCheckboxColumn,
   buildOperationColumn,
+  buildSeqColumn,
 } from '../../system/shared/columns';
 import { statusTagOptions } from '../../system/shared/tags';
 
@@ -32,6 +35,12 @@ export function useCustomerFormSchema(
       fieldName: 'name',
       label: t('fields.name'),
       rules: 'required',
+    },
+    {
+      component: 'Input',
+      componentProps: { maxlength: 64 },
+      fieldName: 'shortName',
+      label: t('fields.shortName'),
     },
     {
       component: 'Input',
@@ -132,6 +141,10 @@ export function useCustomerColumns(
 ): VxeTableGridOptions<CustomerApi.Customer>['columns'] {
   const operationOptions: Array<Record<string, any> | string> = [];
   if (canEdit) {
+    appendPinOperationOptions(operationOptions, {
+      pin: t('actions.pin'),
+      unpin: t('actions.unpin'),
+    });
     operationOptions.push({ code: 'edit', text: $t('common.edit') });
   }
   if (canDelete) {
@@ -149,12 +162,18 @@ export function useCustomerColumns(
       nameField: 'name',
       nameTitle: t('fields.name'),
       operationOptions,
+      width: canEdit ? 220 : 168,
     },
   );
 
   const columns: VxeTableGridOptions<CustomerApi.Customer>['columns'] = [
     buildCheckboxColumn(),
+    buildSeqColumn(),
   ];
+  const dragColumn = buildDragSortColumn(canEdit);
+  if (dragColumn) {
+    columns.push(dragColumn);
+  }
   if (showInternalCode) {
     columns.push({
       field: 'code',
@@ -166,10 +185,19 @@ export function useCustomerColumns(
   }
   columns.push(
     {
+      className: 'party-name-col',
       field: 'name',
       fixed: showInternalCode ? undefined : 'left',
+      headerClassName: 'party-name-col',
       minWidth: 160,
+      showOverflow: 'ellipsis',
+      slots: { default: 'name' },
       title: t('fields.name'),
+    },
+    {
+      field: 'shortName',
+      minWidth: 120,
+      title: t('fields.shortName'),
     },
     {
       field: 'contactName',
@@ -221,6 +249,7 @@ export function toCustomerSavePayload(
     name: values.name,
     phone: values.phone?.trim() || undefined,
     remark: values.remark?.trim() || undefined,
+    shortName: values.shortName?.trim() || undefined,
     status: values.status ?? 1,
   };
 }

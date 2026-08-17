@@ -4,7 +4,10 @@ import type { ContainerTypeApi } from '#/api/master-data/container-type';
 
 import { $t } from '#/locales';
 
-import { buildOperationColumn } from '../../system/shared/columns';
+import {
+  buildOperationColumn,
+  buildSeqColumn,
+} from '../../system/shared/columns';
 import { statusTagOptions } from '../../system/shared/tags';
 
 const t = (key: string) => $t(`page.masterData.${key}`);
@@ -81,6 +84,7 @@ export function useContainerTypeColumns(
 ): VxeTableGridOptions<ContainerTypeApi.ContainerType>['columns'] {
   const columns: VxeTableGridOptions<ContainerTypeApi.ContainerType>['columns'] =
     [
+      buildSeqColumn(),
       {
         align: 'left',
         className: 'col-sys-code',

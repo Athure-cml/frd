@@ -63,23 +63,58 @@ export async function getGlobalPortOptions(params?: {
 }
 
 function formatPortOptionLabel(item: GlobalPortApi.GlobalPort) {
-  return item.nameZh
-    ? `${item.code} · ${item.nameZh} · ${item.nameEn}`
-    : `${item.code} · ${item.nameEn}`;
+  const name = item.nameEn?.trim() || item.code;
+  const typeLabel = formatPortTypeLabel(item.portType);
+  return typeLabel ? `${name}/${typeLabel}` : name;
+}
+
+function formatPortTypeLabel(portType?: GlobalPortApi.PortType) {
+  if (!portType) {
+    return '';
+  }
+  // 下拉简写，与业务习惯一致：港口 / 内陆 / 铁路
+  switch (portType) {
+    case 'AIRPORT': {
+      return '机场';
+    }
+    case 'INLAND': {
+      return '内陆';
+    }
+    case 'OTHER': {
+      return '其他';
+    }
+    case 'RAIL': {
+      return '铁路';
+    }
+    case 'SEAPORT': {
+      return '港口';
+    }
+    default: {
+      return '';
+    }
+  }
 }
 
 /** 海运录入下拉：value 存英文港名，附带中文名供自动带入 */
 export interface GlobalPortNameOption {
   label: string;
   nameZh?: string;
+  portType?: GlobalPortApi.PortType;
   value: string;
 }
 
-/** 选中后搜索框可能残留「CODE · 名称」，提取有效检索词 */
+/** 选中后搜索框可能残留「名称/类型」或旧「CODE · 名称」，提取有效检索词 */
 function normalizePortSearchKeyword(keyword?: string) {
   const raw = keyword?.trim() || '';
   if (!raw) {
     return '';
+  }
+  // 名称/类型
+  if (raw.includes('/')) {
+    const namePart = raw.split('/')[0]?.trim();
+    if (namePart) {
+      return namePart;
+    }
   }
   const parts = raw
     .split('·')
@@ -131,10 +166,9 @@ export async function searchGlobalPortNameOptions(params?: {
       seenCode.add(codeKey);
     }
     options.push({
-      label: item.nameZh?.trim()
-        ? `${code} · ${item.nameZh.trim()} · ${nameEn}`
-        : `${code} · ${nameEn}`,
+      label: formatPortOptionLabel(item),
       nameZh: item.nameZh?.trim() || undefined,
+      portType: item.portType,
       value: nameEn,
     });
     if (options.length >= limit) {
@@ -155,9 +189,7 @@ export async function getPorPortOptions() {
     getGlobalPortList({ page: 1, pageSize: 500, portType: 'RAIL' }),
   ]);
   return [...inland.items, ...rail.items].map((item) => ({
-    label: item.nameZh
-      ? `${item.code} · ${item.nameZh} · ${item.nameEn}`
-      : `${item.code} · ${item.nameEn}`,
+    label: formatPortOptionLabel(item),
     value: item.id,
   }));
 }

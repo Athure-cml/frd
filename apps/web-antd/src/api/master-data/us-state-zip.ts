@@ -75,6 +75,31 @@ export async function searchDestCityNameOptions(params?: {
   }));
 }
 
+export type DestZipResolveStatus =
+  | 'ambiguous'
+  | 'notFound'
+  | 'skipped'
+  | 'unique';
+
+export interface DestZipResolveItem {
+  candidates?: string[];
+  city: string;
+  message?: string;
+  state: string;
+  status: DestZipResolveStatus;
+  zipCode?: null | string;
+}
+
+/** 按 City+State 批量解析邮编（唯一匹配才返回 zip） */
+export async function resolveDestZips(
+  items: Array<{ city: string; state: string }>,
+) {
+  return requestClient.post<DestZipResolveItem[]>(
+    `${BASE}/resolve-zips`,
+    items,
+  );
+}
+
 export async function createUsStateZipCity(data: {
   name: string;
   stateId: number;

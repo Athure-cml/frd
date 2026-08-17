@@ -10,6 +10,8 @@ export interface PageResult<T> {
 export interface CostImportResult {
   errors: string[];
   failed: number;
+  /** 失败数据行号（从 1 起，不含表头）；用于按模板下载失败行 */
+  failedRowNumbers?: number[];
   imported: number;
 }
 
@@ -71,9 +73,9 @@ export interface FreightCostSave {
 }
 
 export interface RoadCostRecord {
-  allInFmOneWay: number;
-  allInFmRound: number;
-  allInNoFm: number;
+  allInFmOneWay?: null | number;
+  allInFmRound?: null | number;
+  allInNoFm?: null | number;
   baseFreight?: number;
   chassis?: number;
   city: string;
@@ -123,16 +125,20 @@ export type FumigationCostSave = Omit<FumigationCostRecord, 'id' | 'updatedAt'>;
 
 export interface CostTableFieldOverride {
   align?: 'center' | 'left' | 'right';
+  /** 列背景色，如 #E8F1FC；空则清除 */
+  bgColor?: string;
   fixed?: 'left' | 'right' | null;
   minWidth?: number;
   required?: boolean;
+  /** 列表表头是否显示排序 */
+  sortable?: boolean;
   title?: string;
   visible?: boolean;
   width?: number;
 }
 
 export interface CostTableCustomFieldDef {
-  dataType?: 'number' | 'text';
+  dataType?: 'date' | 'number' | 'text';
   field: string;
   required?: boolean;
   title: string;

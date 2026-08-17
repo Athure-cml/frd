@@ -19,6 +19,13 @@ export function buildCostCheckboxColumn() {
   };
 }
 
+/** 状态标签「生效中 / 已过期」内容宽度 */
+const COST_STATUS_COL_WIDTH = 76;
+/** 操作「修改 / 复制 / 删除」 */
+const COST_OPERATION_COL_WIDTH_DEFAULT = 148;
+/** 操作「修改 / 续期 / 复制 / 删除」 */
+const COST_OPERATION_COL_WIDTH_WITH_RENEW = 188;
+
 export function buildCostStatusColumn() {
   return {
     align: 'center' as const,
@@ -28,8 +35,9 @@ export function buildCostStatusColumn() {
     },
     field: 'status',
     ...(isMobileViewport() ? {} : { fixed: 'right' as const }),
+    minWidth: COST_STATUS_COL_WIDTH,
     title: $t('page.costLibrary.fields.status'),
-    width: isMobileViewport() ? 88 : 100,
+    width: COST_STATUS_COL_WIDTH,
   };
 }
 
@@ -46,13 +54,26 @@ export function appendCostOperationColumn<T extends { id: number }>(
   onActionClick: OnActionClickFn<T>,
   nameField: string,
   nameTitle: string,
+  options?: { enableRenew?: boolean },
 ) {
   const mobile = isMobileViewport();
+  const enableRenew = options?.enableRenew === true;
+  const operationWidth = enableRenew
+    ? COST_OPERATION_COL_WIDTH_WITH_RENEW
+    : COST_OPERATION_COL_WIDTH_DEFAULT;
   const operation = buildOperationColumn(canEdit, onActionClick, {
     nameField,
     nameTitle,
     operationOptions: [
       'edit',
+      ...(enableRenew
+        ? [
+            {
+              code: 'renew',
+              text: $t('page.costLibrary.actions.renew'),
+            },
+          ]
+        : []),
       {
         code: 'copy',
         text: $t('page.costLibrary.actions.copy'),
@@ -62,14 +83,11 @@ export function appendCostOperationColumn<T extends { id: number }>(
   });
   if (operation) {
     operation.title = $t('page.costLibrary.fields.operation');
+    operation.minWidth = operationWidth;
+    operation.width = operationWidth;
     if (mobile) {
       // 小屏取消右固定，避免操作列占满屏宽挡住数据列；改为整表横滑
       delete (operation as { fixed?: string }).fixed;
-      operation.minWidth = 148;
-      operation.width = 148;
-    } else {
-      operation.minWidth = 220;
-      operation.width = 220;
     }
     columns?.push(operation);
   }
@@ -105,12 +123,12 @@ export function adaptCostColumnsForViewport<T>(
         .map((child) => strip(child));
     }
     if (next.field === 'operation') {
-      next.width = 148;
-      next.minWidth = 148;
+      next.width = COST_OPERATION_COL_WIDTH_WITH_RENEW;
+      next.minWidth = COST_OPERATION_COL_WIDTH_WITH_RENEW;
     }
     if (next.field === 'status') {
-      next.width = 88;
-      next.minWidth = 88;
+      next.width = COST_STATUS_COL_WIDTH;
+      next.minWidth = COST_STATUS_COL_WIDTH;
     }
     if (next.type === 'seq') {
       next.width = 44;

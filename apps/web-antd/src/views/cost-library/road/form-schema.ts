@@ -43,6 +43,8 @@ const ALL_IN_TRIGGER_FIELDS = [
   'stopOff',
   'waitingFee',
   'redelivery',
+  'extraFields.cf_road_yard_storage',
+  'extraFields.cf_road_extra_chassis',
   'prepull',
   'nsLift',
   'otherFee',
@@ -146,6 +148,7 @@ function createPortSelectProps(options: {
     class: 'w-full',
     filterOption: false,
     optionFilterProp: 'label',
+    optionLabelProp: 'value',
     params,
     showSearch: true,
     // 同名港口 value 冲突时，虚拟列表滚动会越滚越重复
@@ -266,31 +269,6 @@ function createCitySelectProps(stateCode?: string) {
   };
 }
 
-/** POR：美国城市接货地 */
-function createPorCitySelectProps() {
-  const params = reactive({ keyword: '' });
-  const setKeyword = useDebounceFn((keyword: string) => {
-    params.keyword = keyword.trim();
-  }, 280);
-
-  return {
-    allowClear: true,
-    api: async (p: { keyword?: string }) =>
-      searchDestCityNameOptions({
-        keyword: p?.keyword,
-        limit: 50,
-      }),
-    class: 'w-full',
-    filterOption: false,
-    optionFilterProp: 'label',
-    params,
-    showSearch: true,
-    onSearch: (keyword: string) => {
-      setKeyword(keyword);
-    },
-  };
-}
-
 async function applyZipLookup(
   zip: string,
   setFieldValue: (field: string, value: unknown) => void,
@@ -318,7 +296,12 @@ async function applyZipLookup(
 }
 
 export async function loadSupplierFormulaCache() {
-  const result = await getSupplierList({ page: 1, pageSize: 200, status: 1 });
+  const result = await getSupplierList({
+    category: 'TRUCK',
+    page: 1,
+    pageSize: 200,
+    status: 1,
+  });
   supplierFormulaCache.clear();
   for (const item of result.items) {
     supplierFormulaCache.set(item.name.trim(), {
@@ -393,7 +376,9 @@ export function useRoadFormSchema(): VbenFormSchema[] {
     },
     {
       component: 'ApiSelect',
-      componentProps: createPorCitySelectProps(),
+      componentProps: createPortSelectProps({
+        portTypes: PORT_TYPES,
+      }),
       fieldName: 'por',
       label: t('por'),
       rules: 'required',
@@ -405,7 +390,6 @@ export function useRoadFormSchema(): VbenFormSchema[] {
       }),
       fieldName: 'pol',
       label: t('pol'),
-      rules: 'required',
     },
     {
       component: 'ApiSelect',
@@ -463,28 +447,21 @@ export function useRoadFormSchema(): VbenFormSchema[] {
 export function useRoadBatchSchema(): VbenFormSchema[] {
   return [
     {
+      component: 'InputNumber',
+      componentProps: {
+        addonAfter: '%',
+        class: 'w-full',
+        min: 0,
+        precision: 2,
+      },
+      fieldName: 'fsc',
+      label: t('fsc'),
+    },
+    {
       component: 'DatePicker',
       componentProps: datePickerProps(),
       fieldName: 'validDate',
       label: t('validDate'),
-    },
-    {
-      component: 'ApiSelect',
-      componentProps: supplierSelectProps(),
-      fieldName: 'supplier',
-      label: t('supplier'),
-    },
-    {
-      component: 'InputNumber',
-      componentProps: { class: 'w-full', min: 0, precision: 2 },
-      fieldName: 'baseFreight',
-      label: t('baseFreight'),
-    },
-    {
-      component: 'Textarea',
-      componentProps: { maxlength: 512, rows: 2 },
-      fieldName: 'remark',
-      label: t('remark'),
     },
   ];
 }
@@ -494,15 +471,18 @@ export function rowToRoadFormValues(row: RoadCostRecord) {
 }
 
 export function toRoadSavePayload(values: Record<string, any>): RoadCostSave {
-  const numOrZero = (v: unknown) =>
-    v === null || v === undefined || v === '' || Number.isNaN(Number(v))
-      ? 0
-      : Number(v);
+  const numOrNull = (v: unknown) => {
+    if (v === null || v === undefined || v === '') {
+      return undefined;
+    }
+    const n = Number(v);
+    return Number.isNaN(n) ? undefined : n;
+  };
 
   return {
-    allInFmOneWay: numOrZero(values.allInFmOneWay),
-    allInFmRound: numOrZero(values.allInFmRound),
-    allInNoFm: numOrZero(values.allInNoFm),
+    allInFmOneWay: numOrNull(values.allInFmOneWay),
+    allInFmRound: numOrNull(values.allInFmRound),
+    allInNoFm: numOrNull(values.allInNoFm),
     baseFreight: values.baseFreight,
     chassis: values.chassis,
     city: values.city,

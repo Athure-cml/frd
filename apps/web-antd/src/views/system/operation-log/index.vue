@@ -41,6 +41,7 @@ const searchFormOptions = useI18nFormOptions(() => ({
 const [Grid] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    id: 'system-operation-log-list',
     columns: useOperationLogColumns(),
     height: 'auto',
     pagerConfig: {},

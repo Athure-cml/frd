@@ -11,11 +11,14 @@ import { h } from 'vue';
 import { $t } from '#/locales';
 
 import { formatAmount } from '../road/formatters';
+import { applyColumnBgParams, resolveColumnBgColor } from './column-bg-style';
+import { resolveCompactColumnSize } from './column-width';
 import {
   appendCostOperationColumn,
   appendCostStatusColumn,
   buildCostCheckboxColumn,
 } from './columns';
+import { coerceAmountValue } from './fee-unit-pairs';
 import { getFieldCatalog, toFieldCatalogMap } from './field-catalog';
 import {
   customFieldColumnPath,
@@ -25,25 +28,25 @@ import {
   resolveFieldTitle,
 } from './template-field-model';
 
-const PRIMARY_HEADER = 'fumigation-header-primary';
-const VALIDITY_HEADER = 'fumigation-header-quote';
-
 const OUTDOOR_FIELDS = new Set([
+  'cf_fum_outdoor_eff',
   'outdoorNonOak',
   'outdoorOak',
   'outdoorValidity',
 ]);
-const INDOOR_FIELDS = new Set(['indoorNonOak', 'indoorOak', 'indoorValidity']);
-const VALIDITY_FIELDS = new Set(['indoorValidity', 'outdoorValidity']);
+const INDOOR_FIELDS = new Set([
+  'cf_fum_indoor_eff',
+  'indoorNonOak',
+  'indoorOak',
+  'indoorValidity',
+]);
 
 export const FUMIGATION_GROUP_DEFS = {
   indoor: {
-    headerClassName: PRIMARY_HEADER,
     key: 'indoor',
     labelKey: 'page.costLibrary.fumigationGroups.indoor',
   },
   outdoor: {
-    headerClassName: PRIMARY_HEADER,
     key: 'outdoor',
     labelKey: 'page.costLibrary.fumigationGroups.outdoor',
   },
@@ -126,49 +129,62 @@ export function resolveFumigationColumnSegments(
   return segments;
 }
 
-function resolveHeaderClass(field: string, groupClassName?: string) {
-  if (VALIDITY_FIELDS.has(field)) {
-    return VALIDITY_HEADER;
-  }
-  if (groupClassName) {
-    return groupClassName;
-  }
-  if (OUTDOOR_FIELDS.has(field) || INDOOR_FIELDS.has(field)) {
-    return PRIMARY_HEADER;
-  }
-  return undefined;
-}
-
 function buildRequiredHeaderSlot(title: string) {
-  return () => [
-    h('span', { class: 'col-required-mark' }, '*'),
-    h('span', null, title),
-  ];
+  return () =>
+    h('span', { class: 'col-required-header' }, [
+      h('span', { class: 'col-required-mark' }, '*'),
+      h('span', null, title),
+    ]);
 }
 
 function buildLeafColumn(
   field: string,
   entry: FieldCatalogEntry,
   options: {
-    headerClassName?: string;
     override?: CostTableFieldOverride;
     required?: boolean;
     title: string;
   },
 ) {
+  const size = resolveCompactColumnSize(options.title, entry, {
+    required: options.required,
+  });
+  const minWidth =
+    options.override?.minWidth ?? entry.minWidth ?? size.minWidth;
+  const width = options.override?.width ?? entry.width;
   const column: Record<string, unknown> = {
     align: entry.align,
     className: entry.className,
     field,
-    headerClassName: options.headerClassName,
-    minWidth: options.override?.minWidth ?? entry.minWidth,
-    showOverflow: entry.showOverflow ?? isCustomFieldKey(field),
+    headerClassName: options.required ? 'col-required' : undefined,
+    minWidth,
+    showOverflow: entry.showOverflow ?? true,
+    sortable: options.override?.sortable === true,
     title: options.title,
-    width: options.override?.width ?? entry.width,
   };
+  if (typeof width === 'number' && width > 0) {
+    column.width = width;
+  }
 
   if (isCustomFieldKey(field)) {
     column.field = customFieldColumnPath(field);
+    if (options.override?.sortable === true) {
+      column.sortBy = ({
+        row,
+      }: {
+        row: { extraFields?: Record<string, unknown> };
+      }) => {
+        const raw = row.extraFields?.[field];
+        if (raw === null || raw === undefined || raw === '') {
+          return null;
+        }
+        if (entry.format === 'amount') {
+          return coerceAmountValue(raw);
+        }
+        const asNum = coerceAmountValue(raw);
+        return asNum === null ? String(raw) : asNum;
+      };
+    }
     column.formatter = ({
       cellValue,
       row,
@@ -191,8 +207,6 @@ function buildLeafColumn(
   }
 
   if (options.required) {
-    column.headerClassName =
-      `${options.headerClassName ?? ''} col-required`.trim();
     column.slots = {
       header: buildRequiredHeaderSlot(options.title),
     };
@@ -201,6 +215,10 @@ function buildLeafColumn(
   if (options.override?.fixed) {
     column.fixed = options.override.fixed;
   }
+  applyColumnBgParams(
+    column,
+    resolveColumnBgColor('fumigation', field, options.override?.bgColor),
+  );
 
   return column;
 }
@@ -209,7 +227,6 @@ function buildFieldColumn(
   field: string,
   catalogMap: Map<string, FieldCatalogEntry>,
   layout: CostTableTemplateLayout,
-  headerClassName?: string,
 ) {
   if (!isFieldVisibleInLayout(layout, field)) {
     return null;
@@ -219,7 +236,6 @@ function buildFieldColumn(
     return null;
   }
   return buildLeafColumn(field, entry, {
-    headerClassName: resolveHeaderClass(field, headerClassName),
     override: layout.fieldOverrides?.[field],
     required: isFieldRequiredInLayout(layout, field),
     title: resolveFieldTitle('fumigation', field, layout),
@@ -252,7 +268,6 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
       field: def.field,
       format: def.dataType === 'number' ? 'amount' : undefined,
       labelKey: def.title,
-      minWidth: 120,
     });
   });
   resolveFumigationFieldOrder(layout).forEach((field) => {
@@ -262,38 +277,24 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
     catalogMap.set(field, {
       field,
       labelKey: resolveFieldTitle('fumigation', field, layout),
-      minWidth: 120,
     });
   });
 
   const dataColumns = resolveFumigationColumnSegments(layout)
     .map((segment) => {
       if (segment.type === 'leaf') {
-        const headerClassName = ['address', 'region', 'station'].includes(
-          segment.field,
-        )
-          ? PRIMARY_HEADER
-          : undefined;
-        return buildFieldColumn(
-          segment.field,
-          catalogMap,
-          layout,
-          headerClassName,
-        );
+        return buildFieldColumn(segment.field, catalogMap, layout);
       }
 
       const groupDef = FUMIGATION_GROUP_DEFS[segment.groupKey];
       const children = segment.fields
-        .map((field) =>
-          buildFieldColumn(field, catalogMap, layout, groupDef.headerClassName),
-        )
+        .map((field) => buildFieldColumn(field, catalogMap, layout))
         .filter(Boolean);
       if (children.length === 0) {
         return null;
       }
       return {
         children,
-        headerClassName: groupDef.headerClassName,
         title: $t(groupDef.labelKey),
       };
     })

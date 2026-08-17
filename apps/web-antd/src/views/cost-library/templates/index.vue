@@ -25,6 +25,7 @@ import { useInternalCodeVisibility } from '#/utils/internal-code-access';
 
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import {
+  invalidateTableTemplateCache,
   resolveActiveTemplate,
   saveTemplateId,
 } from '../shared/use-table-templates';
@@ -107,6 +108,7 @@ function onDelete(row: CostTableTemplate) {
     content: $t('page.costLibrary.template.confirmDelete', [name]),
     onOk: async () => {
       await deleteCostTableTemplate(row.id);
+      invalidateTableTemplateCache(activeMode.value);
       message.success($t('ui.actionMessage.deleteSuccess', [name]));
       gridApi.query();
     },
@@ -117,6 +119,7 @@ function onDelete(row: CostTableTemplate) {
 async function onSetDefault(row: CostTableTemplate) {
   await setDefaultCostTableTemplate(row.id);
   saveTemplateId(activeMode.value, row.id);
+  invalidateTableTemplateCache(activeMode.value);
   activeTemplateId.value = row.id;
   message.success($t('ui.actionMessage.operationSuccess'));
   gridApi.query();

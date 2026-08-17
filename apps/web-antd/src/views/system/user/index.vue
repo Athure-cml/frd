@@ -118,6 +118,7 @@ const searchFormOptions = useI18nFormOptions(() => ({
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    id: 'system-user-list',
     columns: useUserColumns(onActionClick, onStatusChange, canManage),
     height: 'auto',
     pagerConfig: {},

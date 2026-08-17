@@ -5,7 +5,10 @@ import type { ExchangeRateApi } from '#/api/exchange-rate';
 import { getBaseCurrencyCode, getEnabledCurrencyOptions } from '#/api/currency';
 import { $t } from '#/locales';
 
-import { buildOperationColumn } from '../../system/shared/columns';
+import {
+  buildOperationColumn,
+  buildSeqColumn,
+} from '../../system/shared/columns';
 import { statusTagOptions } from '../../system/shared/tags';
 
 const t = (key: string) => $t(`page.masterData.${key}`);
@@ -95,6 +98,7 @@ export function useExchangeRateColumns(
 ): VxeTableGridOptions<ExchangeRateApi.ExchangeRate>['columns'] {
   const columns: VxeTableGridOptions<ExchangeRateApi.ExchangeRate>['columns'] =
     [
+      buildSeqColumn(),
       {
         align: 'left',
         className: 'col-sys-code',

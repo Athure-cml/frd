@@ -1,80 +1,105 @@
-.cost-library-grid.fumigation-cost-grid :deep(.fumigation-header-primary) {
-  font-weight: 600;
-  color: #fff !important;
-  background-color: #1d4e7b !important;
-}
+/* 本文件为全局 CSS（非 scoped），勿使用 :deep()，否则选择器会被浏览器整条丢弃 */
 
-.cost-library-grid.fumigation-cost-grid :deep(.fumigation-header-quote) {
-  font-weight: 600;
-  color: #000 !important;
-  background-color: #ff0 !important;
-}
-
-.cost-library-grid :deep(.col-price) {
+.cost-library-grid .col-price {
   font-variant-numeric: tabular-nums;
 }
 
-.cost-library-grid.road-cost-grid :deep(.road-header-route) {
+/* 视图模板配置的列背景色（params.bgColor → cellStyle；单元格继承） */
+.cost-library-grid .vxe-header--column.col-tmpl-bg .vxe-cell,
+.cost-library-grid .vxe-body--column.col-tmpl-bg .vxe-cell {
+  background-color: inherit !important;
+}
+
+.cost-library-grid.road-cost-grid .road-header-route {
   font-weight: 500;
   color: hsl(var(--foreground));
   background-color: color-mix(in srgb, #9bc2e6 28%, #fff) !important;
 }
 
-.cost-library-grid.road-cost-grid :deep(.road-header-freight) {
+.cost-library-grid.road-cost-grid .road-header-freight {
   font-weight: 500;
   color: hsl(var(--foreground));
   background-color: color-mix(in srgb, #ffc000 22%, #fff) !important;
 }
 
-.cost-library-grid.road-cost-grid :deep(.road-header-extra) {
+.cost-library-grid.road-cost-grid .road-header-extra {
   font-weight: 500;
   color: hsl(var(--foreground));
   background-color: color-mix(in srgb, #a9d08e 24%, #fff) !important;
 }
 
-.cost-library-grid.road-cost-grid :deep(.road-header-meta) {
+.cost-library-grid.road-cost-grid .road-header-meta {
   font-weight: 500;
   color: hsl(var(--foreground));
   background-color: color-mix(in srgb, #d0d0d0 30%, #fff) !important;
 }
 
-.cost-library-grid.road-cost-grid :deep(.road-header-green) {
+.cost-library-grid.road-cost-grid .road-header-green {
   font-weight: 500;
   color: hsl(var(--foreground));
   background-color: color-mix(in srgb, #4cd080 14%, #fff) !important;
 }
 
-.cost-library-grid.sea-cost-grid :deep(.sea-header-surcharge) {
+.cost-library-grid.sea-cost-grid .sea-header-surcharge {
   font-weight: 500;
   color: hsl(var(--foreground));
   background-color: color-mix(in srgb, #bfbfbf 28%, #fff) !important;
 }
 
-.cost-library-grid.sea-cost-grid :deep(.sea-header-route) {
+.cost-library-grid.sea-cost-grid .sea-header-route {
   font-weight: 500;
   color: hsl(var(--foreground));
   background-color: color-mix(in srgb, #9bc2e6 28%, #fff) !important;
 }
 
-.cost-library-grid.sea-cost-grid :deep(.sea-header-freight) {
+.cost-library-grid.sea-cost-grid .sea-header-freight {
   font-weight: 500;
   color: hsl(var(--foreground));
   background-color: color-mix(in srgb, #ffc000 22%, #fff) !important;
 }
 
-.cost-library-grid.sea-cost-grid :deep(.sea-header-extra) {
+.cost-library-grid.sea-cost-grid .sea-header-extra {
   font-weight: 500;
   color: hsl(var(--foreground));
   background-color: color-mix(in srgb, #a9d08e 24%, #fff) !important;
 }
 
-.cost-library-grid :deep(.col-remark) {
+.cost-library-grid .col-remark {
   color: hsl(var(--muted-foreground));
 }
 
-.cost-library-grid :deep(.col-required-mark) {
+.cost-library-grid .col-required-mark {
   margin-right: 2px;
   color: #ff4d4f;
+}
+
+.cost-library-grid .col-required-header {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* 表头单行紧凑：贴合字段文案，禁止换行 */
+.cost-library-grid .vxe-header--column,
+.cost-library-grid .vxe-header--column .vxe-cell,
+.cost-library-grid .vxe-header--column .vxe-cell--title,
+.cost-library-grid .vxe-header--column .vxe-cell--wrapper {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cost-library-grid .vxe-header--column.col-required .vxe-cell,
+.cost-library-grid .vxe-header--column .col-required-mark {
+  white-space: nowrap;
+}
+
+.cost-library-grid .vxe-header--column .vxe-cell--title {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  max-width: 100%;
 }
 
 .cost-toolbar {
@@ -113,13 +138,22 @@
   min-width: 140px;
 }
 
-.cost-drawer-form :deep(.ant-select),
-.cost-drawer-form :deep(.ant-picker) {
+.cost-drawer-form .ant-select,
+.cost-drawer-form .ant-picker {
   width: 100%;
 }
 
-/* 小屏：紧凑工具栏 + 强制表格高度
-   （全局 .vxe-grid { height:auto !important } 会把表格压成内容高，需更高优先级覆盖） */
+/*
+ * 全局 .vxe-grid { height:auto !important } 会把空表/加载中表体压成接近 0 高，
+ * VbenLoading（absolute + size-full）随之不可见，表现为「整页空白无转圈」。
+ * 成本库配合 Page auto-content-height，用 100% 填满内容区以露出加载态。
+ */
+:root .vxe-grid.cost-library-grid {
+  height: 100% !important;
+  min-height: 360px !important;
+}
+
+/* 小屏：紧凑工具栏 + 按视口估算高度 */
 @media (max-width: 767px) {
   .cost-toolbar {
     gap: 4px;
@@ -142,12 +176,12 @@
     min-width: 0;
   }
 
-  .cost-toolbar :deep(.ant-btn) {
+  .cost-toolbar .ant-btn {
     padding-inline: 8px;
   }
 
-  .cost-toolbar :deep(.ant-btn .anticon),
-  .cost-toolbar :deep(.ant-btn svg) {
+  .cost-toolbar .ant-btn .anticon,
+  .cost-toolbar .ant-btn svg {
     width: 14px;
     height: 14px;
   }
@@ -158,12 +192,12 @@
     min-height: 420px !important;
   }
 
-  .cost-library-grid :deep(.vxe-grid--toolbar-wrapper) {
+  .cost-library-grid .vxe-grid--toolbar-wrapper {
     padding: 4px 0;
   }
 
-  .cost-library-grid :deep(.vxe-tools--operate),
-  .cost-library-grid :deep(.vxe-toolbar) {
+  .cost-library-grid .vxe-tools--operate,
+  .cost-library-grid .vxe-toolbar {
     flex-wrap: wrap;
     row-gap: 4px;
   }

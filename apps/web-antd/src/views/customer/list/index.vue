@@ -11,15 +11,19 @@ import { useAccess } from '@vben/access';
 import { Page, useVbenModal } from '@vben/common-ui';
 import { ArrowUpToLine, Download, Plus } from '@vben/icons';
 
-import { Button, message } from 'ant-design-vue';
+import { Button, message, Modal, Tag } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import {
+  batchDeleteCustomer,
   deleteCustomer,
   downloadCustomerExport,
   exportCustomer,
   getCustomerList,
   importCustomer,
+  pinCustomer,
+  reorderCustomer,
+  unpinCustomer,
 } from '#/api/customer';
 import { $t } from '#/locales';
 import { useInternalCodeVisibility } from '#/utils/internal-code-access';
@@ -29,6 +33,10 @@ import {
   buildListExportParams,
   getGridSelectedIds,
 } from '../../shared/export-params';
+import {
+  buildPartyRowDragGridOptions,
+  collectGridRowIds,
+} from '../../shared/party-row-drag';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import { buildCustomerSearchSchema, useCustomerColumns } from './data';
 import Form from './modules/form.vue';
@@ -75,6 +83,52 @@ function onDelete(row: CustomerApi.Customer) {
     .catch(() => hideLoading());
 }
 
+function clearSelection() {
+  gridApi.grid?.clearCheckboxRow?.();
+  gridApi.grid?.clearCheckboxReserve?.();
+}
+
+function onBatchDelete() {
+  const ids = getGridSelectedIds(gridApi);
+  if (ids.length === 0) {
+    message.warning($t('page.customer.hint.selectRows'));
+    return;
+  }
+  Modal.confirm({
+    content: $t('page.customer.confirm.batchDelete', [ids.length]),
+    onOk: async () => {
+      await batchDeleteCustomer(ids);
+      message.success($t('ui.actionMessage.operationSuccess'));
+      clearSelection();
+      gridApi.query();
+    },
+    title: $t('common.prompt'),
+  });
+}
+
+function onTogglePin(row: CustomerApi.Customer, pinned: boolean) {
+  const key = 'customer_pin_msg';
+  const hideLoading = message.loading({
+    content: pinned
+      ? $t('page.customer.hint.pinning')
+      : $t('page.customer.hint.unpinning'),
+    duration: 0,
+    key,
+  });
+  const request = pinned ? pinCustomer(row.id) : unpinCustomer(row.id);
+  request
+    .then(() => {
+      message.success({
+        content: pinned
+          ? $t('page.customer.hint.pinSuccess', [row.name])
+          : $t('page.customer.hint.unpinSuccess', [row.name]),
+        key,
+      });
+      gridApi.query();
+    })
+    .catch(() => hideLoading());
+}
+
 function onActionClick({
   code,
   row,
@@ -84,6 +138,12 @@ function onActionClick({
   }
   if (code === 'delete') {
     onDelete(row);
+  }
+  if (code === 'pin') {
+    onTogglePin(row, true);
+  }
+  if (code === 'unpin') {
+    onTogglePin(row, false);
   }
 }
 
@@ -111,6 +171,33 @@ async function onExport() {
   }
 }
 
+async function onRowDragend() {
+  if (!canEdit) {
+    return;
+  }
+  const ids = collectGridRowIds(gridApi.grid);
+  if (ids.length === 0) {
+    return;
+  }
+  const key = 'customer_reorder_msg';
+  const hideLoading = message.loading({
+    content: $t('page.customer.hint.reordering'),
+    duration: 0,
+    key,
+  });
+  try {
+    await reorderCustomer(ids);
+    message.success({
+      content: $t('page.customer.hint.reorderSuccess'),
+      key,
+    });
+  } catch {
+    hideLoading();
+  } finally {
+    gridApi.query();
+  }
+}
+
 function buildColumns() {
   return useCustomerColumns(
     onActionClick,
@@ -127,9 +214,15 @@ const searchFormOptions = useI18nFormOptions(() => ({
   submitOnChange: false,
 }));
 
+const dragGridOptions = buildPartyRowDragGridOptions(canEdit, 'page.customer');
+
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
+  gridEvents: {
+    rowDragend: onRowDragend,
+  },
   gridOptions: {
+    id: 'customer-list',
     checkboxConfig: {
       highlight: true,
       reserve: true,
@@ -149,9 +242,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
         },
       },
     },
-    rowConfig: {
-      keyField: 'id',
-    },
+    ...dragGridOptions,
     toolbarConfig: {
       custom: true,
       refresh: true,
@@ -198,6 +289,9 @@ function onRefresh() {
           <Download class="size-4" />
           {{ $t('page.customer.actions.export') }}
         </Button>
+        <Button v-if="canDelete" class="mr-2" danger @click="onBatchDelete">
+          {{ $t('page.customer.actions.batchDelete') }}
+        </Button>
         <Button v-if="canCreate" type="primary" @click="onCreate">
           <Plus class="size-4" />
           {{ $t('page.customer.actions.create') }}
@@ -205,6 +299,14 @@ function onRefresh() {
       </template>
       <template v-if="canViewInternalCodes" #code="{ row }">
         <span class="customer-code">{{ row.code }}</span>
+      </template>
+      <template #name="{ row }">
+        <span class="party-name-cell">
+          <span class="party-name-text" :title="row.name">{{ row.name }}</span>
+          <Tag v-if="row.pinnedAt" class="party-pin-tag" color="processing">
+            {{ $t('page.customer.badge.pinned') }}
+          </Tag>
+        </span>
       </template>
     </Grid>
   </Page>

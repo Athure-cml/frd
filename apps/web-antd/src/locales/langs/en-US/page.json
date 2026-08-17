@@ -1,4 +1,4 @@
-﻿{
+{
   "auth": {
     "login": "Login",
     "register": "Register",
@@ -218,9 +218,11 @@
       "outdoorNonOak": "NON OAK",
       "outdoorOak": "OAK",
       "outdoorValidity": "Validity",
+      "outdoorValiditySearch": "FM-OUT Validity",
       "indoorNonOak": "NON OAK",
       "indoorOak": "OAK",
       "indoorValidity": "Validity",
+      "indoorValiditySearch": "FM-IN Validity",
       "address": "ADDRESS"
     },
     "seaGroups": {
@@ -237,16 +239,20 @@
       "enProductName": "Product Name (EN)",
       "containerType": "Container Type",
       "freight": "Freight",
-      "freightValidDate": "Valid Date",
-      "buc": "BUC",
-      "bucValidDate": "BUC Valid Date",
+      "freightValidDate": "Valid To",
+      "freightValidDateSearch": "Freight Valid To",
+      "freightEffDate": "Freight Effective From",
+      "effectiveDate": "Effective From",
+      "buc": "Fuel Surcharge",
+      "bucValidDate": "Valid To",
       "ebs": "EBS",
       "ebsValidDate": "EBS Valid Date",
       "gri": "GRI",
       "griValidDate": "GRI Valid Date",
       "others": "OTHERS",
-      "othersValidDate": "OTHERS Valid Date",
-      "allIn": "ALL IN",
+      "othersSurcharge": "Surcharge OTHERS",
+      "othersValidDate": "Valid To",
+      "allIn": "ALL IN (Subtotal)",
       "ssl": "SSL (Carrier)",
       "agent": "AGENT",
       "remark": "REMARK"
@@ -266,13 +272,19 @@
       "batchEditRoad": "Batch Edit Truck Costs",
       "batchEditSea": "Batch Edit Ocean Costs",
       "batchEditFumigation": "Batch Edit Fumigation Costs",
+      "batchCopy": "Batch Copy",
+      "batchCopyShort": "Copy",
+      "batchCopyApply": "Apply Changes",
+      "batchCopySkip": "Skip Changes",
       "batchDelete": "Batch Delete",
       "createShort": "Add",
       "templateShort": "Template",
       "batchEditShort": "Edit",
       "batchDeleteShort": "Delete",
       "copy": "Copy",
-      "copyRecord": "Copy & Enter {0}"
+      "copyRecord": "Copy & Enter {0}",
+      "renew": "Renew",
+      "renewRecord": "Renew {0}"
     },
     "confirm": {
       "batchDelete": "Delete {0} selected record(s)? This cannot be undone."
@@ -282,6 +294,11 @@
       "selectRows": "Select at least one row first",
       "selectFile": "Please select an Excel file",
       "importDrop": "Click or drag Excel file here",
+      "renewDesc": "Create a new rate from this row. After you set the new effective date and save, the previous row’s valid date becomes (new effective date − 1 day).",
+      "renewEffRequired": "Effective date is required for renewal",
+      "renewSourceMissing": "Missing source record for renewal",
+      "renewValidBeforeEff": "Valid date cannot be earlier than effective date",
+      "renewSuccess": "Renewed; previous row valid date updated",
       "importFormat": "Supports .xlsx with export template headers",
       "importPreviewLoading": "Parsing preview…",
       "importPreviewMeta": "{0} data row(s)",
@@ -291,16 +308,36 @@
       "importPreviewEmpty": "No previewable rows found in this file",
       "importPreviewFailed": "Could not parse this Excel file. Please use a valid .xlsx",
       "importPreviewClear": "Choose another",
-      "importSuccess": "Imported {0} record(s)",
-      "importPartial": "Import done: {0} succeeded, {1} failed",
-      "importErrorTitle": "Rows that failed to import",
+      "importDedupeSummary": "Removed {0} duplicate rows ({1} already in library, {2} duplicated in file)",
+      "importDedupeExistingRow": "Row {0}: data already exists ({1})",
+      "importDedupeFileDupRow": "Row {0}: duplicated within file ({1})",
+      "importZipEnrichFilled": "Auto-filled ZIP CODE for {0} row(s) from City+State",
+      "importZipEnrichPartial": "Auto-filled ZIP for {0} row(s); {1} row(s) are ambiguous and will fail on confirm",
+      "importZipEnrichIssues": "{0} row(s) cannot uniquely resolve ZIP from City+State and will fail on confirm",
+      "importZipEnrichFailed": "ZIP auto-fill failed; you can still confirm (server will retry)",
+      "importFailedDownload": "Download all rows (issues highlighted)",
+      "importFailedDownloadEmpty": "Nothing to download",
+      "importFailedDownloadSuccess": "Downloaded all {0} row(s) ({1} with issues, highlighted). Fix them, remove the IMPORT ERROR column, then import once",
+      "importBlockedHint": "Nothing is written while errors remain. Download all rows (failed rows are red with reasons), fix them, remove the IMPORT ERROR column, then import once.",
+      "importBlockedNeedFix": "Fix validation issues before importing",
+      "importValidating": "Validating all rows…",
+      "importValidateOk": "Validation passed: {0} row(s) ready to import",
+      "importValidateFailed": "Pre-validation request failed; please retry",
+      "importErrorColumn": "IMPORT ERROR",
+      "importErrorFallback": "Row failed validation",
+      "importErrorTitle": "Validation issues",
       "importTemplate": "Export current data first to use as a column template, then import.",
       "exporting": "Exporting…",
       "exportSuccess": "Export complete",
       "selectedCount": "{0} selected",
       "batchFill": "Fill only the fields you want to update; blanks are ignored.",
       "batchEmpty": "Fill at least one field to update",
-      "batchSelected": "{0} row(s) selected"
+      "batchSelected": "{0} row(s) selected",
+      "batchCopyPrompt": "When copying selected rows, you can optionally unify Fuel and Validity. If you choose Apply Changes, fill at least one of them.",
+      "batchCopyPromptSea": "When copying selected rows, you can unify Freight, Container Type, Fuel Surcharge, OTHERS and their effective/valid dates. Fill at least one field when applying changes. Blank fields keep the source values. ALL IN is calculated by formula.",
+      "batchCopyNeedFields": "Fill Fuel or Validity when applying changes",
+      "batchCopyNeedFieldsSea": "Fill at least one override field when applying changes",
+      "batchCopySuccess": "Copied {0} record(s)"
     },
     "search": {
       "zipCodePlaceholder": "Fuzzy-search Zip code"
@@ -333,6 +370,8 @@
       "customFieldNamePlaceholder": "Enter field name",
       "customFieldTag": "Custom",
       "requiredField": "Required",
+      "sortableField": "Header sort",
+      "sortableFieldHint": "Show asc/desc on list header (current page)",
       "editColumn": "Edit",
       "hideColumn": "Hide",
       "showColumn": "Show",
@@ -355,6 +394,14 @@
       "showAll": "Show all",
       "visible": "Visible",
       "columnWidth": "Width",
+      "columnBgColor": "Column color",
+      "bgPrimary": "Soft blue",
+      "bgAmber": "Soft amber",
+      "bgGreen": "Soft green",
+      "bgGray": "Soft gray",
+      "bgRose": "Soft rose",
+      "bgCustom": "Custom color",
+      "bgClear": "Clear color",
       "noAvailableFields": "No available fields",
       "noSearchResults": "No matching fields",
       "fixedLeft": "Pin left",
@@ -428,48 +475,66 @@
     },
     "roadFields": {
       "zipCode": "ZIP CODE",
-      "city": "City",
-      "state": "State",
+      "city": "CITY",
+      "state": "STATE",
       "por": "POR",
       "pol": "POL",
       "supplier": "SUPPLIER",
-      "baseFreight": "BASE FREIGHT",
-      "fsc": "FSC (%)",
+      "baseFreight": "BASE",
+      "fsc": "FSC",
       "chassis": "CHASSIS",
-      "triTandemAxle": "OW/TRI-AXCEL",
+      "triTandemAxle": "OW",
       "split": "SPLIT",
       "stopOff": "STOP OFF",
-      "allInNoFm": "ALL IN - NO FM",
-      "allInFmOneWay": "ALL IN - FM (NON OAK)",
-      "allInFmRound": "ALL IN - FM (OAK)",
-      "waitingFee": "WAITING FEE",
+      "allInNoFm": "ALL IN",
+      "allInFmOneWay": "ALL IN FM NON OAK",
+      "allInFmRound": "ALL IN FM OAK",
+      "waitingFee": "WAITING",
       "redelivery": "REDELIVERY",
       "prepull": "PREPULL",
-      "nsLift": "NS LIFT",
-      "otherFee": "OTHER FEE",
+      "nsLift": "LIFT",
+      "otherFee": "OTHERS",
       "remark": "REMARK",
-      "validDate": "Validity",
-      "logYardNameAddress": "LOG YARD NAME & ADDRESS"
+      "validDate": "VALID TIME",
+      "logYardNameAddress": "PICK UP ADDRESS"
     }
   },
   "customer": {
     "title": "Business Partners",
     "list": "Customer List",
     "hint": {
-      "list": "Maintain customer master data. Quotes reference customers by selection to avoid typos.",
+      "list": "Maintain customer master data. Quotes reference customers by selection to avoid typos. Pin frequently used customers to the top.",
       "codeAuto": "A customer code is assigned automatically on save.",
       "exporting": "Exporting…",
-      "exportSuccess": "Export completed"
+      "exportSuccess": "Export completed",
+      "pinning": "Pinning…",
+      "unpinning": "Unpinning…",
+      "pinSuccess": "Pinned: {0}",
+      "unpinSuccess": "Unpinned: {0}",
+      "dragCrossPin": "Drag only within pinned or unpinned groups",
+      "reordering": "Saving order…",
+      "reorderSuccess": "Order updated",
+      "selectRows": "Select at least one row to delete"
+    },
+    "badge": {
+      "pinned": "Pinned"
+    },
+    "confirm": {
+      "batchDelete": "Delete {0} selected record(s)? This cannot be undone."
     },
     "actions": {
       "create": "New Customer",
       "edit": "Edit Customer",
       "import": "Import",
-      "export": "Export"
+      "export": "Export",
+      "batchDelete": "Batch Delete",
+      "pin": "Pin",
+      "unpin": "Unpin"
     },
     "fields": {
       "code": "Code",
       "name": "Name",
+      "shortName": "Short Name",
       "contactName": "Contact",
       "phone": "Phone",
       "email": "Email",
@@ -485,19 +550,41 @@
     }
   },
   "supplier": {
-    "title": "Supplier List",
-    "list": "Supplier List",
+    "title": "Suppliers",
+    "list": "Truck Suppliers",
+    "truckList": "Truck Suppliers",
+    "fumigationList": "Fumigation Suppliers",
+    "yardList": "Yards / Warehouses",
+    "otherList": "Other Suppliers",
     "hint": {
-      "list": "Maintain supplier name, email, remark, and package price formulas.",
+      "list": "Maintain truck suppliers and package formulas for truck costing.",
+      "truckList": "Maintain truck supplier contacts and package formulas.",
+      "fumigationList": "Maintain fumigation supplier master data.",
+      "yardList": "Maintain warehouse / yard master data.",
+      "otherList": "Maintain other suppliers with manageable types (used types cannot be deleted).",
       "codeAuto": "A supplier code is assigned automatically on save.",
-      "formulaTokens": "Allowed fields: BASE FREIGHT, FSC, CHASSIS, OW/TRI-AXCEL (or TRI/TANDEM AXLE), SPLIT, STOP OFF, WAITING FEE, REDELIVERY, PREPULL, NS LIFT, OTHER FEE. Supports + - * / and parentheses.",
-      "formulaExample": "Example: BASE FREIGHT+FSC+CHASSIS+OW/TRI-AXCEL+SPLIT+STOP OFF",
+      "formulaTokens": "Allowed fields: BASE, FSC, CHASSIS, OW, SPLIT, STOP OFF, WAITING, REDELIVERY, YARD STORAGE, EXTRA CHASSIS, PREPULL, LIFT, OTHERS. Supports + - * / and parentheses.",
+      "formulaExample": "Example: BASE+FSC+CHASSIS+OW+SPLIT+STOP OFF+YARD STORAGE+EXTRA CHASSIS",
       "exporting": "Exporting…",
-      "exportSuccess": "Export completed"
+      "exportSuccess": "Export completed",
+      "pinning": "Pinning…",
+      "unpinning": "Unpinning…",
+      "pinSuccess": "Pinned: {0}",
+      "unpinSuccess": "Unpinned: {0}",
+      "dragCrossPin": "Drag only within pinned or unpinned groups",
+      "reordering": "Saving order…",
+      "reorderSuccess": "Order updated",
+      "selectRows": "Select at least one row to delete"
+    },
+    "badge": {
+      "pinned": "Pinned"
+    },
+    "confirm": {
+      "batchDelete": "Delete {0} selected record(s)? This cannot be undone."
     },
     "formula": {
       "help": "Click fee fields to insert; type operators and numbers yourself.",
-      "placeholder": "Insert fields, then type + - * / () and numbers, e.g. BASE FREIGHT+FSC*1.1",
+      "placeholder": "Insert fields, then type + - * / () and numbers, e.g. BASE+FSC*1.1",
       "fields": "Fee fields (click to insert)",
       "operators": "Operators & numbers",
       "number": "Number",
@@ -513,15 +600,21 @@
       "refFumigationNonOakHint": "You can insert “熏蒸打包价（非橡木）” to reference the previous formula result; type operators and numbers yourself."
     },
     "actions": {
-      "create": "New Supplier",
-      "edit": "Edit Supplier",
+      "create": "New",
+      "edit": "Edit",
       "import": "Import",
-      "export": "Export"
+      "export": "Export",
+      "batchDelete": "Batch Delete",
+      "pin": "Pin",
+      "unpin": "Unpin"
     },
     "fields": {
       "code": "Code",
       "name": "Supplier Name",
+      "shortName": "Short Name",
       "types": "Type",
+      "contactName": "Contact",
+      "phone": "Phone",
       "email": "Email",
       "remark": "Remark",
       "nonFumigationPackageFormula": "Non-Fumigation Package Formula",
@@ -529,16 +622,19 @@
       "fumigationOakPackageFormula": "Fumigation Package Formula (Oak)",
       "status": "Status",
       "createdBy": "Created By",
-      "updatedAt": "Updated At"
+      "updatedAt": "Updated At",
+      "operation": "Actions"
     },
-    "types": {
-      "bookingAgent": "Booking Agent",
-      "fleet": "Fleet",
-      "customsBroker": "Customs Broker",
-      "warehouse": "Warehouse",
-      "dedicatedLine": "Dedicated Line",
-      "containerLeasing": "Container Leasing",
-      "other": "Other"
+    "type": {
+      "manage": "Manage Types",
+      "add": "Add Type",
+      "name": "Type Name",
+      "namePlaceholder": "Enter type name",
+      "nameRequired": "Type name is required",
+      "usage": "Usage",
+      "inUse": "In use",
+      "unused": "Unused",
+      "inUseCannotDelete": "This type is in use and cannot be deleted"
     },
     "status": {
       "enabled": "Enabled",
@@ -549,20 +645,40 @@
     "title": "Shipping Line List",
     "list": "Shipping Line List",
     "hint": {
-      "list": "Maintain shipping line name, email, and remark for ocean costs and quotes.",
+      "list": "Maintain shipping line name, email, and remark for ocean costs and quotes. Pin frequently used lines to the top.",
       "codeAuto": "A shipping line code is assigned automatically on save.",
       "exporting": "Exporting…",
-      "exportSuccess": "Export completed"
+      "exportSuccess": "Export completed",
+      "pinning": "Pinning…",
+      "unpinning": "Unpinning…",
+      "pinSuccess": "Pinned: {0}",
+      "unpinSuccess": "Unpinned: {0}",
+      "dragCrossPin": "Drag only within pinned or unpinned groups",
+      "reordering": "Saving order…",
+      "reorderSuccess": "Order updated",
+      "selectRows": "Select at least one row to delete"
+    },
+    "badge": {
+      "pinned": "Pinned"
+    },
+    "confirm": {
+      "batchDelete": "Delete {0} selected record(s)? This cannot be undone."
     },
     "actions": {
       "create": "New Shipping Line",
       "edit": "Edit Shipping Line",
       "import": "Import",
-      "export": "Export"
+      "export": "Export",
+      "batchDelete": "Batch Delete",
+      "pin": "Pin",
+      "unpin": "Unpin"
     },
     "fields": {
       "code": "Code",
       "name": "Shipping Line Name",
+      "shortName": "Short Name",
+      "contactName": "Contact",
+      "phone": "Phone",
       "email": "Email",
       "remark": "Remark",
       "status": "Status",
@@ -578,20 +694,40 @@
     "title": "Agent List",
     "list": "Agent List",
     "hint": {
-      "list": "Maintain agent name, email, and remark for ocean costs and quotes.",
+      "list": "Maintain agent name, email, and remark for ocean costs and quotes. Pin frequently used agents to the top.",
       "codeAuto": "An agent code is assigned automatically on save.",
       "exporting": "Exporting…",
-      "exportSuccess": "Export completed"
+      "exportSuccess": "Export completed",
+      "pinning": "Pinning…",
+      "unpinning": "Unpinning…",
+      "pinSuccess": "Pinned: {0}",
+      "unpinSuccess": "Unpinned: {0}",
+      "dragCrossPin": "Drag only within pinned or unpinned groups",
+      "reordering": "Saving order…",
+      "reorderSuccess": "Order updated",
+      "selectRows": "Select at least one row to delete"
+    },
+    "badge": {
+      "pinned": "Pinned"
+    },
+    "confirm": {
+      "batchDelete": "Delete {0} selected record(s)? This cannot be undone."
     },
     "actions": {
       "create": "New Agent",
       "edit": "Edit Agent",
       "import": "Import",
-      "export": "Export"
+      "export": "Export",
+      "batchDelete": "Batch Delete",
+      "pin": "Pin",
+      "unpin": "Unpin"
     },
     "fields": {
       "code": "Code",
       "name": "Agent Name",
+      "shortName": "Short Name",
+      "contactName": "Contact",
+      "phone": "Phone",
       "email": "Email",
       "remark": "Remark",
       "status": "Status",
@@ -719,6 +855,7 @@
       "noCostMatch": "No matching cost data. Please maintain the cost library first.",
       "costImported": "Cost data imported. Adjust manually before saving.",
       "selectExport": "Select quotes to export",
+      "exporting": "Exporting…",
       "exportSuccess": "Export successful",
       "voidSuccess": "Quote voided",
       "submitSuccess": "Submitted as effective",
@@ -765,6 +902,7 @@
     "title": "Master Data",
     "currency": "Currencies",
     "exchangeRate": "Exchange Rates",
+    "unit": "Units",
     "usStateZip": "US State Zip Codes",
     "globalPort": "Global Ports",
     "containerType": "Container Types",
@@ -773,6 +911,8 @@
     "hint": {
       "currency": "Currencies used in quotes and cost library. One base currency is used for FX conversion.",
       "exchangeRate": "Maintain FX rates by effective date. Rates are snapshotted when a quote is saved.",
+      "unit": "Maintain fee units (e.g. day, hours). Store amount and unit separately; UI can show 20/hours.",
+      "unitCodeHelp": "Code used in display, e.g. hours → 20/hours",
       "rateMeaning": "1 unit of source currency = rate × target currency",
       "usStateZip": "Maintain US states, cities, and zip codes (State / City / Zip code) for freight and quotes.",
       "usStateZipEmpty": "No zip code data yet. Upload GeoNames US.txt for a full import, or use Excel import / manual entry.",
@@ -781,12 +921,13 @@
       "selectFile": "Please select an Excel file",
       "importDrop": "Click or drag file here",
       "importFormat": "Supports .xlsx / .xls",
+      "globalPortImportTemplate": "Excel headers: Name / Type / Country. Rows with the same Name+Type+Country are deduped in preview with an already-exists tip.",
       "importing": "Importing… Large files may take several minutes.",
       "importPartial": "{0} imported, {1} failed",
       "importSuccess": "{0} rows imported",
       "importErrorTitle": "Some rows failed",
       "deleteCityCascade": "Deleting this city will also remove all zip codes under it. Continue?",
-      "globalPort": "Shared port master (UNECE UN/LOCODE). Seaport for POL/POD; filter Inland / Rail for POR.",
+      "globalPort": "Maintain port name, type and country for freight entry and quotes.",
       "syncingUnlocode": "Syncing ports from UNECE…",
       "syncingUnlocodeLoading": "Downloading and parsing UN/LOCODE data…",
       "syncingUnlocodeImporting": "Importing ports, please wait…",
@@ -802,6 +943,8 @@
       "editCurrency": "Edit Currency",
       "createExchangeRate": "New Rate",
       "editExchangeRate": "Edit Rate",
+      "createUnit": "New Unit",
+      "editUnit": "Edit Unit",
       "import": "Import",
       "export": "Export",
       "createCity": "New City",
@@ -835,7 +978,7 @@
       "effectiveDate": "Effective Date"
     },
     "portType": {
-      "SEAPORT": "Seaport",
+      "SEAPORT": "Port",
       "INLAND": "Inland",
       "RAIL": "Rail",
       "AIRPORT": "Airport",
@@ -953,6 +1096,7 @@
         "costTemplate": "Templates",
         "currency": "Currencies",
         "exchangeRate": "Exchange Rates",
+        "unit": "Units",
         "mdDestAddress": "US State Zip Codes",
         "mdGlobalPort": "Global Ports",
         "mdInlandPor": "Inland POR",

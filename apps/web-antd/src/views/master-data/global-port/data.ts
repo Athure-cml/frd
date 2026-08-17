@@ -6,15 +6,15 @@ import { $t } from '#/locales';
 
 import {
   buildCheckboxColumn,
-  buildOperationColumn,
+  buildSeqColumn,
 } from '../../system/shared/columns';
 
 const PORT_TYPE_OPTIONS: { label: string; value: GlobalPortApi.PortType }[] = [
-  { label: 'Seaport', value: 'SEAPORT' },
-  { label: 'Inland', value: 'INLAND' },
-  { label: 'Rail', value: 'RAIL' },
-  { label: 'Airport', value: 'AIRPORT' },
-  { label: 'Other', value: 'OTHER' },
+  { label: '港口', value: 'SEAPORT' },
+  { label: '内陆点', value: 'INLAND' },
+  { label: '铁路场站', value: 'RAIL' },
+  { label: '机场', value: 'AIRPORT' },
+  { label: '其他', value: 'OTHER' },
 ];
 
 export function formatPortType(value?: GlobalPortApi.PortType) {
@@ -24,62 +24,40 @@ export function formatPortType(value?: GlobalPortApi.PortType) {
   return $t(`page.masterData.portType.${value}`);
 }
 
-export function useGlobalPortFormSchema(isEdit: boolean): VbenFormSchema[] {
+export function useGlobalPortFormSchema(_isEdit: boolean): VbenFormSchema[] {
   return [
     {
       component: 'Input',
-      componentProps: {
-        disabled: isEdit,
-        maxlength: 8,
-        style: { textTransform: 'uppercase' },
-      },
-      fieldName: 'code',
-      label: 'Port Code',
-      rules: 'required',
-    },
-    {
-      component: 'Input',
-      componentProps: { maxlength: 128 },
+      componentProps: { class: 'w-full', maxlength: 128 },
       fieldName: 'nameEn',
-      label: 'Name EN',
+      label: '名称',
       rules: 'required',
-    },
-    {
-      component: 'Input',
-      componentProps: { maxlength: 128 },
-      fieldName: 'nameZh',
-      label: 'Name ZH',
     },
     {
       component: 'Select',
       componentProps: {
         allowClear: true,
+        class: 'w-full',
         options: PORT_TYPE_OPTIONS,
       },
       defaultValue: 'SEAPORT',
       fieldName: 'portType',
-      label: 'Port Type',
+      label: '类型',
+      rules: 'required',
     },
     {
       component: 'Input',
-      componentProps: { maxlength: 128 },
-      fieldName: 'route',
-      label: 'Route',
-    },
-    {
-      component: 'Input',
-      componentProps: { maxlength: 128 },
+      componentProps: { class: 'w-full', maxlength: 128 },
       fieldName: 'countryRegion',
-      label: 'Country/Region',
+      label: '国家',
+      rules: 'required',
     },
   ];
 }
 
 export function useGlobalPortSearchSchema(): VbenFormSchema[] {
   return [
-    { component: 'Input', fieldName: 'code', label: 'Port Code' },
-    { component: 'Input', fieldName: 'nameEn', label: 'Name EN' },
-    { component: 'Input', fieldName: 'nameZh', label: 'Name ZH' },
+    { component: 'Input', fieldName: 'nameEn', label: '名称' },
     {
       component: 'Select',
       componentProps: {
@@ -87,10 +65,9 @@ export function useGlobalPortSearchSchema(): VbenFormSchema[] {
         options: PORT_TYPE_OPTIONS,
       },
       fieldName: 'portType',
-      label: 'Port Type',
+      label: '类型',
     },
-    { component: 'Input', fieldName: 'route', label: 'Route' },
-    { component: 'Input', fieldName: 'countryRegion', label: 'Country/Region' },
+    { component: 'Input', fieldName: 'countryRegion', label: '国家' },
   ];
 }
 
@@ -100,25 +77,34 @@ export function useGlobalPortColumns(
 ): VxeTableGridOptions<GlobalPortApi.GlobalPort>['columns'] {
   const columns: VxeTableGridOptions<GlobalPortApi.GlobalPort>['columns'] = [
     buildCheckboxColumn(),
-    { field: 'code', minWidth: 100, title: 'Port Code', width: 110 },
-    { field: 'nameEn', minWidth: 140, title: 'Name EN' },
-    { field: 'nameZh', minWidth: 120, title: 'Name ZH' },
+    buildSeqColumn(),
+    { field: 'nameEn', minWidth: 200, title: '名称' },
     {
       field: 'portType',
       formatter: ({ cellValue }) => formatPortType(cellValue),
-      minWidth: 100,
-      title: 'Port Type',
-      width: 110,
+      minWidth: 120,
+      title: '类型',
     },
-    { field: 'route', minWidth: 120, title: 'Route' },
-    { field: 'countryRegion', minWidth: 130, title: 'Country/Region' },
+    { field: 'countryRegion', minWidth: 100, title: '国家' },
   ];
-  const operation = buildOperationColumn(canManage, onActionClick, {
-    nameField: 'code',
-    nameTitle: 'Port Code',
-  });
-  if (operation) {
-    columns.push(operation);
+  if (canManage) {
+    columns.push({
+      align: 'center',
+      cellRender: {
+        attrs: {
+          nameField: 'nameEn',
+          nameTitle: '名称',
+          onClick: onActionClick,
+        },
+        name: 'CellOperation',
+        options: ['edit', 'delete'],
+      },
+      field: 'operation',
+      minWidth: 140,
+      showOverflow: false,
+      title: $t('page.system.fields.operation'),
+      width: 140,
+    });
   }
   return columns;
 }
@@ -127,17 +113,15 @@ export function toGlobalPortSavePayload(
   values: Record<string, any>,
 ): GlobalPortApi.GlobalPortSave {
   return {
-    code: String(values.code ?? '')
-      .trim()
-      .toUpperCase(),
-    countryRegion: values.countryRegion?.trim() ?? '',
+    code: '',
+    countryRegion: String(values.countryRegion ?? '').trim(),
     nameEn: String(values.nameEn ?? '').trim(),
-    nameZh: values.nameZh?.trim() ?? '',
+    nameZh: '',
     portType: values.portType ?? 'SEAPORT',
-    route: values.route?.trim() ?? '',
+    route: '',
   };
 }
 
 export function getGlobalPortRowName(row: GlobalPortApi.GlobalPort) {
-  return row.code;
+  return row.nameEn || row.code;
 }

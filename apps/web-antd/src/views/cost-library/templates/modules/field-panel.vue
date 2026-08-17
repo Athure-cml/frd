@@ -16,10 +16,15 @@ import {
   InputNumber,
   Select,
   Switch,
+  Tooltip,
 } from 'ant-design-vue';
 
 import { $t } from '#/locales';
 
+import {
+  COLUMN_BG_PRESETS,
+  normalizeColumnBgColor,
+} from '../../shared/column-bg-style';
 import {
   addFieldFromLibrary,
   applyLayoutFieldItems,
@@ -137,6 +142,16 @@ function patchItem(field: string, patch: Partial<TemplateLayoutFieldItem>) {
   syncItems(updateLayoutFieldItem(items.value, field, patch));
 }
 
+function setItemBgColor(field: string, color?: string) {
+  const next = normalizeColumnBgColor(color);
+  patchItem(field, { bgColor: next });
+}
+
+function onCustomBgInput(field: string, event: Event) {
+  const value = (event.target as HTMLInputElement | null)?.value;
+  setItemBgColor(field, value);
+}
+
 function onAddFromLibrary(field: string) {
   syncItems(addFieldFromLibrary(props.mode, items.value, field, layout.value));
 }
@@ -195,7 +210,15 @@ function handleSelectedReorder(event: {
     return;
   }
   visible.splice(newIndex, 0, moved);
-  syncItems([...visible, ...hiddenItems.value]);
+  // 仅重排可见列在 fieldOrder 中的位置，保留隐藏列相对插槽
+  let visibleIndex = 0;
+  const next = items.value.map((item) => {
+    if (!item.visible) {
+      return item;
+    }
+    return visible[visibleIndex++] ?? item;
+  });
+  syncItems(next);
 }
 
 async function setupSortable() {
@@ -215,6 +238,7 @@ async function setupSortable() {
   if (
     isSearching.value ||
     !isPanelOpen('selected', selectedOpen.value) ||
+    !(selectedEl instanceof HTMLElement) ||
     !isConnectedElement(selectedEl) ||
     filteredVisibleItems.value.length < 2
   ) {
@@ -222,7 +246,7 @@ async function setupSortable() {
   }
 
   try {
-    const { initializeSortable } = useSortable(selectedEl!, {
+    const { initializeSortable } = useSortable(selectedEl, {
       animation: 180,
       draggable: '.tpl-field-row--draggable',
       handle: '.tpl-field-row__drag',
@@ -435,6 +459,50 @@ onBeforeUnmount(() => {
                       "
                     />
                   </div>
+                  <div class="tpl-field-row__bg">
+                    <span class="tpl-field-row__bg-label">{{
+                      $t('page.costLibrary.template.columnBgColor')
+                    }}</span>
+                    <div class="tpl-field-row__bg-swatches">
+                      <Tooltip
+                        v-for="preset in COLUMN_BG_PRESETS"
+                        :key="preset.key"
+                        :title="$t(preset.labelKey)"
+                      >
+                        <button
+                          class="tpl-bg-swatch"
+                          :class="{
+                            'tpl-bg-swatch--active':
+                              item.bgColor?.toLowerCase() ===
+                              preset.color.toLowerCase(),
+                          }"
+                          type="button"
+                          :style="{ backgroundColor: preset.color }"
+                          @click="setItemBgColor(item.field, preset.color)"
+                        ></button>
+                      </Tooltip>
+                      <Tooltip
+                        :title="$t('page.costLibrary.template.bgCustom')"
+                      >
+                        <label class="tpl-bg-swatch tpl-bg-swatch--custom">
+                          <input
+                            type="color"
+                            :value="item.bgColor || '#E8F1FC'"
+                            @input="onCustomBgInput(item.field, $event)"
+                          />
+                        </label>
+                      </Tooltip>
+                      <Tooltip :title="$t('page.costLibrary.template.bgClear')">
+                        <button
+                          class="tpl-bg-swatch tpl-bg-swatch--clear"
+                          type="button"
+                          @click="setItemBgColor(item.field, undefined)"
+                        >
+                          ×
+                        </button>
+                      </Tooltip>
+                    </div>
+                  </div>
                   <label class="tpl-field-row__switch">
                     <Switch
                       size="small"
@@ -457,6 +525,22 @@ onBeforeUnmount(() => {
                     <span>{{
                       $t('page.costLibrary.template.requiredField')
                     }}</span>
+                  </label>
+                  <label class="tpl-field-row__check">
+                    <Checkbox
+                      :checked="item.sortable"
+                      @change="
+                        (e) =>
+                          patchItem(item.field, { sortable: e.target.checked })
+                      "
+                    />
+                    <Tooltip
+                      :title="$t('page.costLibrary.template.sortableFieldHint')"
+                    >
+                      <span>{{
+                        $t('page.costLibrary.template.sortableField')
+                      }}</span>
+                    </Tooltip>
                   </label>
                 </div>
               </div>

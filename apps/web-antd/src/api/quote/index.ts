@@ -208,15 +208,8 @@ export async function copyQuote(id: number) {
   return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/copy`);
 }
 
-export async function exportQuotes(ids: number[]) {
-  return requestClient.post<Blob>(
-    '/quotes/export',
-    { ids },
-    {
-      responseType: 'blob',
-      isTransformResponse: false,
-    },
-  );
+export async function exportQuotes(params: Recordable<any> = {}) {
+  return requestClient.download('/quotes/export', { params });
 }
 
 export async function getQuoteOperationLogs(

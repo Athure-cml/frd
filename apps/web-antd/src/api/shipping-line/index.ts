@@ -9,20 +9,27 @@ import { requestClient } from '#/api/request';
 export namespace ShippingLineApi {
   export interface ShippingLine {
     code: string;
+    contactName?: string;
     createdAt: string;
     createdByName?: string;
     email?: string;
     id: number;
     name: string;
+    phone?: string;
+    pinnedAt?: null | string;
     remark?: string;
+    shortName?: string;
     status: 0 | 1;
     updatedAt: string;
   }
 
   export interface ShippingLineSave {
+    contactName?: string;
     email?: string;
     name: string;
+    phone?: string;
     remark?: string;
+    shortName?: string;
     status: 0 | 1;
   }
 
@@ -59,6 +66,24 @@ export async function updateShippingLine(
 
 export async function deleteShippingLine(id: number) {
   return requestClient.delete(`${BASE}/${id}`);
+}
+
+export async function batchDeleteShippingLine(ids: number[]) {
+  return requestClient.post(`${BASE}/batch-delete`, { ids });
+}
+
+export async function pinShippingLine(id: number) {
+  return requestClient.post<ShippingLineApi.ShippingLine>(`${BASE}/${id}/pin`);
+}
+
+export async function unpinShippingLine(id: number) {
+  return requestClient.post<ShippingLineApi.ShippingLine>(
+    `${BASE}/${id}/unpin`,
+  );
+}
+
+export async function reorderShippingLine(ids: number[]) {
+  return requestClient.put(`${BASE}/reorder`, { ids });
 }
 
 export async function importShippingLine(file: File) {

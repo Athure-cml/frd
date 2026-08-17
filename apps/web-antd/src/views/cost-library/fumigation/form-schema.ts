@@ -21,7 +21,10 @@ const VALIDITY_PARSE_FORMATS = [
   'YYYY-MM-DD',
 ];
 
-function createCitySelectProps() {
+const VALIDITY_RANGE_RE =
+  /^(\d{4}[/-]\d{1,2}[/-]\d{1,2})\s*[-–—]\s*(\d{4}[/-]\d{1,2}[/-]\d{1,2})$/;
+
+export function createCitySelectProps() {
   const params = reactive({ keyword: '' });
   const setKeyword = useDebounceFn((keyword: string) => {
     params.keyword = keyword.trim();
@@ -45,61 +48,45 @@ function createCitySelectProps() {
   };
 }
 
-function validityRangePickerProps() {
+function datePickerProps() {
   return {
     allowClear: true,
     class: 'w-full',
-    format: 'YYYY/M/D',
-    valueFormat: 'YYYY/M/D',
+    format: 'YYYY-MM-DD',
+    valueFormat: 'YYYY-MM-DD',
   };
 }
 
-/** 解析 `2026/1/1-2026/12/31` → RangePicker 值 */
-export function parseValidityRange(
+function normalizeValidityDate(value: string) {
+  const text = value.trim();
+  const parsed = dayjs(text, VALIDITY_PARSE_FORMATS, true);
+  if (parsed.isValid()) {
+    return parsed.format('YYYY-MM-DD');
+  }
+  const loose = dayjs(text);
+  return loose.isValid() ? loose.format('YYYY-MM-DD') : undefined;
+}
+
+/**
+ * 有效期存单日 `YYYY-MM-DD`（生效期已单独字段）。
+ * 兼容历史区间：取结束日；兼容 RangePicker 数组：取结束日。
+ */
+export function normalizeFumigationValidity(
   value?: null | string | string[],
-): string[] | undefined {
+): string | undefined {
   if (Array.isArray(value)) {
-    if (value.length >= 2 && value[0] && value[1]) {
-      return [normalizeValidityDate(value[0]), normalizeValidityDate(value[1])];
-    }
-    return undefined;
+    const end = value[1] ?? value[0];
+    return end ? normalizeValidityDate(String(end)) : undefined;
   }
   if (!value?.trim()) {
     return undefined;
   }
-  const matched = value
-    .trim()
-    .match(
-      /^(\d{4}[/-]\d{1,2}[/-]\d{1,2})\s*[-–—]\s*(\d{4}[/-]\d{1,2}[/-]\d{1,2})$/,
-    );
-  if (!matched?.[1] || !matched[2]) {
-    return undefined;
+  const text = value.trim();
+  const matched = text.match(VALIDITY_RANGE_RE);
+  if (matched?.[2]) {
+    return normalizeValidityDate(matched[2]);
   }
-  return [normalizeValidityDate(matched[1]), normalizeValidityDate(matched[2])];
-}
-
-/** RangePicker 值 → `2026/1/1-2026/12/31` */
-export function joinValidityRange(
-  value?: null | string | string[],
-): string | undefined {
-  if (Array.isArray(value)) {
-    if (value.length >= 2 && value[0] && value[1]) {
-      return `${normalizeValidityDate(String(value[0]))}-${normalizeValidityDate(String(value[1]))}`;
-    }
-    return undefined;
-  }
-  const parsed = parseValidityRange(value);
-  return parsed ? `${parsed[0]}-${parsed[1]}` : value?.trim() || undefined;
-}
-
-function normalizeValidityDate(value: string) {
-  const text = value.trim().replaceAll('-', '/');
-  const parsed = dayjs(text, VALIDITY_PARSE_FORMATS, true);
-  if (parsed.isValid()) {
-    return parsed.format('YYYY/M/D');
-  }
-  const loose = dayjs(text);
-  return loose.isValid() ? loose.format('YYYY/M/D') : text;
+  return normalizeValidityDate(text);
 }
 
 export function useFumigationFormSchema(): VbenFormSchema[] {
@@ -138,8 +125,8 @@ export function useFumigationFormSchema(): VbenFormSchema[] {
       label: f('outdoorOak'),
     },
     {
-      component: 'RangePicker',
-      componentProps: validityRangePickerProps(),
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
       fieldName: 'outdoorValidity',
       label: f('outdoorValidity'),
     },
@@ -165,8 +152,8 @@ export function useFumigationFormSchema(): VbenFormSchema[] {
       label: f('indoorOak'),
     },
     {
-      component: 'RangePicker',
-      componentProps: validityRangePickerProps(),
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
       fieldName: 'indoorValidity',
       label: f('indoorValidity'),
     },
@@ -183,8 +170,8 @@ export function useFumigationFormSchema(): VbenFormSchema[] {
 export function rowToFumigationFormValues(row: FumigationCostRecord) {
   return {
     ...row,
-    indoorValidity: parseValidityRange(row.indoorValidity),
-    outdoorValidity: parseValidityRange(row.outdoorValidity),
+    indoorValidity: normalizeFumigationValidity(row.indoorValidity),
+    outdoorValidity: normalizeFumigationValidity(row.outdoorValidity),
   };
 }
 
@@ -196,10 +183,10 @@ export function toFumigationSavePayload(
     extraFields: values.extraFields,
     indoorNonOak: values.indoorNonOak ?? null,
     indoorOak: values.indoorOak ?? null,
-    indoorValidity: joinValidityRange(values.indoorValidity),
+    indoorValidity: normalizeFumigationValidity(values.indoorValidity) ?? '',
     outdoorNonOak: values.outdoorNonOak ?? null,
     outdoorOak: values.outdoorOak ?? null,
-    outdoorValidity: joinValidityRange(values.outdoorValidity),
+    outdoorValidity: normalizeFumigationValidity(values.outdoorValidity) ?? '',
     region: values.region,
     station: values.station,
     status: 'active',

@@ -32,6 +32,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: 'MasterDataUnit',
+        path: '/master-data/unit',
+        component: () => import('#/views/master-data/unit/index.vue'),
+        meta: {
+          icon: 'lucide:ruler',
+          title: $t('page.masterData.unit'),
+        },
+      },
+      {
         name: 'MasterDataUsStateZip',
         path: '/master-data/us-state-zip',
         component: () => import('#/views/master-data/us-state-zip/index.vue'),

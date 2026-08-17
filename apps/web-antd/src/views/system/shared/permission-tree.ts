@@ -141,9 +141,9 @@ const MENU_SCHEMA: MenuModuleDef[] = [
       },
       {
         kind: 'group',
-        segment: 'supplier',
-        titleKey: 'page.supplier.list',
-        match: (code) => code.startsWith('supplier:'),
+        segment: 'supplier_truck',
+        titleKey: 'page.supplier.truckList',
+        match: (code) => code.startsWith('supplier:truck:'),
       },
       {
         kind: 'group',
@@ -153,9 +153,27 @@ const MENU_SCHEMA: MenuModuleDef[] = [
       },
       {
         kind: 'group',
+        segment: 'supplier_fumigation',
+        titleKey: 'page.supplier.fumigationList',
+        match: (code) => code.startsWith('supplier:fumigation:'),
+      },
+      {
+        kind: 'group',
         segment: 'agent',
         titleKey: 'page.agent.list',
         match: (code) => code.startsWith('agent:'),
+      },
+      {
+        kind: 'group',
+        segment: 'supplier_yard',
+        titleKey: 'page.supplier.yardList',
+        match: (code) => code.startsWith('supplier:yard:'),
+      },
+      {
+        kind: 'group',
+        segment: 'supplier_other',
+        titleKey: 'page.supplier.otherList',
+        match: (code) => code.startsWith('supplier:other:'),
       },
     ],
   },
@@ -174,6 +192,12 @@ const MENU_SCHEMA: MenuModuleDef[] = [
         segment: 'exchange_rate',
         titleKey: 'page.masterData.exchangeRate',
         match: (code) => code.startsWith('exchange_rate:'),
+      },
+      {
+        kind: 'group',
+        segment: 'unit',
+        titleKey: 'page.masterData.unit',
+        match: (code) => code.startsWith('unit:'),
       },
       {
         kind: 'group',

@@ -46,6 +46,7 @@
     "pinia": "catalog:",
     "vue": "catalog:",
     "vue-router": "catalog:",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "xlsx-js-style": "^1.2.0"
   }
 }

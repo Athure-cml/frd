@@ -23,6 +23,7 @@ function buildModuleOptions() {
     { label: t('modules.costTemplate'), value: 'cost:template' },
     { label: t('modules.currency'), value: 'currency' },
     { label: t('modules.exchangeRate'), value: 'exchange_rate' },
+    { label: t('modules.unit'), value: 'unit' },
     { label: t('modules.mdDestAddress'), value: 'md_dest_address' },
     { label: t('modules.mdGlobalPort'), value: 'md_global_port' },
     { label: t('modules.mdInlandPor'), value: 'md_inland_por' },

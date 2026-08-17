@@ -8,7 +8,7 @@ import { useVbenDrawer } from '@vben/common-ui';
 import { message } from 'ant-design-vue';
 
 import { useVbenForm } from '#/adapter/form';
-import { createRoadCost, updateRoadCost } from '#/api/cost';
+import { createRoadCost, renewRoadCost, updateRoadCost } from '#/api/cost';
 import { $t } from '#/locales';
 
 import {
@@ -17,7 +17,10 @@ import {
   mergeRecordWithExtraFields,
 } from '../../shared/build-template-form-schema';
 import { getDefaultTemplate } from '../../shared/default-templates';
-import { isCostCopyPayload } from '../../shared/drawer-data';
+import {
+  isCostCopyPayload,
+  isCostRenewPayload,
+} from '../../shared/drawer-data';
 import {
   loadSupplierFormulaCache,
   rowToRoadFormValues,
@@ -27,8 +30,12 @@ import {
 
 const emit = defineEmits<{ success: [] }>();
 
+const ROAD_EFF_FIELD = 'cf_road_eff';
+
 const recordId = ref<number>();
 const isCopy = ref(false);
+const isRenew = ref(false);
+const renewFromId = ref<number>();
 const activeTemplate = ref<CostTableTemplate>(getDefaultTemplate('road'));
 
 const [Form, formApi] = useVbenForm({
@@ -41,6 +48,11 @@ const [Form, formApi] = useVbenForm({
 const getTitle = computed(() => {
   if (recordId.value) {
     return $t('page.costLibrary.actions.editRecord');
+  }
+  if (isRenew.value) {
+    return $t('page.costLibrary.actions.renewRecord', [
+      $t('page.costLibrary.roadRecord'),
+    ]);
   }
   if (isCopy.value) {
     return $t('page.costLibrary.actions.copyRecord', [
@@ -63,6 +75,20 @@ function applyTemplateSchema(template?: CostTableTemplate) {
   });
 }
 
+function readEffectiveDate(values: Record<string, unknown>) {
+  const flat = values[`extraFields.${ROAD_EFF_FIELD}`];
+  if (flat !== null && flat !== undefined && String(flat).trim() !== '') {
+    return String(flat).trim();
+  }
+  const nested = (values.extraFields as Record<string, unknown> | undefined)?.[
+    ROAD_EFF_FIELD
+  ];
+  if (nested !== null && nested !== undefined && String(nested).trim() !== '') {
+    return String(nested).trim();
+  }
+  return '';
+}
+
 const [Drawer, drawerApi] = useVbenDrawer({
   class: 'w-full sm:w-[720px]',
   async onConfirm() {
@@ -70,17 +96,46 @@ const [Drawer, drawerApi] = useVbenDrawer({
     if (!valid) {
       return;
     }
+    const values = await formApi.getValues();
+    if (isRenew.value) {
+      if (!readEffectiveDate(values)) {
+        message.warning($t('page.costLibrary.hint.renewEffRequired'));
+        return;
+      }
+      if (!renewFromId.value) {
+        message.error($t('page.costLibrary.hint.renewSourceMissing'));
+        return;
+      }
+      const validRaw =
+        values.validDate === null || values.validDate === undefined
+          ? ''
+          : String(values.validDate).trim();
+      if (validRaw) {
+        const eff = readEffectiveDate(values);
+        if (validRaw < eff) {
+          message.warning($t('page.costLibrary.hint.renewValidBeforeEff'));
+          return;
+        }
+      }
+    }
     drawerApi.lock();
     try {
-      const values = await formApi.getValues();
       const payload = {
         ...toRoadSavePayload(values),
         extraFields: extractExtraFields(values),
       };
-      await (recordId.value
-        ? updateRoadCost(recordId.value, payload)
-        : createRoadCost(payload));
-      message.success($t('ui.actionMessage.operationSuccess'));
+      if (recordId.value) {
+        await updateRoadCost(recordId.value, payload);
+      } else if (isRenew.value && renewFromId.value) {
+        await renewRoadCost(renewFromId.value, payload);
+      } else {
+        await createRoadCost(payload);
+      }
+      message.success(
+        isRenew.value
+          ? $t('page.costLibrary.hint.renewSuccess')
+          : $t('ui.actionMessage.operationSuccess'),
+      );
       emit('success');
       drawerApi.close();
     } finally {
@@ -95,11 +150,15 @@ const [Drawer, drawerApi] = useVbenDrawer({
       RoadCostRecord & {
         aiPrefill?: boolean;
         copyFrom?: boolean;
+        renewFrom?: boolean;
+        renewFromId?: number;
         template?: CostTableTemplate;
       }
     >();
     recordId.value = data?.aiPrefill ? undefined : data?.id;
     isCopy.value = isCostCopyPayload(data);
+    isRenew.value = isCostRenewPayload(data);
+    renewFromId.value = data?.renewFromId;
     applyTemplateSchema(data?.template);
     formApi.resetForm();
     void loadSupplierFormulaCache().then(() => {
@@ -123,7 +182,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
         );
         return;
       }
-      if (isCopy.value && data) {
+      if ((isCopy.value || isRenew.value) && data) {
         formApi.setValues(
           mergeRecordWithExtraFields(
             rowToRoadFormValues(data as RoadCostRecord),
@@ -139,6 +198,12 @@ const [Drawer, drawerApi] = useVbenDrawer({
 
 <template>
   <Drawer :title="getTitle">
+    <p
+      v-if="isRenew"
+      class="text-muted-foreground mb-3 text-sm leading-relaxed"
+    >
+      {{ $t('page.costLibrary.hint.renewDesc') }}
+    </p>
     <Form class="cost-drawer-form px-1" />
   </Drawer>
 </template>

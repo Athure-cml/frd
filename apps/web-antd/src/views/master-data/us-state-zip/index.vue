@@ -27,7 +27,10 @@ import {
   buildListExportParams,
   getGridSelectedIds,
 } from '../../shared/export-params';
-import { buildCheckboxColumn } from '../../system/shared/columns';
+import {
+  buildCheckboxColumn,
+  buildSeqColumn,
+} from '../../system/shared/columns';
 import { useUsStateZipSearchSchema } from './data';
 import Form from './modules/form.vue';
 
@@ -129,6 +132,7 @@ const searchFormOptions = computed(() => {
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    id: 'md-us-state-zip-list',
     checkboxConfig: {
       highlight: true,
       reserve: true,
@@ -136,6 +140,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
     columns: [
       buildCheckboxColumn(),
+      buildSeqColumn(),
       {
         field: 'stateCode',
         minWidth: 100,

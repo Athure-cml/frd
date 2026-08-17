@@ -15,6 +15,17 @@ export function buildCheckboxColumn() {
   };
 }
 
+/** 列表序号列（按当前页分页递增） */
+export function buildSeqColumn(width = 60) {
+  return {
+    align: 'center' as const,
+    fixed: 'left' as const,
+    title: '序号',
+    type: 'seq' as const,
+    width,
+  };
+}
+
 export function buildStatusColumn<T>(
   canManage: boolean,
   onStatusChange?: (newStatus: number, row: T) => Promise<boolean | undefined>,
@@ -38,18 +49,40 @@ export function buildStatusColumn<T>(
   };
 }
 
+export function appendPinOperationOptions(
+  operationOptions: Array<Record<string, any> | string>,
+  labels: { pin: string; unpin: string },
+) {
+  operationOptions.push(
+    {
+      code: 'pin',
+      show: (row: { pinnedAt?: null | string }) => !row.pinnedAt,
+      text: labels.pin,
+    },
+    {
+      code: 'unpin',
+      show: (row: { pinnedAt?: null | string }) => !!row.pinnedAt,
+      text: labels.unpin,
+    },
+  );
+}
+
 export function buildOperationColumn<T>(
   canManage: boolean,
   onActionClick: (params: { code: string; row: T }) => void,
   options: {
+    minWidth?: number;
     nameField: string;
     nameTitle: string;
     operationOptions?: Array<Record<string, any> | string>;
+    width?: number;
   },
 ): NonNullable<VxeTableGridOptions<T>['columns']>[number] | null {
   if (!canManage) {
     return null;
   }
+  const width = options.width ?? 168;
+  const minWidth = options.minWidth ?? width;
   return {
     align: 'center',
     cellRender: {
@@ -63,9 +96,9 @@ export function buildOperationColumn<T>(
     },
     field: 'operation',
     fixed: 'right',
-    minWidth: 168,
+    minWidth,
     showOverflow: false,
     title: t('fields.operation'),
-    width: 168,
+    width,
   };
 }

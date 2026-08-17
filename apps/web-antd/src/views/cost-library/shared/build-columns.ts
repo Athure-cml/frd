@@ -14,17 +14,27 @@ import { $t } from '#/locales';
 
 import { formatAmount, formatPercent } from '../road/formatters';
 import { buildFumigationColumnsFromLayout } from './build-fumigation-columns';
+import { applyColumnBgParams, resolveColumnBgColor } from './column-bg-style';
+import { resolveCompactColumnSize } from './column-width';
 import {
   appendCostOperationColumn,
   appendCostStatusColumn,
   buildCostCheckboxColumn,
 } from './columns';
 import { getDefaultTemplate } from './default-templates';
+import {
+  coerceAmountValue,
+  formatAmountWithUnit,
+  isRoadFeeUnitField,
+  readRowUnit,
+  resolveRoadFeeUnitField,
+} from './fee-unit-pairs';
 import { getFieldCatalog, toFieldCatalogMap } from './field-catalog';
-import { formatPrice } from './formatters';
+import { formatDateMd, formatPrice } from './formatters';
 import { costStatusTagOptions } from './tags';
 import {
   customFieldColumnPath,
+  ensureRoadFeeUnitFields,
   isCustomFieldKey,
   isFieldRequiredInLayout,
   isFieldVisibleInLayout,
@@ -34,6 +44,7 @@ import {
 
 export interface BuildColumnsOptions<T extends { id: number }> {
   canEdit: boolean;
+  enableRenew?: boolean;
   includeOperation?: boolean;
   mode: CostMode;
   nameField: string;
@@ -43,9 +54,47 @@ export interface BuildColumnsOptions<T extends { id: number }> {
   template?: CostTableTemplate;
 }
 
+/** 海运表格日期列（含自定义「生效期」）：列表展示 MM-DD */
+const SEA_EFF_CUSTOM_FIELDS = new Set([
+  'cf_sea_bunker_eff',
+  'cf_sea_freight_eff',
+  'cf_sea_others_eff',
+  'cf_seaBunkerEff',
+  'cf_seaFreightEff',
+  'cf_seaOthersEff',
+]);
+
+function isSeaTableDateField(
+  field: string,
+  options?: { dataType?: string; title?: string },
+) {
+  if (options?.dataType === 'date') return true;
+  if (field.endsWith('ValidDate')) return true;
+  if (SEA_EFF_CUSTOM_FIELDS.has(field)) return true;
+  if (options?.title === '生效期' || options?.title === '有效期') return true;
+  if (field.startsWith('cf_') && /(_eff|Eff)$/.test(field)) return true;
+  return false;
+}
+
 function buildFormatter(entry: FieldCatalogEntry) {
+  const unitField = resolveRoadFeeUnitField(entry.field);
   if (entry.format === 'amount') {
-    return ({ cellValue }: { cellValue: number }) => formatAmount(cellValue);
+    return ({
+      cellValue,
+      row,
+    }: {
+      cellValue: unknown;
+      row: { extraFields?: Record<string, unknown> };
+    }) => {
+      const amount = coerceAmountValue(cellValue);
+      if (amount === null) {
+        return formatAmount(undefined);
+      }
+      return formatAmountWithUnit(
+        formatAmount(amount),
+        readRowUnit(row, unitField),
+      );
+    };
   }
   if (entry.format === 'percent') {
     return ({ cellValue }: { cellValue: number }) => formatPercent(cellValue);
@@ -59,55 +108,110 @@ function buildFormatter(entry: FieldCatalogEntry) {
       row: { currency?: string };
     }) => formatPrice(cellValue, row.currency);
   }
+  if (entry.format === 'dateMd') {
+    return ({ cellValue }: { cellValue: null | number | string }) =>
+      formatDateMd(cellValue);
+  }
   return undefined;
 }
 
 function buildCatalogMap(mode: CostMode, layout: CostTableTemplateLayout) {
   const map = toFieldCatalogMap(getFieldCatalog(mode));
   layout.customFields?.forEach((def) => {
+    const title = def.title;
     map.set(def.field, {
       field: def.field,
-      format: def.dataType === 'number' ? 'amount' : undefined,
-      labelKey: def.title,
-      minWidth: 120,
+      format:
+        def.dataType === 'number'
+          ? 'amount'
+          : mode === 'sea' &&
+              isSeaTableDateField(def.field, {
+                dataType: def.dataType,
+                title,
+              })
+            ? 'dateMd'
+            : undefined,
+      labelKey: title,
     });
   });
   resolveLayoutFieldOrder(mode, layout).forEach((field) => {
-    if (!isCustomFieldKey(field) || map.has(field)) {
+    const title = resolveFieldTitle(mode, field, layout);
+    if (isCustomFieldKey(field)) {
+      const existing = map.get(field);
+      if (existing) {
+        if (
+          mode === 'sea' &&
+          !existing.format &&
+          isSeaTableDateField(field, { title })
+        ) {
+          map.set(field, { ...existing, format: 'dateMd' });
+        }
+        return;
+      }
+      map.set(field, {
+        field,
+        format:
+          mode === 'sea' && isSeaTableDateField(field, { title })
+            ? 'dateMd'
+            : undefined,
+        labelKey: title,
+      });
       return;
     }
-    map.set(field, {
-      field,
-      labelKey: resolveFieldTitle(mode, field, layout),
-      minWidth: 120,
-    });
+    const catalog = map.get(field);
+    if (
+      mode === 'sea' &&
+      catalog &&
+      !catalog.format &&
+      isSeaTableDateField(field, { title })
+    ) {
+      map.set(field, { ...catalog, format: 'dateMd' });
+    }
   });
   return map;
 }
 
 function buildRequiredHeaderSlot(title: string) {
-  return () => [
-    h('span', { class: 'col-required-mark' }, '*'),
-    h('span', null, title),
-  ];
+  return () =>
+    h('span', { class: 'col-required-header' }, [
+      h('span', { class: 'col-required-mark' }, '*'),
+      h('span', null, title),
+    ]);
 }
 
 function buildLeafColumn(
   entry: FieldCatalogEntry,
   options: {
+    mode: CostMode;
     override?: CostTableFieldOverride;
     required?: boolean;
     title: string;
   },
 ) {
+  const size = resolveCompactColumnSize(options.title, entry, {
+    required: options.required,
+  });
+  const headerClassName = [
+    entry.headerClassName,
+    options.required ? 'col-required' : undefined,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const minWidth =
+    options.override?.minWidth ?? entry.minWidth ?? size.minWidth;
+  const width = options.override?.width ?? entry.width;
   const column: Record<string, unknown> = {
     align: entry.align,
     field: entry.field,
-    headerClassName: options.required ? 'col-required' : undefined,
-    minWidth: options.override?.minWidth ?? entry.minWidth,
+    headerClassName: headerClassName || undefined,
+    minWidth,
+    showOverflow: entry.showOverflow ?? true,
+    sortable: options.override?.sortable === true,
     title: options.title,
-    width: options.override?.width ?? entry.width,
   };
+  if (typeof width === 'number' && width > 0) {
+    column.width = width;
+  }
 
   if (options.required) {
     column.slots = {
@@ -117,14 +221,38 @@ function buildLeafColumn(
 
   if (entry.align) column.align = entry.align;
   if (entry.className) column.className = entry.className;
-  if (entry.showOverflow) column.showOverflow = entry.showOverflow;
-  if (entry.width) column.width = entry.width;
-  if (options.override?.width) column.width = options.override.width;
   if (options.override?.fixed) column.fixed = options.override.fixed;
+  applyColumnBgParams(
+    column,
+    resolveColumnBgColor(options.mode, entry.field, options.override?.bgColor),
+  );
 
   if (isCustomFieldKey(entry.field)) {
     column.field = customFieldColumnPath(entry.field);
     column.showOverflow = entry.showOverflow ?? true;
+    if (options.override?.sortable === true) {
+      column.sortBy = ({
+        row,
+      }: {
+        row: { extraFields?: Record<string, unknown> };
+      }) => {
+        const raw = row.extraFields?.[entry.field];
+        if (raw === null || raw === undefined || raw === '') {
+          return null;
+        }
+        if (entry.format === 'amount') {
+          const amount = coerceAmountValue(raw);
+          return amount;
+        }
+        const asNum = coerceAmountValue(raw);
+        return asNum === null ? String(raw) : asNum;
+      };
+    }
+    const useDateMd =
+      entry.format === 'dateMd' ||
+      (options.mode === 'sea' &&
+        isSeaTableDateField(entry.field, { title: options.title }));
+    const unitField = resolveRoadFeeUnitField(entry.field);
     column.formatter = ({
       cellValue,
       row,
@@ -132,12 +260,43 @@ function buildLeafColumn(
       cellValue: unknown;
       row: { extraFields?: Record<string, unknown> };
     }) => {
-      const value = cellValue ?? row.extraFields?.[entry.field];
-      if (value === undefined || value === null) {
+      let value: unknown = cellValue;
+      if (
+        value === undefined ||
+        value === null ||
+        (typeof value === 'object' && !Array.isArray(value))
+      ) {
+        value = row.extraFields?.[entry.field];
+      }
+      if (value === undefined || value === null || value === '') {
         return '';
       }
-      if (entry.format === 'amount' && typeof value === 'number') {
-        return formatAmount(value);
+      if (entry.format === 'amount') {
+        const amount = coerceAmountValue(value);
+        if (amount === null) {
+          return String(value);
+        }
+        return formatAmountWithUnit(
+          formatAmount(amount),
+          readRowUnit(row, unitField),
+        );
+      }
+      // 即使未标 amount，只要挂了单位字段也拼接（兜底）
+      if (unitField) {
+        const amount = coerceAmountValue(value);
+        if (amount !== null) {
+          return formatAmountWithUnit(
+            formatAmount(amount),
+            readRowUnit(row, unitField),
+          );
+        }
+      }
+      if (useDateMd) {
+        return formatDateMd(
+          typeof value === 'string' || typeof value === 'number'
+            ? value
+            : String(value),
+        );
       }
       return String(value);
     };
@@ -163,18 +322,23 @@ function resolveFieldColumns(
   layout: CostTableTemplateLayout,
   catalogMap: Map<string, FieldCatalogEntry>,
 ) {
-  return resolveLayoutFieldOrder(mode, layout)
-    .filter((field) => isFieldVisibleInLayout(layout, field))
-    .map((field) => {
-      const entry = catalogMap.get(field);
-      if (!entry) return null;
-      return buildLeafColumn(entry, {
-        override: layout.fieldOverrides?.[field],
-        required: isFieldRequiredInLayout(layout, field),
-        title: resolveFieldTitle(mode, field, layout),
-      });
-    })
-    .filter(Boolean);
+  return (
+    resolveLayoutFieldOrder(mode, layout)
+      .filter((field) => isFieldVisibleInLayout(layout, field))
+      // 单位列仅导入/导出与表单使用；列表拼到对应费用后
+      .filter((field) => !(mode === 'road' && isRoadFeeUnitField(field)))
+      .map((field) => {
+        const entry = catalogMap.get(field);
+        if (!entry) return null;
+        return buildLeafColumn(entry, {
+          mode,
+          override: layout.fieldOverrides?.[field],
+          required: isFieldRequiredInLayout(layout, field),
+          title: resolveFieldTitle(mode, field, layout),
+        });
+      })
+      .filter(Boolean)
+  );
 }
 
 function buildLayoutColumns(
@@ -204,12 +368,17 @@ function buildLayoutColumns(
       index += 1;
       continue;
     }
+    if (mode === 'road' && isRoadFeeUnitField(field)) {
+      index += 1;
+      continue;
+    }
     const group = fieldToGroup.get(field);
     if (!group) {
       const entry = catalogMap.get(field);
       if (entry) {
         columns.push(
           buildLeafColumn(entry, {
+            mode,
             override: layout.fieldOverrides?.[field],
             required: isFieldRequiredInLayout(layout, field),
             title: resolveFieldTitle(mode, field, layout),
@@ -230,10 +399,15 @@ function buildLayoutColumns(
       ) {
         break;
       }
+      if (mode === 'road' && isRoadFeeUnitField(groupedField)) {
+        index += 1;
+        continue;
+      }
       const entry = catalogMap.get(groupedField);
       if (entry) {
         children.push(
           buildLeafColumn(entry, {
+            mode,
             override: layout.fieldOverrides?.[groupedField],
             required: isFieldRequiredInLayout(layout, groupedField),
             title: resolveFieldTitle(mode, groupedField, layout),
@@ -259,6 +433,7 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
 ): VxeTableGridOptions<T>['columns'] {
   const {
     canEdit,
+    enableRenew = false,
     includeOperation = true,
     mode,
     nameField,
@@ -279,10 +454,22 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
     });
   }
 
-  const catalogMap = buildCatalogMap(mode, template.layout);
-  const dataColumns = buildLayoutColumns(mode, template.layout, catalogMap, {
-    flattenGroups: mode === 'road',
-  });
+  const catalogMap = buildCatalogMap(
+    mode,
+    mode === 'road'
+      ? ensureRoadFeeUnitFields(template.layout)
+      : template.layout,
+  );
+  const dataColumns = buildLayoutColumns(
+    mode,
+    mode === 'road'
+      ? ensureRoadFeeUnitFields(template.layout)
+      : template.layout,
+    catalogMap,
+    {
+      flattenGroups: mode === 'road',
+    },
+  );
 
   const columns = [
     buildCostCheckboxColumn(),
@@ -303,5 +490,6 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
     onActionClick,
     nameField,
     nameTitle,
+    { enableRenew: enableRenew || mode === 'road' },
   );
 }

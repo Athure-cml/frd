@@ -76,6 +76,7 @@ const searchFormOptions = useI18nFormOptions(() => ({
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    id: 'system-dept-list',
     columns: useDeptColumns(onActionClick, canManage),
     height: 'auto',
     pagerConfig: {

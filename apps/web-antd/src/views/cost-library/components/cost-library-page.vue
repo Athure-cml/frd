@@ -41,15 +41,19 @@ import { $t } from '#/locales';
 
 import { buildListExportParams } from '../../shared/export-params';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
+import { createTemplateColumnBgStyleHandlers } from '../shared/column-bg-style';
 import { adaptCostColumnsForViewport } from '../shared/columns';
 import { getDefaultTemplate } from '../shared/default-templates';
-import { toCopyDrawerData } from '../shared/drawer-data';
+import { toCopyDrawerData, toRenewDrawerData } from '../shared/drawer-data';
 import {
   getGridStorageId,
+  getTemplateLayoutSignature,
+  invalidateTableTemplateCache,
   loadTableTemplates,
   resolveActiveTemplate,
   saveTemplateId,
 } from '../shared/use-table-templates';
+import BatchCopyModal from './batch-copy-modal.vue';
 import BatchEditModal from './batch-edit-modal.vue';
 import ImportModal from './import-modal.vue';
 
@@ -66,6 +70,8 @@ const props = defineProps<{
   createLabel: string;
   description: string;
   editPermission: string;
+  /** 开启后展示批量复制（卡车/海运） */
+  enableBatchCopy?: boolean;
   exportFilename: string;
   formComponent: Component;
   getRowName: (row: any) => string;
@@ -91,9 +97,12 @@ const pageDescription = computed(() =>
 let pageAlive = true;
 let templateRequestId = 0;
 let mobileAdaptTimer: null | ReturnType<typeof setTimeout> = null;
+/** 已应用到表格的模板布局签名，避免远程模板与内置相同时二次 loadColumn */
+let appliedLayoutSignature = '';
 
 const importModalRef = ref<InstanceType<typeof ImportModal>>();
 const batchModalRef = ref<InstanceType<typeof BatchEditModal>>();
+const batchCopyModalRef = ref<InstanceType<typeof BatchCopyModal>>();
 const selectedCount = ref(0);
 const exporting = ref(false);
 const templates = ref<CostTableTemplate[]>([getDefaultTemplate(props.mode)]);
@@ -111,8 +120,12 @@ function resolveColumns() {
   );
 }
 
-function applyTemplate() {
+function applyTemplate(force = false) {
   if (!pageAlive) {
+    return;
+  }
+  const signature = getTemplateLayoutSignature(activeTemplate.value);
+  if (!force && signature && signature === appliedLayoutSignature) {
     return;
   }
   const columns = resolveColumns();
@@ -142,6 +155,7 @@ function applyTemplate() {
     try {
       $grid.loadColumn?.(columns);
       $grid.recalculate?.(true);
+      appliedLayoutSignature = signature;
     } catch {
       // grid may already be disposed during KeepAlive switch
     }
@@ -149,15 +163,16 @@ function applyTemplate() {
 }
 
 function onManageTemplates() {
+  invalidateTableTemplateCache(props.mode);
   router.push({
     path: `/cost-library/templates/${props.mode}`,
   });
 }
 
-async function refreshTemplates() {
+async function refreshTemplates(options?: { force?: boolean }) {
   const requestId = ++templateRequestId;
   try {
-    const loaded = await loadTableTemplates(props.mode);
+    const loaded = await loadTableTemplates(props.mode, options);
     if (!pageAlive || requestId !== templateRequestId) {
       return;
     }
@@ -220,6 +235,8 @@ onMounted(() => {
 
 onActivated(() => {
   pageAlive = true;
+  // 标签切回时强制同步列，避免 KeepAlive/HMR 后表体空白且无 loading
+  appliedLayoutSignature = '';
   refreshTemplates();
   applyAiCostPrefill(consumeAiCostPrefill(props.mode as AiCostPrefillMode));
 });
@@ -254,6 +271,10 @@ function onCopy(row: any) {
   formDrawerApi.setData(toCopyDrawerData(row, activeTemplate.value)).open();
 }
 
+function onRenew(row: any) {
+  formDrawerApi.setData(toRenewDrawerData(row, activeTemplate.value)).open();
+}
+
 function onDelete(row: any) {
   const name = props.getRowName(row);
   const hideLoading = message.loading({
@@ -277,6 +298,9 @@ function onDelete(row: any) {
 function onActionClick(params: OnActionClickParams<any>) {
   if (params.code === 'edit') {
     onEdit(params.row);
+  }
+  if (params.code === 'renew') {
+    onRenew(params.row);
   }
   if (params.code === 'copy') {
     onCopy(params.row);
@@ -333,6 +357,15 @@ function onBatchEdit() {
     return;
   }
   batchModalRef.value?.open(ids);
+}
+
+function onBatchCopy() {
+  const ids = getSelectedIds();
+  if (ids.length === 0) {
+    message.warning($t('page.costLibrary.hint.selectRows'));
+    return;
+  }
+  batchCopyModalRef.value?.open(ids);
 }
 
 async function onExport() {
@@ -396,7 +429,8 @@ const [Grid, gridApi] = useVbenVxeGrid({
       showReserveStatus: true,
     },
     columns: resolveColumns(),
-    height: 'auto',
+    // 由 .cost-library-grid CSS 覆盖全局 height:auto，保证加载态可见
+    height: '100%',
     id: getGridStorageId(
       props.mode,
       activeTemplateId.value,
@@ -419,6 +453,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     rowConfig: {
       keyField: 'id',
     },
+    // 勾选「排序」的列可本地升/降序（当前页数据）；proxy 下需显式关闭远程排序
+    sortConfig: {
+      remote: false,
+      trigger: 'default',
+    },
     scrollX: props.scrollX ? { enabled: true } : undefined,
     toolbarConfig: {
       custom: true,
@@ -427,6 +466,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       search: !isMobile.value,
       zoom: !isMobile.value,
     },
+    ...createTemplateColumnBgStyleHandlers(),
   } as VxeTableGridOptions,
 });
 
@@ -451,7 +491,7 @@ watch(isMobile, (mobile) => {
     if (!pageAlive) {
       return;
     }
-    applyTemplate();
+    applyTemplate(true);
   }, 120);
 });
 
@@ -470,6 +510,11 @@ const batchEditBtnLabel = computed(() =>
     ? $t('page.costLibrary.actions.batchEditShort')
     : $t('page.costLibrary.actions.batchEdit'),
 );
+const batchCopyBtnLabel = computed(() =>
+  isMobile.value
+    ? $t('page.costLibrary.actions.batchCopyShort')
+    : $t('page.costLibrary.actions.batchCopy'),
+);
 const batchDeleteBtnLabel = computed(() =>
   isMobile.value
     ? $t('page.costLibrary.actions.batchDeleteShort')
@@ -486,7 +531,11 @@ function onRefresh() {
     <FormDrawer @success="onRefresh" />
     <ImportModal
       ref="importModalRef"
-      :import-fn="api.import"
+      :enrich-road-zip="props.mode === 'road'"
+      :import-fn="
+        (file, options) =>
+          api.importExcel(file, activeTemplateId, options?.dryRun)
+      "
       :title="importTitle"
       @success="onRefresh"
     />
@@ -495,11 +544,18 @@ function onRefresh() {
       :batch-update-fn="(ids, fields) => api.batchUpdate({ ids, fields })"
       :schema="batchEditSchema"
       :title="batchEditTitle"
+      :wide="mode === 'sea'"
+      @success="onBatchSuccess"
+    />
+    <BatchCopyModal
+      v-if="enableBatchCopy"
+      ref="batchCopyModalRef"
+      :mode="mode === 'sea' ? 'sea' : 'road'"
       @success="onBatchSuccess"
     />
     <Grid
-      :class="gridClass ?? 'cost-library-grid'"
       :form-options="searchFormOptions"
+      :grid-class="gridClass ?? 'cost-library-grid'"
     >
       <template #toolbar-tools>
         <div class="cost-toolbar">
@@ -543,6 +599,14 @@ function onRefresh() {
               @click="onBatchEdit"
             >
               {{ batchEditBtnLabel }}
+            </Button>
+            <Button
+              v-if="enableBatchCopy"
+              :disabled="selectedCount === 0"
+              :size="toolbarSize"
+              @click="onBatchCopy"
+            >
+              {{ batchCopyBtnLabel }}
             </Button>
             <Button
               danger

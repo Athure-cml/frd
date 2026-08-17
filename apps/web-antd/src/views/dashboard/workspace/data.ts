@@ -76,6 +76,11 @@ export function useMasterDataLinks(): WorkspaceLinkItem[] {
       title: $t('page.masterData.exchangeRate'),
       url: '/master-data/exchange-rate',
     },
+    {
+      icon: 'lucide:ruler',
+      title: $t('page.masterData.unit'),
+      url: '/master-data/unit',
+    },
   ];
 }
 

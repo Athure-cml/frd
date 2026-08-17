@@ -1,5 +1,8 @@
 /** 卡车 ALL IN 公式求值：表头别名 + 四则运算与括号（禁止 eval）。 */
 
+export const ROAD_YARD_STORAGE_FIELD = 'cf_road_yard_storage';
+export const ROAD_EXTRA_CHASSIS_FIELD = 'cf_road_extra_chassis';
+
 export const ROAD_FORMULA_VARIABLE_FIELDS = [
   'baseFreight',
   'fsc',
@@ -9,6 +12,8 @@ export const ROAD_FORMULA_VARIABLE_FIELDS = [
   'stopOff',
   'waitingFee',
   'redelivery',
+  'yardStorage',
+  'extraChassis',
   'prepull',
   'nsLift',
   'otherFee',
@@ -47,6 +52,9 @@ export interface SupplierAllInFormulas {
 
 /** 别名按长度降序，避免短词抢先匹配。 */
 const FIELD_ALIAS_ENTRIES: Array<[string, RoadFormulaEvalField]> = [
+  ['总价 熏非橡', 'allInFmOneWay'],
+  ['总价 非熏蒸', 'allInNoFm'],
+  ['总价 熏橡', 'allInFmRound'],
   ['熏蒸打包价（非橡木）', 'allInFmOneWay'],
   ['熏蒸打包价价（非橡木）', 'allInFmOneWay'],
   ['ALL IN - FM (NON OAK)', 'allInFmOneWay'],
@@ -59,17 +67,39 @@ const FIELD_ALIAS_ENTRIES: Array<[string, RoadFormulaEvalField]> = [
   ['OW/TRI-AXLE', 'triTandemAxle'],
   ['OW/TRI AXLE', 'triTandemAxle'],
   ['OW TRI AXLE', 'triTandemAxle'],
+  ['EXTRA CHASSIS', 'extraChassis'],
+  ['YARD STORAGE', 'yardStorage'],
   ['BASE FREIGHT', 'baseFreight'],
   ['WAITING FEE', 'waitingFee'],
   ['OTHER FEE', 'otherFee'],
   ['STOP OFF', 'stopOff'],
   ['NS LIFT', 'nsLift'],
   ['TO LIFT', 'nsLift'],
-  ['CHASSIS', 'chassis'],
+  ['额外车架费', 'extraChassis'],
+  ['后段运费', 'redelivery'],
+  ['上下车费', 'nsLift'],
+  ['待时费', 'waitingFee'],
+  ['堆存费', 'yardStorage'],
+  ['预提费', 'prepull'],
+  ['其他费', 'otherFee'],
+  [ROAD_EXTRA_CHASSIS_FIELD, 'extraChassis'],
+  [ROAD_YARD_STORAGE_FIELD, 'yardStorage'],
   ['REDELIVERY', 'redelivery'],
+  ['CHASSIS', 'chassis'],
+  ['WAITING', 'waitingFee'],
   ['PREPULL', 'prepull'],
+  ['OTHERS', 'otherFee'],
   ['SPLIT', 'split'],
+  ['BASE', 'baseFreight'],
+  ['LIFT', 'nsLift'],
   ['FSC', 'fsc'],
+  ['OW', 'triTandemAxle'],
+  ['基础', 'baseFreight'],
+  ['燃油', 'fsc'],
+  ['车架', 'chassis'],
+  ['超重', 'triTandemAxle'],
+  ['分离', 'split'],
+  ['停留', 'stopOff'],
   ...ROAD_FORMULA_VARIABLE_FIELDS.map(
     (field) => [field, field] as [string, RoadFormulaEvalField],
   ),
@@ -79,33 +109,36 @@ const FIELD_ALIAS_ENTRIES: Array<[string, RoadFormulaEvalField]> = [
 ].toSorted((a, b) => b[0].length - a[0].length);
 
 export const ROAD_FORMULA_HINT_TOKENS = [
-  'BASE FREIGHT',
+  'BASE',
   'FSC',
   'CHASSIS',
-  'OW/TRI-AXCEL',
-  'TRI/TANDEM AXLE',
+  'OW',
   'SPLIT',
   'STOP OFF',
-  'WAITING FEE',
+  'WAITING',
   'REDELIVERY',
+  'YARD STORAGE',
+  'EXTRA CHASSIS',
   'PREPULL',
-  'NS LIFT',
-  'OTHER FEE',
+  'LIFT',
+  'OTHERS',
 ] as const;
 
-/** 公式构建器可选费用字段 */
+/** 公式构建器可选费用字段（对齐卡车成本表头） */
 export const ROAD_FORMULA_BUILDER_FIELDS = [
-  'BASE FREIGHT',
+  'BASE',
   'FSC',
   'CHASSIS',
-  'OW/TRI-AXCEL',
+  'OW',
   'SPLIT',
   'STOP OFF',
-  'WAITING FEE',
+  'WAITING',
   'REDELIVERY',
+  'YARD STORAGE',
+  'EXTRA CHASSIS',
   'PREPULL',
-  'NS LIFT',
-  'OTHER FEE',
+  'LIFT',
+  'OTHERS',
 ] as const;
 
 export const PACKAGE_REF_TOKEN_NON_FUMIGATION = '非熏蒸打包价';
@@ -127,7 +160,7 @@ export function builderFieldsForVariant(
 }
 
 export const ROAD_FORMULA_EXAMPLE =
-  'BASE FREIGHT+FSC+CHASSIS+OW/TRI-AXCEL+SPLIT+STOP OFF';
+  'BASE+FSC+CHASSIS+OW+SPLIT+STOP OFF+YARD STORAGE+EXTRA CHASSIS';
 
 export class FormulaEvalError extends Error {
   constructor(message: string) {
@@ -354,16 +387,48 @@ export function evaluateRoadFormula(
   return Math.round(result * 100) / 100;
 }
 
+function readFormFee(
+  values: Record<string, unknown>,
+  field: string,
+  extraKey?: string,
+): number {
+  const direct = values[field];
+  if (direct !== null && direct !== undefined && direct !== '') {
+    return Number(direct);
+  }
+  if (extraKey) {
+    const flat = values[`extraFields.${extraKey}`];
+    if (flat !== null && flat !== undefined && flat !== '') {
+      return Number(flat);
+    }
+    const nested = (
+      values.extraFields as Record<string, unknown> | undefined
+    )?.[extraKey];
+    if (nested !== null && nested !== undefined && nested !== '') {
+      return Number(nested);
+    }
+  }
+  return 0;
+}
+
 export function feeValuesFromForm(
   values: Record<string, unknown>,
 ): RoadFormulaFeeValues {
-  const out: RoadFormulaFeeValues = {};
-  for (const field of ROAD_FORMULA_VARIABLE_FIELDS) {
-    const raw = values[field];
-    out[field] =
-      raw === null || raw === undefined || raw === '' ? 0 : Number(raw);
-  }
-  return out;
+  return {
+    baseFreight: readFormFee(values, 'baseFreight'),
+    chassis: readFormFee(values, 'chassis'),
+    extraChassis: readFormFee(values, 'extraChassis', ROAD_EXTRA_CHASSIS_FIELD),
+    fsc: readFormFee(values, 'fsc'),
+    nsLift: readFormFee(values, 'nsLift'),
+    otherFee: readFormFee(values, 'otherFee'),
+    prepull: readFormFee(values, 'prepull'),
+    redelivery: readFormFee(values, 'redelivery'),
+    split: readFormFee(values, 'split'),
+    stopOff: readFormFee(values, 'stopOff'),
+    triTandemAxle: readFormFee(values, 'triTandemAxle'),
+    waitingFee: readFormFee(values, 'waitingFee'),
+    yardStorage: readFormFee(values, 'yardStorage', ROAD_YARD_STORAGE_FIELD),
+  };
 }
 
 export function resolveAllInFromFormulas(

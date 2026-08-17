@@ -81,6 +81,7 @@ const searchFormOptions = useI18nFormOptions(() => ({
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    id: 'md-exchange-rate-list',
     columns: useExchangeRateColumns(onActionClick, canManage),
     height: 'auto',
     pagerConfig: { enabled: false },

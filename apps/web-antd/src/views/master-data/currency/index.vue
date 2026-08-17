@@ -80,6 +80,7 @@ const searchFormOptions = useI18nFormOptions(() => ({
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    id: 'md-currency-list',
     columns: useCurrencyColumns(onActionClick, canManage),
     height: 'auto',
     pagerConfig: { enabled: false },

@@ -11,6 +11,7 @@ import { useRouter } from 'vue-router';
 import { useAccess } from '@vben/access';
 import { Page } from '@vben/common-ui';
 import { Download, Plus } from '@vben/icons';
+import { downloadFileFromBlob } from '@vben/utils';
 
 import { Button, message, Modal } from 'ant-design-vue';
 
@@ -23,6 +24,10 @@ import {
 } from '#/api/quote';
 import { $t } from '#/locales';
 
+import {
+  buildListExportParams,
+  getGridSelectedIds,
+} from '../../shared/export-params';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import {
   quoteRowClassName,
@@ -41,8 +46,8 @@ const canVoid = hasAccessByCodes(['quote:approve']);
 const canExport = hasAccessByCodes(['quote:export']);
 const exporting = ref(false);
 
-function onCreate() {
-  router.push({ name: 'QuoteCreate' });
+async function onCreate() {
+  await router.push({ name: 'QuoteCreate' });
 }
 
 function onView(row: QuoteApi.QuoteListItem) {
@@ -104,22 +109,27 @@ function onActionClick({
 }
 
 async function onBatchExport() {
-  const records =
-    gridApi.grid?.getCheckboxRecords() as QuoteApi.QuoteListItem[];
-  if (!records?.length) {
-    message.warning($t('page.quote.message.selectExport'));
-    return;
-  }
   exporting.value = true;
+  const hideLoading = message.loading({
+    content: $t('page.quote.message.exporting'),
+    duration: 0,
+    key: 'quote_export_msg',
+  });
   try {
-    const blob = await exportQuotes(records.map((r) => r.id));
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `报价单-${Date.now()}.xlsx`;
-    link.click();
-    URL.revokeObjectURL(url);
-    message.success($t('page.quote.message.exportSuccess'));
+    const formValues = await gridApi.formApi?.getLatestSubmissionValues?.();
+    const blob = await exportQuotes(
+      buildListExportParams(formValues, getGridSelectedIds(gridApi)),
+    );
+    await downloadFileFromBlob({
+      fileName: `报价单-${Date.now()}.xlsx`,
+      source: blob as Blob,
+    });
+    message.success({
+      content: $t('page.quote.message.exportSuccess'),
+      key: 'quote_export_msg',
+    });
+  } catch {
+    hideLoading();
   } finally {
     exporting.value = false;
   }
@@ -135,6 +145,7 @@ const searchFormOptions = useI18nFormOptions(() => ({
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
+    id: 'quote-list',
     columns: useQuoteColumns(onActionClick, canEdit, canDelete, canVoid),
     height: 'auto',
     pagerConfig: {},
@@ -152,6 +163,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
     rowClassName: quoteRowClassName,
     rowConfig: {
       keyField: 'id',
+    },
+    checkboxConfig: {
+      highlight: true,
+      reserve: true,
     },
     scrollX: { enabled: true },
     toolbarConfig: {

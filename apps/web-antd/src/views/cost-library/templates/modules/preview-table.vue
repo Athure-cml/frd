@@ -11,6 +11,7 @@ import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { $t } from '#/locales';
 
 import { buildColumnsFromTemplate } from '../../shared/build-columns';
+import { createTemplateColumnBgStyleHandlers } from '../../shared/column-bg-style';
 import { getTemplatePreviewRows } from '../template-preview-data';
 
 const props = defineProps<{
@@ -108,10 +109,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
       gt: 0,
     },
     showOverflow: true,
+    sortConfig: {
+      remote: false,
+      trigger: 'default',
+    },
     stripe: true,
     toolbarConfig: {
       enabled: false,
     },
+    ...createTemplateColumnBgStyleHandlers(),
   },
 });
 
