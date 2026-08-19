@@ -18,7 +18,11 @@ export const FUMIGATION_FIELD_CATALOG: FieldCatalogEntry[] = [
     format: 'amount',
     labelKey: f('outdoorOak'),
   },
-  { field: 'outdoorValidity', labelKey: f('outdoorValidity') },
+  {
+    field: 'outdoorValidity',
+    format: 'dateMd',
+    labelKey: f('outdoorValidity'),
+  },
   {
     align: 'right',
     field: 'indoorNonOak',
@@ -31,7 +35,7 @@ export const FUMIGATION_FIELD_CATALOG: FieldCatalogEntry[] = [
     format: 'amount',
     labelKey: f('indoorOak'),
   },
-  { field: 'indoorValidity', labelKey: f('indoorValidity') },
+  { field: 'indoorValidity', format: 'dateMd', labelKey: f('indoorValidity') },
   {
     className: 'col-remark',
     field: 'address',

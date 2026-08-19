@@ -48,30 +48,29 @@ function createPortSearchProps() {
 }
 
 function createZipSearchProps() {
-  const params = reactive({ keyword: '' });
-  const setKeyword = useDebounceFn((keyword: string) => {
-    params.keyword = keyword.trim();
+  const options = reactive<Array<{ label: string; value: string }>>([]);
+  const search = useDebounceFn(async (keyword: string) => {
+    const q = keyword.trim();
+    if (!q) {
+      options.splice(0);
+      return;
+    }
+    const rows = await lookupQuoteZip(q, 30);
+    options.splice(
+      0,
+      options.length,
+      ...rows.map((row) => ({
+        label: `${row.zipCode} · ${row.city}, ${row.stateCode}`,
+        value: row.zipCode,
+      })),
+    );
   }, 280);
   return {
     allowClear: true,
-    api: async (p: { keyword?: string }) => {
-      const keyword = p?.keyword?.trim() || '';
-      if (!keyword) {
-        return [];
-      }
-      const rows = await lookupQuoteZip(keyword, 30);
-      return rows.map((row) => ({
-        label: `${row.zipCode} · ${row.city}, ${row.stateCode}`,
-        value: row.zipCode,
-      }));
-    },
     class: 'w-full',
     filterOption: false,
-    immediate: false,
-    optionFilterProp: 'label',
-    params,
-    showSearch: true,
-    onSearch: setKeyword,
+    options,
+    onSearch: search,
   };
 }
 
@@ -122,7 +121,7 @@ function createStateSearchProps() {
 export function useRoadSearchSchema(): VbenFormSchema[] {
   return [
     {
-      component: 'ApiSelect',
+      component: 'AutoComplete',
       componentProps: createZipSearchProps(),
       fieldName: 'zipCode',
       label: t('zipCode'),

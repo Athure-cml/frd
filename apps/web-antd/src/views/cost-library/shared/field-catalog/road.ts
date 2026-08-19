@@ -55,7 +55,12 @@ export const ROAD_FIELD_CATALOG: FieldCatalogEntry[] = [
     labelKey: road('remark'),
     showOverflow: true,
   },
-  { field: 'validDate', group: 'meta', labelKey: road('validDate') },
+  {
+    field: 'validDate',
+    format: 'dateMd',
+    group: 'meta',
+    labelKey: road('validDate'),
+  },
   {
     field: 'logYardNameAddress',
     group: 'meta',

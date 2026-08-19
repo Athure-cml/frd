@@ -83,6 +83,7 @@ export type DestZipResolveStatus =
 
 export interface DestZipResolveItem {
   candidates?: string[];
+  canonicalCity?: null | string;
   city: string;
   message?: string;
   state: string;
@@ -90,9 +91,9 @@ export interface DestZipResolveItem {
   zipCode?: null | string;
 }
 
-/** 按 City+State 批量解析邮编（唯一匹配才返回 zip） */
+/** 按 City+State（及可选 ZIP）批量解析邮编并规范 City 格式 */
 export async function resolveDestZips(
-  items: Array<{ city: string; state: string }>,
+  items: Array<{ city: string; state: string; zipCode?: string }>,
 ) {
   return requestClient.post<DestZipResolveItem[]>(
     `${BASE}/resolve-zips`,
@@ -125,23 +126,35 @@ export async function deleteUsStateZip(id: number) {
   return requestClient.delete(`${BASE}/zips/${id}`);
 }
 
-export async function importUsStateZip(file: File) {
-  return requestClient.upload<CostImportResult>(`${BASE}/import`, { file });
+export async function importUsStateZip(
+  file: File,
+  options?: { dryRun?: boolean },
+) {
+  return requestClient.upload<CostImportResult>(`${BASE}/import`, {
+    dryRun: options?.dryRun,
+    file,
+  });
 }
 
-export async function importUsStateZipGeonames(file: File) {
+export async function importUsStateZipGeonames(
+  file: File,
+  options?: { dryRun?: boolean },
+) {
   return requestClient.upload<CostImportResult>(
     `${BASE}/import-geonames`,
-    { file },
+    { dryRun: options?.dryRun, file },
     { timeout: 600_000 },
   );
 }
 
-export async function importUsStateZipFile(file: File) {
+export async function importUsStateZipFile(
+  file: File,
+  options?: { dryRun?: boolean },
+) {
   if (file.name.toLowerCase().endsWith('.txt')) {
-    return importUsStateZipGeonames(file);
+    return importUsStateZipGeonames(file, options);
   }
-  return importUsStateZip(file);
+  return importUsStateZip(file, options);
 }
 
 export async function exportUsStateZip(params?: Recordable<any>) {

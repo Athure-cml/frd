@@ -86,8 +86,14 @@ export async function reorderShippingLine(ids: number[]) {
   return requestClient.put(`${BASE}/reorder`, { ids });
 }
 
-export async function importShippingLine(file: File) {
-  return requestClient.upload<CostImportResult>(`${BASE}/import`, { file });
+export async function importShippingLine(
+  file: File,
+  options?: { dryRun?: boolean },
+) {
+  return requestClient.upload<CostImportResult>(`${BASE}/import`, {
+    dryRun: options?.dryRun,
+    file,
+  });
 }
 
 export async function exportShippingLine(params: Recordable<any>) {

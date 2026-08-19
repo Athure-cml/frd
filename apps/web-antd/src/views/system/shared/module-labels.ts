@@ -28,10 +28,6 @@ export function resolvePermissionModule(code: string): null | string {
   if (code.startsWith('report:')) {
     return null;
   }
-  // 旧版扁平供应商权限，已迁移为 supplier:{category}:*，不进入权限树
-  if (/^supplier:(view|create|edit|delete)$/.test(code)) {
-    return null;
-  }
   if (code.startsWith('md_us_state:') || code.startsWith('md_inland_por:')) {
     return null;
   }

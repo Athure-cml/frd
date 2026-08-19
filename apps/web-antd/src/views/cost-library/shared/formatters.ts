@@ -24,17 +24,45 @@ export function formatUsd(price: number) {
   return formatPrice(price, 'USD');
 }
 
-/** 表格展示：只显示月-日；无法解析时原样返回 */
+function formatSingleCostDate(text: string): null | string {
+  const isoMatch = text.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (isoMatch) {
+    const year = isoMatch[1];
+    const month = (isoMatch[2] ?? '').padStart(2, '0');
+    const day = (isoMatch[3] ?? '').padStart(2, '0');
+    return `${year}/${month}/${day}`;
+  }
+
+  const usMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (usMatch) {
+    let year = Number.parseInt(usMatch[3] ?? '', 10);
+    if (Number.isNaN(year)) {
+      return null;
+    }
+    if (year < 100) {
+      year += 2000;
+    }
+    const month = (usMatch[1] ?? '').padStart(2, '0');
+    const day = (usMatch[2] ?? '').padStart(2, '0');
+    return `${year}/${month}/${day}`;
+  }
+
+  return null;
+}
+
+/** 成本库表格/导出展示：统一 yyyy/MM/dd；无法解析时原样返回 */
 export function formatDateMd(value: null | number | string | undefined) {
   if (value === null || value === undefined || value === '') {
     return '';
   }
   const text = String(value).trim();
-  const match = text.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
-  if (!match) {
-    return text;
+  const rangeMatch = text.match(/^(.+?)\s*[-–—~至到]\s*(.+)$/);
+  if (rangeMatch) {
+    const start = formatSingleCostDate(rangeMatch[1]?.trim() ?? '');
+    const end = formatSingleCostDate(rangeMatch[2]?.trim() ?? '');
+    if (start && end) {
+      return `${start} - ${end}`;
+    }
   }
-  const month = (match[2] ?? '').padStart(2, '0');
-  const day = (match[3] ?? '').padStart(2, '0');
-  return `${month}-${day}`;
+  return formatSingleCostDate(text) ?? text;
 }

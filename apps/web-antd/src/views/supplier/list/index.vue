@@ -361,8 +361,8 @@ function onRefresh() {
   });
 }
 
-async function importFn(file: File) {
-  return importSupplier(file, category.value);
+async function importFn(file: File, options?: { dryRun?: boolean }) {
+  return importSupplier(file, category.value, options);
 }
 </script>
 

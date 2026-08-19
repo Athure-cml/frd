@@ -21,6 +21,7 @@ import XLSXStyle from 'xlsx-js-style';
 
 import { $t } from '#/locales';
 
+import { enrichRoadPreviewUnits } from '../shared/road-import-unit-enrich';
 import { enrichRoadPreviewZipCodes } from '../shared/road-import-zip-enrich';
 
 const props = withDefaults(
@@ -76,7 +77,8 @@ const previewPage = ref({
 });
 const zipEnrichHint = ref('');
 const zipEnrichIssues = ref<string[]>([]);
-/** ZIP 无法唯一匹配的预览行下标（0-based） */
+const zipEnrichPendingNotes = ref<string[]>([]);
+/** 仅 notFound 等阻断性问题标红 */
 const zipEnrichFailedIndexes = ref<number[]>([]);
 const dedupeHint = ref('');
 const dedupeIssues = ref<string[]>([]);
@@ -279,6 +281,7 @@ function clearPreview() {
   previewPage.value = { current: 1, pageSize: 20 };
   zipEnrichHint.value = '';
   zipEnrichIssues.value = [];
+  zipEnrichPendingNotes.value = [];
   zipEnrichFailedIndexes.value = [];
   dedupeHint.value = '';
   dedupeIssues.value = [];
@@ -293,6 +296,18 @@ function onPreviewPageChange(page: number, pageSize: number) {
     pageSize,
   };
   void nextTick(() => measureTableScrollY());
+}
+
+function isTextImportFile(file: File) {
+  return file.name.toLowerCase().endsWith('.txt');
+}
+
+/** txt 保留原文件（Tab 分隔）；Excel 可按预览重建 */
+function resolveUploadFile(file: File) {
+  if (isTextImportFile(file)) {
+    return file;
+  }
+  return hasPreview.value ? buildFileFromPreview(file.name) : file;
 }
 
 async function handleConfirm() {
@@ -313,9 +328,7 @@ async function handleConfirm() {
   validationOkHint.value = '';
   modalApi.lock();
   try {
-    const uploadFile = hasPreview.value
-      ? buildFileFromPreview(file.name)
-      : file;
+    const uploadFile = resolveUploadFile(file);
     const result = await props.importFn(uploadFile);
     if (result.failed > 0) {
       importErrors.value = result.errors ?? [];
@@ -351,7 +364,7 @@ async function runPreValidate() {
   importFailedRowNumbers.value = [];
   validationOkHint.value = '';
   try {
-    const uploadFile = buildFileFromPreview(file.name);
+    const uploadFile = resolveUploadFile(file);
     const result = await props.importFn(uploadFile, { dryRun: true });
     if (token !== validateToken) {
       return;
@@ -820,25 +833,62 @@ function normalizePortTypeForDedupe(raw: string) {
 async function applyRoadZipEnrichment(headers: string[]) {
   zipEnrichHint.value = '';
   zipEnrichIssues.value = [];
+  zipEnrichPendingNotes.value = [];
   zipEnrichFailedIndexes.value = [];
   try {
     const result = await enrichRoadPreviewZipCodes(headers, previewRows.value);
     previewRows.value = result.rows;
     zipEnrichIssues.value = result.issues.map((item) => item.message);
+    zipEnrichPendingNotes.value = result.pendingNotes.map(
+      (item) => item.message,
+    );
     zipEnrichFailedIndexes.value = result.issues.map((item) => item.rowIndex);
-    if (result.filled > 0 && result.issues.length > 0) {
+    if (result.filled > 0 && result.pending > 0 && result.issues.length > 0) {
+      zipEnrichHint.value = $t('page.costLibrary.hint.importZipEnrichMixed', [
+        result.filled,
+        result.pending,
+        result.issues.length,
+      ]);
+    } else if (result.filled > 0 && result.pending > 0) {
       zipEnrichHint.value = $t('page.costLibrary.hint.importZipEnrichPartial', [
         result.filled,
-        result.issues.length,
+        result.pending,
       ]);
     } else if (result.filled > 0) {
       zipEnrichHint.value = $t('page.costLibrary.hint.importZipEnrichFilled', [
         result.filled,
       ]);
+    } else if (result.pending > 0 && result.issues.length > 0) {
+      zipEnrichHint.value = $t(
+        'page.costLibrary.hint.importZipEnrichPendingWithIssues',
+        [result.pending, result.issues.length],
+      );
+    } else if (result.pending > 0) {
+      zipEnrichHint.value = $t('page.costLibrary.hint.importZipEnrichPending', [
+        result.pending,
+      ]);
     } else if (result.issues.length > 0) {
       zipEnrichHint.value = $t('page.costLibrary.hint.importZipEnrichIssues', [
         result.issues.length,
       ]);
+    }
+    if (result.citiesNormalized > 0) {
+      const cityHint = $t('page.costLibrary.hint.importCityNormalized', [
+        result.citiesNormalized,
+      ]);
+      zipEnrichHint.value = zipEnrichHint.value
+        ? `${zipEnrichHint.value}；${cityHint}`
+        : cityHint;
+    }
+    const unitResult = await enrichRoadPreviewUnits(headers, previewRows.value);
+    previewRows.value = unitResult.rows;
+    if (unitResult.normalized > 0) {
+      const unitHint = $t('page.costLibrary.hint.importUnitNormalized', [
+        unitResult.normalized,
+      ]);
+      zipEnrichHint.value = zipEnrichHint.value
+        ? `${zipEnrichHint.value}；${unitHint}`
+        : unitHint;
     }
   } catch (error) {
     console.error(error);
@@ -1062,9 +1112,29 @@ defineExpose({ open });
             :type="zipEnrichIssues.length > 0 ? 'warning' : 'info'"
             :message="zipEnrichHint"
           >
-            <template v-if="zipEnrichIssues.length > 0" #description>
-              <ul class="mb-0 max-h-28 list-disc overflow-auto pl-4 text-xs">
-                <li v-for="(err, idx) in zipEnrichIssues" :key="idx">
+            <template
+              v-if="
+                zipEnrichPendingNotes.length > 0 || zipEnrichIssues.length > 0
+              "
+              #description
+            >
+              <ul
+                v-if="zipEnrichPendingNotes.length > 0"
+                class="mb-0 max-h-28 list-disc overflow-auto pl-4 text-xs"
+              >
+                <li
+                  v-for="(note, idx) in zipEnrichPendingNotes"
+                  :key="`p-${idx}`"
+                >
+                  {{ note }}
+                </li>
+              </ul>
+              <ul
+                v-if="zipEnrichIssues.length > 0"
+                class="mb-0 max-h-28 list-disc overflow-auto pl-4 text-xs"
+                :class="{ 'mt-2': zipEnrichPendingNotes.length > 0 }"
+              >
+                <li v-for="(err, idx) in zipEnrichIssues" :key="`e-${idx}`">
                   {{ err }}
                 </li>
               </ul>

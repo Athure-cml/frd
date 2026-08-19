@@ -112,9 +112,11 @@ export async function reorderSupplier(ids: number[]) {
 export async function importSupplier(
   file: File,
   category: SupplierApi.SupplierCategory = 'TRUCK',
+  options?: { dryRun?: boolean },
 ) {
   return requestClient.upload<CostImportResult>(`${BASE}/import`, {
     category,
+    dryRun: options?.dryRun,
     file,
   });
 }

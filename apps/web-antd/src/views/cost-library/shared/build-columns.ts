@@ -54,7 +54,7 @@ export interface BuildColumnsOptions<T extends { id: number }> {
   template?: CostTableTemplate;
 }
 
-/** 海运表格日期列（含自定义「生效期」）：列表展示 MM-DD */
+/** 海运表格日期列（含自定义「生效期」）：列表展示 yyyy/MM/dd */
 const SEA_EFF_CUSTOM_FIELDS = new Set([
   'cf_sea_bunker_eff',
   'cf_sea_freight_eff',
@@ -74,6 +74,43 @@ function isSeaTableDateField(
   if (options?.title === '生效期' || options?.title === '有效期') return true;
   if (field.startsWith('cf_') && /(_eff|Eff)$/.test(field)) return true;
   return false;
+}
+
+function isRoadTableDateField(
+  field: string,
+  options?: { dataType?: string; title?: string },
+) {
+  if (options?.dataType === 'date') return true;
+  if (field === 'validDate') return true;
+  if (options?.title === '生效期' || options?.title === 'EFFECTIVE TIME') {
+    return true;
+  }
+  if (options?.title === 'VALID TIME') return true;
+  if (field.startsWith('cf_') && /(_eff|Eff)$/.test(field)) return true;
+  return false;
+}
+
+function isTableDateField(
+  mode: CostMode,
+  field: string,
+  options?: { dataType?: string; title?: string },
+) {
+  if (mode === 'sea') {
+    return isSeaTableDateField(field, options);
+  }
+  if (mode === 'road') {
+    return isRoadTableDateField(field, options);
+  }
+  if (mode === 'fumigation') {
+    return (
+      field.endsWith('Validity') ||
+      field.startsWith('cf_fum_') ||
+      options?.dataType === 'date' ||
+      options?.title === '生效期' ||
+      options?.title === '有效期'
+    );
+  }
+  return options?.dataType === 'date';
 }
 
 function buildFormatter(entry: FieldCatalogEntry) {
@@ -124,8 +161,7 @@ function buildCatalogMap(mode: CostMode, layout: CostTableTemplateLayout) {
       format:
         def.dataType === 'number'
           ? 'amount'
-          : mode === 'sea' &&
-              isSeaTableDateField(def.field, {
+          : isTableDateField(mode, def.field, {
                 dataType: def.dataType,
                 title,
               })
@@ -139,31 +175,23 @@ function buildCatalogMap(mode: CostMode, layout: CostTableTemplateLayout) {
     if (isCustomFieldKey(field)) {
       const existing = map.get(field);
       if (existing) {
-        if (
-          mode === 'sea' &&
-          !existing.format &&
-          isSeaTableDateField(field, { title })
-        ) {
+        if (!existing.format && isTableDateField(mode, field, { title })) {
           map.set(field, { ...existing, format: 'dateMd' });
         }
         return;
       }
       map.set(field, {
         field,
-        format:
-          mode === 'sea' && isSeaTableDateField(field, { title })
-            ? 'dateMd'
-            : undefined,
+        format: isTableDateField(mode, field, { title }) ? 'dateMd' : undefined,
         labelKey: title,
       });
       return;
     }
     const catalog = map.get(field);
     if (
-      mode === 'sea' &&
       catalog &&
       !catalog.format &&
-      isSeaTableDateField(field, { title })
+      isTableDateField(mode, field, { title })
     ) {
       map.set(field, { ...catalog, format: 'dateMd' });
     }
@@ -250,8 +278,7 @@ function buildLeafColumn(
     }
     const useDateMd =
       entry.format === 'dateMd' ||
-      (options.mode === 'sea' &&
-        isSeaTableDateField(entry.field, { title: options.title }));
+      isTableDateField(options.mode, entry.field, { title: options.title });
     const unitField = resolveRoadFeeUnitField(entry.field);
     column.formatter = ({
       cellValue,

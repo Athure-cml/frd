@@ -1,5 +1,11 @@
 import { resolveDestZips } from '#/api/master-data/us-state-zip';
 
+/** 多个邮编时写入 ZIP 列（与后端 CostRoadZipPlaceholder.PENDING 一致） */
+export const ROAD_ZIP_PENDING_PLACEHOLDER = '待补录';
+
+/** 未找到 City+State 对应邮编时写入 ZIP 列（与后端 CostRoadZipPlaceholder.CITY_STATE_INVALID 一致） */
+export const ROAD_ZIP_CITY_STATE_INVALID_PLACEHOLDER = 'CITY、STATE有误';
+
 export type RoadZipEnrichIssue = {
   city: string;
   message: string;
@@ -8,8 +14,11 @@ export type RoadZipEnrichIssue = {
 };
 
 export type RoadZipEnrichResult = {
+  citiesNormalized: number;
   filled: number;
   issues: RoadZipEnrichIssue[];
+  pending: number;
+  pendingNotes: RoadZipEnrichIssue[];
   rows: Record<string, string>[];
 };
 
@@ -51,8 +60,7 @@ export function findRoadPreviewRouteColumns(headers: string[]) {
 }
 
 /**
- * 预览表：缺 ZIP 且有 City+State 时批量解析；唯一匹配写入 ZIP 列。
- * 歧义/未找到仅记录 issues，确认导入时由后端整行报错。
+ * 预览表：规范 City 大小写；缺 ZIP 且有 City+State 时批量解析邮编。
  */
 export async function enrichRoadPreviewZipCodes(
   headers: string[],
@@ -61,71 +69,106 @@ export async function enrichRoadPreviewZipCodes(
   const { cityIndex, stateIndex, zipIndex } =
     findRoadPreviewRouteColumns(headers);
   if (zipIndex < 0 || cityIndex < 0 || stateIndex < 0) {
-    return { filled: 0, issues: [], rows };
+    return {
+      citiesNormalized: 0,
+      filled: 0,
+      issues: [],
+      pending: 0,
+      pendingNotes: [],
+      rows,
+    };
   }
 
   const zipKey = `c${zipIndex}`;
   const cityKey = `c${cityIndex}`;
   const stateKey = `c${stateIndex}`;
 
-  const needResolveIndexes: number[] = [];
-  const resolvePayload: Array<{ city: string; state: string }> = [];
+  const resolvePayload = rows.map((row) => ({
+    city: String(row[cityKey] ?? '').trim(),
+    state: String(row[stateKey] ?? '').trim(),
+    zipCode: String(row[zipKey] ?? '').trim() || undefined,
+  }));
 
-  rows.forEach((row, rowIndex) => {
-    const zip = String(row[zipKey] ?? '').trim();
-    const city = String(row[cityKey] ?? '').trim();
-    const state = String(row[stateKey] ?? '').trim();
-    if (zip || !city || !state) {
-      return;
-    }
-    needResolveIndexes.push(rowIndex);
-    resolvePayload.push({ city, state });
-  });
-
-  if (resolvePayload.length === 0) {
-    return { filled: 0, issues: [], rows };
+  if (
+    resolvePayload.every((item) => !item.city && !item.state && !item.zipCode)
+  ) {
+    return {
+      citiesNormalized: 0,
+      filled: 0,
+      issues: [],
+      pending: 0,
+      pendingNotes: [],
+      rows,
+    };
   }
 
   const resolved = await resolveDestZips(resolvePayload);
   const nextRows = rows.map((row) => ({ ...row }));
   const issues: RoadZipEnrichIssue[] = [];
+  const pendingNotes: RoadZipEnrichIssue[] = [];
   let filled = 0;
+  let pending = 0;
+  let citiesNormalized = 0;
 
-  needResolveIndexes.forEach((rowIndex, payloadIndex) => {
-    const item = resolved[payloadIndex];
+  resolved.forEach((item, rowIndex) => {
     const row = nextRows[rowIndex];
     if (!item || !row) {
       return;
     }
     const city = String(row[cityKey] ?? '').trim();
     const state = String(row[stateKey] ?? '').trim();
+    const zip = String(row[zipKey] ?? '').trim();
+
+    if (item.canonicalCity && item.canonicalCity !== city) {
+      row[cityKey] = item.canonicalCity;
+      citiesNormalized += 1;
+    }
+
+    if (zip) {
+      return;
+    }
+    if (!city || !state) {
+      return;
+    }
+
     if (item.status === 'unique' && item.zipCode) {
       row[zipKey] = item.zipCode;
       filled += 1;
       return;
     }
     if (item.status === 'ambiguous') {
+      row[zipKey] = ROAD_ZIP_PENDING_PLACEHOLDER;
+      pending += 1;
       const candidates =
         item.candidates && item.candidates.length > 0
-          ? `（${item.candidates.join(', ')}）`
+          ? `（可选：${item.candidates.slice(0, 5).join(', ')}${item.candidates.length > 5 ? '…' : ''}）`
           : '';
-      issues.push({
+      pendingNotes.push({
         city,
-        message: `第 ${rowIndex + 1} 行：City+State 对应多个邮编${candidates}，请填写邮编`,
+        message: `第 ${rowIndex + 1} 行：City+State 对应多个邮编，已填入「${ROAD_ZIP_PENDING_PLACEHOLDER}」${candidates}，请后续补录`,
         rowIndex,
         state,
       });
       return;
     }
     if (item.status === 'notFound') {
-      issues.push({
+      row[zipKey] = ROAD_ZIP_CITY_STATE_INVALID_PLACEHOLDER;
+      pending += 1;
+      pendingNotes.push({
         city,
-        message: `第 ${rowIndex + 1} 行：主数据中未找到 City+State 对应邮编，请填写邮编`,
+        message: `第 ${rowIndex + 1} 行：主数据中未找到 City+State 对应邮编，已填入「${ROAD_ZIP_CITY_STATE_INVALID_PLACEHOLDER}」，请核对 City/State 后补录`,
         rowIndex,
         state,
       });
     }
   });
 
-  return { filled, issues, rows: nextRows };
+  return {
+    citiesNormalized,
+    filled,
+    issues,
+    pending,
+    pendingNotes,
+    rows: nextRows,
+  };
 }

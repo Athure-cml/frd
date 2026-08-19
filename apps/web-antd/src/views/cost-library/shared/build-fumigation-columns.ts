@@ -20,6 +20,7 @@ import {
 } from './columns';
 import { coerceAmountValue } from './fee-unit-pairs';
 import { getFieldCatalog, toFieldCatalogMap } from './field-catalog';
+import { formatDateMd } from './formatters';
 import {
   customFieldColumnPath,
   isCustomFieldKey,
@@ -40,6 +41,15 @@ const INDOOR_FIELDS = new Set([
   'indoorOak',
   'indoorValidity',
 ]);
+
+function isFumigationDateField(field: string, title?: string) {
+  return (
+    field.endsWith('Validity') ||
+    field.startsWith('cf_fum_') ||
+    title === '生效期' ||
+    title === '有效期'
+  );
+}
 
 export const FUMIGATION_GROUP_DEFS = {
   indoor: {
@@ -199,11 +209,21 @@ function buildLeafColumn(
       if (entry.format === 'amount' && typeof value === 'number') {
         return formatAmount(value);
       }
+      if (isFumigationDateField(field, options.title)) {
+        return formatDateMd(
+          typeof value === 'string' || typeof value === 'number'
+            ? value
+            : String(value),
+        );
+      }
       return String(value);
     };
   } else if (entry.format === 'amount') {
     column.formatter = ({ cellValue }: { cellValue: number }) =>
       formatAmount(cellValue);
+  } else if (isFumigationDateField(field, options.title)) {
+    column.formatter = ({ cellValue }: { cellValue: null | number | string }) =>
+      formatDateMd(cellValue);
   }
 
   if (options.required) {

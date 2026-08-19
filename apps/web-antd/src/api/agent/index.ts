@@ -77,8 +77,11 @@ export async function reorderAgent(ids: number[]) {
   return requestClient.put(`${BASE}/reorder`, { ids });
 }
 
-export async function importAgent(file: File) {
-  return requestClient.upload<CostImportResult>(`${BASE}/import`, { file });
+export async function importAgent(file: File, options?: { dryRun?: boolean }) {
+  return requestClient.upload<CostImportResult>(`${BASE}/import`, {
+    dryRun: options?.dryRun,
+    file,
+  });
 }
 
 export async function exportAgent(params: Recordable<any>) {
