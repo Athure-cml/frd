@@ -2,11 +2,16 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { CostTableTemplate, FreightCostRecord } from '#/api/cost';
 
-import { getEnabledContainerTypeOptions } from '#/api/master-data/container-type';
+import { getAgentList } from '#/api/agent';
+import { getShippingLineList } from '#/api/shipping-line';
 import { $t } from '#/locales';
 
 import { buildColumnsFromTemplate } from '../shared/build-columns';
-import { createPortSelectProps } from '../shared/freight-schema';
+import {
+  createContainerTypeSearchProps,
+  createPartyNameSelectProps,
+  createPortSelectProps,
+} from '../shared/freight-schema';
 import { createCostStatusSearchField } from '../shared/status-search';
 
 const f = (key: string) => $t(`page.costLibrary.seaFields.${key}`);
@@ -27,6 +32,7 @@ export function useSeaSearchSchema(): VbenFormSchema[] {
       component: 'ApiSelect',
       componentProps: createPortSelectProps({
         portTypes: ['INLAND', 'RAIL', 'SEAPORT'],
+        requireKeyword: true,
       }),
       fieldName: 'por',
       label: f('por'),
@@ -35,6 +41,7 @@ export function useSeaSearchSchema(): VbenFormSchema[] {
       component: 'ApiSelect',
       componentProps: createPortSelectProps({
         portTypes: ['SEAPORT'],
+        requireKeyword: true,
       }),
       fieldName: 'pol',
       label: f('pol'),
@@ -43,20 +50,14 @@ export function useSeaSearchSchema(): VbenFormSchema[] {
       component: 'ApiSelect',
       componentProps: createPortSelectProps({
         portTypes: ['SEAPORT'],
+        requireKeyword: true,
       }),
       fieldName: 'pod',
       label: f('pod'),
     },
     {
       component: 'ApiSelect',
-      componentProps: {
-        allowClear: true,
-        api: getEnabledContainerTypeOptions,
-        class: 'w-full',
-        immediate: false,
-        optionFilterProp: 'label',
-        showSearch: true,
-      },
+      componentProps: createContainerTypeSearchProps(),
       fieldName: 'containerType',
       label: f('containerType'),
     },
@@ -73,14 +74,20 @@ export function useSeaSearchSchema(): VbenFormSchema[] {
       label: f('freightValidDateSearch'),
     },
     {
-      component: 'Input',
-      componentProps: { autocomplete: 'off' },
+      component: 'ApiSelect',
+      componentProps: createPartyNameSelectProps({
+        fetch: getShippingLineList,
+        requireKeyword: true,
+      }),
       fieldName: 'ssl',
       label: f('ssl'),
     },
     {
-      component: 'Input',
-      componentProps: { autocomplete: 'off' },
+      component: 'ApiSelect',
+      componentProps: createPartyNameSelectProps({
+        fetch: getAgentList,
+        requireKeyword: true,
+      }),
       fieldName: 'agent',
       label: f('agent'),
     },

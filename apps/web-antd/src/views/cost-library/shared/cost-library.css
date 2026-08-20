@@ -143,6 +143,24 @@
   width: 100%;
 }
 
+/* 多选港口/箱型：标签换行，输入框高度随内容撑开 */
+.cost-drawer-form .cost-select-multiple-wrap.ant-select-multiple .ant-select-selector {
+  height: auto !important;
+  min-height: 32px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.cost-drawer-form .cost-select-multiple-wrap.ant-select-multiple .ant-select-selection-overflow {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.cost-drawer-form .cost-select-multiple-wrap.ant-select-multiple .ant-select-selection-item {
+  max-width: 100%;
+  margin-block-end: 2px;
+}
+
 /*
  * 全局 .vxe-grid { height:auto !important } 会把空表/加载中表体压成接近 0 高，
  * VbenLoading（absolute + size-full）随之不可见，表现为「整页空白无转圈」。

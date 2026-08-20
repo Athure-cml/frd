@@ -30,7 +30,7 @@ import {
   resolveRoadFeeUnitField,
 } from './fee-unit-pairs';
 import { getFieldCatalog, toFieldCatalogMap } from './field-catalog';
-import { formatDateMd, formatPrice } from './formatters';
+import { formatDateMd, formatDateMmDd, formatPrice } from './formatters';
 import { costStatusTagOptions } from './tags';
 import {
   customFieldColumnPath,
@@ -54,7 +54,7 @@ export interface BuildColumnsOptions<T extends { id: number }> {
   template?: CostTableTemplate;
 }
 
-/** 海运表格日期列（含自定义「生效期」）：列表展示 yyyy/MM/dd */
+/** 海运表格日期列（含自定义「生效期」）：列表展示 MM/DD */
 const SEA_EFF_CUSTOM_FIELDS = new Set([
   'cf_sea_bunker_eff',
   'cf_sea_freight_eff',
@@ -113,7 +113,22 @@ function isTableDateField(
   return options?.dataType === 'date';
 }
 
-function buildFormatter(entry: FieldCatalogEntry) {
+function listDateFormat(mode: CostMode): 'dateMd' | 'dateMmDd' {
+  return mode === 'sea' ? 'dateMmDd' : 'dateMd';
+}
+
+function formatListDate(
+  mode: CostMode,
+  format: FieldCatalogEntry['format'],
+  value: null | number | string,
+) {
+  if (format === 'dateMmDd' || (format === 'dateMd' && mode === 'sea')) {
+    return formatDateMmDd(value);
+  }
+  return formatDateMd(value);
+}
+
+function buildFormatter(entry: FieldCatalogEntry, mode: CostMode) {
   const unitField = resolveRoadFeeUnitField(entry.field);
   if (entry.format === 'amount') {
     return ({
@@ -145,9 +160,9 @@ function buildFormatter(entry: FieldCatalogEntry) {
       row: { currency?: string };
     }) => formatPrice(cellValue, row.currency);
   }
-  if (entry.format === 'dateMd') {
+  if (entry.format === 'dateMd' || entry.format === 'dateMmDd') {
     return ({ cellValue }: { cellValue: null | number | string }) =>
-      formatDateMd(cellValue);
+      formatListDate(mode, entry.format, cellValue);
   }
   return undefined;
 }
@@ -165,7 +180,7 @@ function buildCatalogMap(mode: CostMode, layout: CostTableTemplateLayout) {
                 dataType: def.dataType,
                 title,
               })
-            ? 'dateMd'
+            ? listDateFormat(mode)
             : undefined,
       labelKey: title,
     });
@@ -176,13 +191,15 @@ function buildCatalogMap(mode: CostMode, layout: CostTableTemplateLayout) {
       const existing = map.get(field);
       if (existing) {
         if (!existing.format && isTableDateField(mode, field, { title })) {
-          map.set(field, { ...existing, format: 'dateMd' });
+          map.set(field, { ...existing, format: listDateFormat(mode) });
         }
         return;
       }
       map.set(field, {
         field,
-        format: isTableDateField(mode, field, { title }) ? 'dateMd' : undefined,
+        format: isTableDateField(mode, field, { title })
+          ? listDateFormat(mode)
+          : undefined,
         labelKey: title,
       });
       return;
@@ -193,7 +210,7 @@ function buildCatalogMap(mode: CostMode, layout: CostTableTemplateLayout) {
       !catalog.format &&
       isTableDateField(mode, field, { title })
     ) {
-      map.set(field, { ...catalog, format: 'dateMd' });
+      map.set(field, { ...catalog, format: listDateFormat(mode) });
     }
   });
   return map;
@@ -276,8 +293,9 @@ function buildLeafColumn(
         return asNum === null ? String(raw) : asNum;
       };
     }
-    const useDateMd =
+    const useListDate =
       entry.format === 'dateMd' ||
+      entry.format === 'dateMmDd' ||
       isTableDateField(options.mode, entry.field, { title: options.title });
     const unitField = resolveRoadFeeUnitField(entry.field);
     column.formatter = ({
@@ -318,8 +336,10 @@ function buildLeafColumn(
           );
         }
       }
-      if (useDateMd) {
-        return formatDateMd(
+      if (useListDate) {
+        return formatListDate(
+          options.mode,
+          entry.format ?? listDateFormat(options.mode),
           typeof value === 'string' || typeof value === 'number'
             ? value
             : String(value),
@@ -328,7 +348,7 @@ function buildLeafColumn(
       return String(value);
     };
   } else {
-    const formatter = buildFormatter(entry);
+    const formatter = buildFormatter(entry, options.mode);
     if (formatter) {
       column.formatter = formatter;
     }

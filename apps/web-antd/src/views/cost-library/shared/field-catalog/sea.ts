@@ -24,10 +24,10 @@ export const SEA_FIELD_CATALOG: FieldCatalogEntry[] = [
   },
   {
     field: 'freightValidDate',
-    format: 'dateMd',
+    format: 'dateMmDd',
     labelKey: f('freightValidDate'),
-    minWidth: 64,
-    width: 64,
+    minWidth: 52,
+    width: 52,
   },
   {
     align: 'right',
@@ -39,10 +39,10 @@ export const SEA_FIELD_CATALOG: FieldCatalogEntry[] = [
   },
   {
     field: 'bucValidDate',
-    format: 'dateMd',
+    format: 'dateMmDd',
     labelKey: f('bucValidDate'),
-    minWidth: 64,
-    width: 64,
+    minWidth: 52,
+    width: 52,
   },
   {
     align: 'right',
@@ -54,10 +54,10 @@ export const SEA_FIELD_CATALOG: FieldCatalogEntry[] = [
   },
   {
     field: 'othersValidDate',
-    format: 'dateMd',
+    format: 'dateMmDd',
     labelKey: f('othersValidDate'),
-    minWidth: 64,
-    width: 64,
+    minWidth: 52,
+    width: 52,
   },
   {
     align: 'right',
@@ -115,10 +115,10 @@ export const SEA_FIELD_CATALOG: FieldCatalogEntry[] = [
   },
   {
     field: 'ebsValidDate',
-    format: 'dateMd',
+    format: 'dateMmDd',
     labelKey: f('ebsValidDate'),
-    minWidth: 64,
-    width: 64,
+    minWidth: 52,
+    width: 52,
   },
   {
     align: 'right',
@@ -130,9 +130,9 @@ export const SEA_FIELD_CATALOG: FieldCatalogEntry[] = [
   },
   {
     field: 'griValidDate',
-    format: 'dateMd',
+    format: 'dateMmDd',
     labelKey: f('griValidDate'),
-    minWidth: 64,
-    width: 64,
+    minWidth: 52,
+    width: 52,
   },
 ];

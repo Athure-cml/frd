@@ -102,15 +102,7 @@ function containerTypeSelectProps() {
   return {
     allowClear: true,
     api: getEnabledContainerTypeOptions,
-    class: 'w-full',
-    maxTagCount: 0,
-    maxTagPlaceholder: (
-      omittedValues: Array<{ label?: unknown; value?: unknown }>,
-    ) =>
-      omittedValues
-        .map((item) => String(item.value ?? item.label ?? '').trim())
-        .filter(Boolean)
-        .join('/'),
+    class: 'w-full cost-select-multiple-wrap',
     mode: 'multiple' as const,
     optionFilterProp: 'label',
     showSearch: true,
@@ -120,6 +112,8 @@ function containerTypeSelectProps() {
 export function createPortSelectProps(options: {
   multiple?: boolean;
   portTypes?: GlobalPortApi.PortType[];
+  /** 搜索栏：无输入不请求、不展示选项 */
+  requireKeyword?: boolean;
 }) {
   const params = reactive({ keyword: '' });
   const setKeyword = useDebounceFn((keyword: string) => {
@@ -129,8 +123,12 @@ export function createPortSelectProps(options: {
   const base: Record<string, unknown> = {
     allowClear: true,
     api: async (p: { keyword?: string }) => {
+      const keyword = p?.keyword?.trim() ?? '';
+      if (options.requireKeyword && !keyword) {
+        return [];
+      }
       const items = await searchGlobalPortNameOptions({
-        keyword: p?.keyword,
+        keyword: keyword || undefined,
         limit: 50,
         portTypes: options.portTypes,
       });
@@ -142,6 +140,7 @@ export function createPortSelectProps(options: {
     },
     class: 'w-full',
     filterOption: false,
+    immediate: !options.requireKeyword,
     optionFilterProp: 'label',
     // 选中后输入框只展示 value（港口名称），下拉仍展示 label（名称/类型）
     optionLabelProp: 'value',
@@ -156,28 +155,58 @@ export function createPortSelectProps(options: {
   if (options.multiple) {
     return {
       ...base,
-      maxTagCount: 0,
-      maxTagPlaceholder: (
-        omittedValues: Array<{ label?: unknown; value?: unknown }>,
-      ) =>
-        omittedValues
-          .map((item) => String(item.value ?? item.label ?? '').trim())
-          .filter(Boolean)
-          .join('/'),
+      class: 'w-full cost-select-multiple-wrap',
       mode: 'multiple' as const,
     };
   }
   return base;
 }
 
+export function createContainerTypeSearchProps() {
+  const params = reactive({ keyword: '' });
+  const setKeyword = useDebounceFn((keyword: string) => {
+    params.keyword = keyword.trim();
+  }, 280);
+
+  return {
+    allowClear: true,
+    api: async (p: { keyword?: string }) => {
+      const keyword = p?.keyword?.trim() ?? '';
+      if (!keyword) {
+        return [];
+      }
+      const list = await getEnabledContainerTypeOptions();
+      const upper = keyword.toUpperCase();
+      return list.filter(
+        (item) =>
+          item.label.toUpperCase().includes(upper) ||
+          String(item.title ?? '')
+            .toUpperCase()
+            .includes(upper),
+      );
+    },
+    class: 'w-full',
+    filterOption: false,
+    immediate: false,
+    optionFilterProp: 'label',
+    params,
+    showSearch: true,
+    onSearch: (keyword: string) => {
+      setKeyword(keyword);
+    },
+  };
+}
+
 /** 船公司 / 代理：从客商列表选名称，下拉可搜，选中后只显示名称 */
-function createPartyNameSelectProps(options: {
+export function createPartyNameSelectProps(options: {
   fetch: (params: {
     name?: string;
     page: number;
     pageSize: number;
     status: number;
   }) => Promise<{ items: Array<{ name: string }> }>;
+  /** 搜索栏：无输入不请求、不展示选项 */
+  requireKeyword?: boolean;
 }) {
   const params = reactive({ keyword: '' });
   const setKeyword = useDebounceFn((keyword: string) => {
@@ -187,8 +216,12 @@ function createPartyNameSelectProps(options: {
   return {
     allowClear: true,
     api: async (p: { keyword?: string }) => {
+      const keyword = p?.keyword?.trim() ?? '';
+      if (options.requireKeyword && !keyword) {
+        return [];
+      }
       const result = await options.fetch({
-        name: p?.keyword?.trim() || undefined,
+        name: keyword || undefined,
         page: 1,
         pageSize: 50,
         status: 1,
@@ -211,6 +244,7 @@ function createPartyNameSelectProps(options: {
     },
     class: 'w-full',
     filterOption: false,
+    immediate: !options.requireKeyword,
     optionFilterProp: 'label',
     optionLabelProp: 'value',
     params,
@@ -288,6 +322,7 @@ export function useFreightFormSchema(): VbenFormSchema[] {
     {
       component: 'ApiSelect',
       componentProps: createPortSelectProps({
+        multiple: true,
         portTypes: ['SEAPORT'],
       }),
       fieldName: 'pol',
@@ -296,7 +331,6 @@ export function useFreightFormSchema(): VbenFormSchema[] {
     {
       component: 'ApiSelect',
       componentProps: createPortSelectProps({
-        multiple: true,
         portTypes: ['SEAPORT'],
       }),
       fieldName: 'pod',
@@ -519,7 +553,7 @@ export function rowToFreightFormValues(row: FreightCostRecord) {
   const values: Record<string, unknown> = {
     ...row,
     containerType: parseContainerTypes(row.containerType),
-    pod: parsePortNames(row.pod),
+    pol: parsePortNames(row.pol),
   };
   for (const key of DATE_FIELD_KEYS) {
     values[key] = normalizeCostDate(row[key]);
@@ -557,8 +591,8 @@ export function toFreightSavePayload(
     griValidDate: values.griValidDate || undefined,
     others: values.others ?? undefined,
     othersValidDate: values.othersValidDate || undefined,
-    pod: joinPortNames(values.pod) ?? '',
-    pol: values.pol,
+    pod: values.pod || '',
+    pol: joinPortNames(values.pol) ?? '',
     por: values.por || undefined,
     remark: values.remark || undefined,
     ssl: values.ssl,

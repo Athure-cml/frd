@@ -50,7 +50,7 @@ function formatSingleCostDate(text: string): null | string {
   return null;
 }
 
-/** 成本库表格/导出展示：统一 yyyy/MM/dd；无法解析时原样返回 */
+/** 成本库表格展示：统一 yyyy/MM/dd；无法解析时原样返回 */
 export function formatDateMd(value: null | number | string | undefined) {
   if (value === null || value === undefined || value === '') {
     return '';
@@ -65,4 +65,30 @@ export function formatDateMd(value: null | number | string | undefined) {
     }
   }
   return formatSingleCostDate(text) ?? text;
+}
+
+function toMonthDay(ymd: string): null | string {
+  const match = ymd.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+  if (!match) {
+    return null;
+  }
+  return `${match[2]}/${match[3]}`;
+}
+
+/** 海运成本库列表：仅展示 MM/DD（存储与导出仍为 yyyy/MM/dd） */
+export function formatDateMmDd(value: null | number | string | undefined) {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+  const text = String(value).trim();
+  const rangeMatch = text.match(/^(.+?)\s*[-–—~至到]\s*(.+)$/);
+  if (rangeMatch) {
+    const start = toMonthDay(formatDateMd(rangeMatch[1]?.trim() ?? ''));
+    const end = toMonthDay(formatDateMd(rangeMatch[2]?.trim() ?? ''));
+    if (start && end) {
+      return `${start} - ${end}`;
+    }
+  }
+  const full = formatDateMd(text);
+  return toMonthDay(full) ?? full;
 }

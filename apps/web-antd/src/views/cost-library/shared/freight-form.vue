@@ -105,7 +105,10 @@ async function hydrateFormValues(
     const values = mergeRecordWithExtraFields(
       rowToFreightFormValues(row as FreightCostRecord),
     );
-    await prefetchPortNameZh(parsePortNames(values.pod as string | string[]));
+    await prefetchPortNameZh([
+      ...parsePortNames(values.pol as string | string[]),
+      ...(values.pod ? [String(values.pod).trim()] : []),
+    ]);
     values.allIn = computeSeaAllIn(values);
     formApi.setValues(values);
     await nextTick();

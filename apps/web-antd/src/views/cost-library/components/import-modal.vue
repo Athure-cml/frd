@@ -213,10 +213,14 @@ const modalClass = computed(() =>
     .join(' '),
 );
 
-const tableScroll = computed(() => ({
-  x: 'max-content' as const,
-  y: tableScrollY.value,
-}));
+const tableScroll = computed(() => {
+  const scroll: { x: 'max-content'; y?: number } = { x: 'max-content' };
+  // 少量数据时不设 scroll.y，避免表头与首行重叠
+  if (isFullscreen.value || previewRows.value.length > 10) {
+    scroll.y = tableScrollY.value;
+  }
+  return scroll;
+});
 
 function measureTableScrollY() {
   // 普通窗口：固定可视高度，分页在表格外单独渲染
@@ -1066,11 +1070,13 @@ defineExpose({ open });
         <template v-if="hasPreview">
           <div ref="tableHostRef" class="import-preview-table-host">
             <Table
+              row-key="key"
               size="small"
               :columns="previewColumns"
               :data-source="previewPageRows"
               :pagination="false"
               :scroll="tableScroll"
+              :sticky="{ offsetHeader: 0 }"
               bordered
             />
           </div>
@@ -1261,7 +1267,19 @@ defineExpose({ open });
 }
 
 .import-preview-table-host :deep(.ant-table-thead > tr > th) {
+  z-index: 2;
   white-space: nowrap;
+  background: hsl(var(--background));
+}
+
+.import-preview-table-host :deep(.ant-table-header) {
+  position: relative;
+  z-index: 2;
+}
+
+.import-preview-table-host :deep(.ant-table-body) {
+  position: relative;
+  z-index: 1;
 }
 
 .import-preview-table-host :deep(.ant-table-container) {

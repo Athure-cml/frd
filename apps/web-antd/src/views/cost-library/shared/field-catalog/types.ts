@@ -1,6 +1,7 @@
 export type FieldFormat =
   | 'amount'
   | 'dateMd'
+  | 'dateMmDd'
   | 'percent'
   | 'price'
   | 'tag'
