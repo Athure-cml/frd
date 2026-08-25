@@ -91,6 +91,15 @@ export function useSeaSearchSchema(): VbenFormSchema[] {
       fieldName: 'agent',
       label: f('agent'),
     },
+    {
+      component: 'Input',
+      componentProps: {
+        allowClear: true,
+        class: 'w-full',
+      },
+      fieldName: 'remark',
+      label: f('remark'),
+    },
     createCostStatusSearchField(),
   ];
 }

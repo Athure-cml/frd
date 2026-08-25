@@ -12,13 +12,13 @@ import { $t } from '#/locales';
 
 import { formatAmount } from '../road/formatters';
 import { applyColumnBgParams, resolveColumnBgColor } from './column-bg-style';
+import { buildColumnSortBy } from './column-sort';
 import { resolveCompactColumnSize } from './column-width';
 import {
   appendCostOperationColumn,
   appendCostStatusColumn,
   buildCostCheckboxColumn,
 } from './columns';
-import { coerceAmountValue } from './fee-unit-pairs';
 import { getFieldCatalog, toFieldCatalogMap } from './field-catalog';
 import { formatDateMd } from './formatters';
 import {
@@ -178,23 +178,6 @@ function buildLeafColumn(
 
   if (isCustomFieldKey(field)) {
     column.field = customFieldColumnPath(field);
-    if (options.override?.sortable === true) {
-      column.sortBy = ({
-        row,
-      }: {
-        row: { extraFields?: Record<string, unknown> };
-      }) => {
-        const raw = row.extraFields?.[field];
-        if (raw === null || raw === undefined || raw === '') {
-          return null;
-        }
-        if (entry.format === 'amount') {
-          return coerceAmountValue(raw);
-        }
-        const asNum = coerceAmountValue(raw);
-        return asNum === null ? String(raw) : asNum;
-      };
-    }
     column.formatter = ({
       cellValue,
       row,
@@ -239,6 +222,13 @@ function buildLeafColumn(
     column,
     resolveColumnBgColor('fumigation', field, options.override?.bgColor),
   );
+
+  if (options.override?.sortable === true) {
+    column.sortBy = buildColumnSortBy(entry, 'fumigation', {
+      field,
+      title: options.title,
+    });
+  }
 
   return column;
 }

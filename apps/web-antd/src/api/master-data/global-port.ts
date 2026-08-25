@@ -209,8 +209,14 @@ export async function deleteGlobalPort(id: number) {
   return requestClient.delete(`${BASE}/${id}`);
 }
 
-export async function importGlobalPort(file: File) {
-  return requestClient.upload<CostImportResult>(`${BASE}/import`, { file });
+export async function importGlobalPort(
+  file: File,
+  options?: { dryRun?: boolean },
+) {
+  return requestClient.upload<CostImportResult>(`${BASE}/import`, {
+    dryRun: options?.dryRun,
+    file,
+  });
 }
 
 export async function exportGlobalPort(params: Recordable<any>) {

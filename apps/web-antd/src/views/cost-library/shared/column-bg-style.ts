@@ -19,6 +19,29 @@ export function normalizeColumnBgColor(value?: null | string) {
   return undefined;
 }
 
+function parseHexRgb(hex: string) {
+  const normalized = normalizeColumnBgColor(hex);
+  if (!normalized) {
+    return null;
+  }
+  const value = normalized.slice(1);
+  return {
+    b: Number.parseInt(value.slice(4, 6), 16),
+    g: Number.parseInt(value.slice(2, 4), 16),
+    r: Number.parseInt(value.slice(0, 2), 16),
+  };
+}
+
+/** 浅色列底用深字、深色列底用浅字，避免暗色主题下白字叠浅底不可读 */
+export function contrastTextColorForBg(bgHex: string) {
+  const rgb = parseHexRgb(bgHex);
+  if (!rgb) {
+    return 'hsl(var(--foreground))';
+  }
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return luminance > 0.62 ? '#1e293b' : '#f8fafc';
+}
+
 /** 模板编辑器预设（淡色，贴合工作台主色与语义色） */
 export const COLUMN_BG_PRESETS = [
   {
@@ -115,7 +138,9 @@ export function createTemplateColumnBgStyleHandlers() {
     const color = normalizeColumnBgColor(column?.params?.bgColor);
     return color
       ? {
+          '--col-tmpl-bg': color,
           backgroundColor: color,
+          color: contrastTextColorForBg(color),
         }
       : null;
   };

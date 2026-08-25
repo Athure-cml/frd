@@ -7,61 +7,73 @@
 /* 视图模板配置的列背景色（params.bgColor → cellStyle；单元格继承） */
 .cost-library-grid .vxe-header--column.col-tmpl-bg .vxe-cell,
 .cost-library-grid .vxe-body--column.col-tmpl-bg .vxe-cell {
-  background-color: inherit !important;
+  color: var(--col-tmpl-fg, inherit);
+  background-color: var(--col-tmpl-bg, inherit) !important;
+}
+
+/* 暗色主题：浅色列底与卡片混色，文字跟随主题前景色 */
+.dark .cost-library-grid .vxe-header--column.col-tmpl-bg .vxe-cell,
+.dark .cost-library-grid .vxe-body--column.col-tmpl-bg .vxe-cell {
+  color: hsl(var(--foreground)) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--col-tmpl-bg, hsl(var(--card))) 38%,
+    hsl(var(--card))
+  ) !important;
 }
 
 .cost-library-grid.road-cost-grid .road-header-route {
   font-weight: 500;
   color: hsl(var(--foreground));
-  background-color: color-mix(in srgb, #9bc2e6 28%, #fff) !important;
+  background-color: color-mix(in srgb, #9bc2e6 28%, hsl(var(--card))) !important;
 }
 
 .cost-library-grid.road-cost-grid .road-header-freight {
   font-weight: 500;
   color: hsl(var(--foreground));
-  background-color: color-mix(in srgb, #ffc000 22%, #fff) !important;
+  background-color: color-mix(in srgb, #ffc000 22%, hsl(var(--card))) !important;
 }
 
 .cost-library-grid.road-cost-grid .road-header-extra {
   font-weight: 500;
   color: hsl(var(--foreground));
-  background-color: color-mix(in srgb, #a9d08e 24%, #fff) !important;
+  background-color: color-mix(in srgb, #a9d08e 24%, hsl(var(--card))) !important;
 }
 
 .cost-library-grid.road-cost-grid .road-header-meta {
   font-weight: 500;
   color: hsl(var(--foreground));
-  background-color: color-mix(in srgb, #d0d0d0 30%, #fff) !important;
+  background-color: color-mix(in srgb, #d0d0d0 30%, hsl(var(--card))) !important;
 }
 
 .cost-library-grid.road-cost-grid .road-header-green {
   font-weight: 500;
   color: hsl(var(--foreground));
-  background-color: color-mix(in srgb, #4cd080 14%, #fff) !important;
+  background-color: color-mix(in srgb, #4cd080 14%, hsl(var(--card))) !important;
 }
 
 .cost-library-grid.sea-cost-grid .sea-header-surcharge {
   font-weight: 500;
   color: hsl(var(--foreground));
-  background-color: color-mix(in srgb, #bfbfbf 28%, #fff) !important;
+  background-color: color-mix(in srgb, #bfbfbf 28%, hsl(var(--card))) !important;
 }
 
 .cost-library-grid.sea-cost-grid .sea-header-route {
   font-weight: 500;
   color: hsl(var(--foreground));
-  background-color: color-mix(in srgb, #9bc2e6 28%, #fff) !important;
+  background-color: color-mix(in srgb, #9bc2e6 28%, hsl(var(--card))) !important;
 }
 
 .cost-library-grid.sea-cost-grid .sea-header-freight {
   font-weight: 500;
   color: hsl(var(--foreground));
-  background-color: color-mix(in srgb, #ffc000 22%, #fff) !important;
+  background-color: color-mix(in srgb, #ffc000 22%, hsl(var(--card))) !important;
 }
 
 .cost-library-grid.sea-cost-grid .sea-header-extra {
   font-weight: 500;
   color: hsl(var(--foreground));
-  background-color: color-mix(in srgb, #a9d08e 24%, #fff) !important;
+  background-color: color-mix(in srgb, #a9d08e 24%, hsl(var(--card))) !important;
 }
 
 .cost-library-grid .col-remark {

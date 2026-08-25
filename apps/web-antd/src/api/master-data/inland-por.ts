@@ -1,7 +1,6 @@
 import type { Recordable } from '@vben/types';
 
-import type { CostImportResult } from '#/api/cost/types';
-import type { PageResult } from '#/api/cost/types';
+import type { CostImportResult, PageResult } from '#/api/cost/types';
 
 import { downloadFileFromBlob } from '@vben/utils';
 
@@ -43,8 +42,14 @@ export async function deleteInlandPor(id: number) {
   return requestClient.delete(`${BASE}/${id}`);
 }
 
-export async function importInlandPor(file: File) {
-  return requestClient.upload<CostImportResult>(`${BASE}/import`, { file });
+export async function importInlandPor(
+  file: File,
+  options?: { dryRun?: boolean },
+) {
+  return requestClient.upload<CostImportResult>(`${BASE}/import`, {
+    dryRun: options?.dryRun,
+    file,
+  });
 }
 
 export async function exportInlandPor(params: Recordable<any>) {

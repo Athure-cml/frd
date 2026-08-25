@@ -8,7 +8,7 @@ import { useI18n } from '@vben/locales';
 
 /**
  * 随语言切换重新计算 formOptions（避免 data.ts 模块加载时 $t 结果被固化）。
- * 搜索栏默认折叠；调用方可显式覆盖 collapsed / showCollapseButton。
+ * 搜索栏默认折叠、大屏一行 4 列；调用方可显式覆盖 collapsed / showCollapseButton / wrapperClass。
  */
 export function useI18nFormOptions<
   P extends Record<string, any> = Record<never, never>,
@@ -20,6 +20,7 @@ export function useI18nFormOptions<
     return {
       collapsed: true,
       showCollapseButton: true,
+      wrapperClass: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
       ...options,
     };
   });

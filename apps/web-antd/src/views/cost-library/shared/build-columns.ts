@@ -15,6 +15,7 @@ import { $t } from '#/locales';
 import { formatAmount, formatPercent } from '../road/formatters';
 import { buildFumigationColumnsFromLayout } from './build-fumigation-columns';
 import { applyColumnBgParams, resolveColumnBgColor } from './column-bg-style';
+import { buildColumnSortBy } from './column-sort';
 import { resolveCompactColumnSize } from './column-width';
 import {
   appendCostOperationColumn,
@@ -275,24 +276,6 @@ function buildLeafColumn(
   if (isCustomFieldKey(entry.field)) {
     column.field = customFieldColumnPath(entry.field);
     column.showOverflow = entry.showOverflow ?? true;
-    if (options.override?.sortable === true) {
-      column.sortBy = ({
-        row,
-      }: {
-        row: { extraFields?: Record<string, unknown> };
-      }) => {
-        const raw = row.extraFields?.[entry.field];
-        if (raw === null || raw === undefined || raw === '') {
-          return null;
-        }
-        if (entry.format === 'amount') {
-          const amount = coerceAmountValue(raw);
-          return amount;
-        }
-        const asNum = coerceAmountValue(raw);
-        return asNum === null ? String(raw) : asNum;
-      };
-    }
     const useListDate =
       entry.format === 'dateMd' ||
       entry.format === 'dateMmDd' ||
@@ -359,6 +342,13 @@ function buildLeafColumn(
       name: 'CellTag',
       options: costStatusTagOptions(),
     };
+  }
+
+  if (options.override?.sortable === true) {
+    column.sortBy = buildColumnSortBy(entry, options.mode, {
+      field: entry.field,
+      title: options.title,
+    });
   }
 
   return column;
