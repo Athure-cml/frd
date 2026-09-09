@@ -33,6 +33,10 @@ export async function deleteUnit(id: number) {
   return requestClient.delete(`/units/${id}`);
 }
 
+export async function batchDeleteUnit(ids: number[]) {
+  return requestClient.post('/units/batch-delete', { ids });
+}
+
 export async function getEnabledUnitOptions() {
   const list = await getUnitList({ status: 1 });
   return list.map((item) => ({

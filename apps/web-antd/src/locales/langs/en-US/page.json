@@ -257,6 +257,23 @@
       "agent": "AGENT",
       "remark": "REMARK"
     },
+    "highlight": {
+      "onlyFavorites": "Favorites only",
+      "markMenu": "Mark actions",
+      "mark": "Mark favorite",
+      "unmark": "Remove favorite",
+      "unmarkNone": "None of the selected rows are marked by your department",
+      "markTitle": "Mark as favorite",
+      "markDesc": "Mark {0} selected row(s) for your department",
+      "pickColor": "Row background color",
+      "customColor": "Custom color",
+      "remarkOptional": "Remark (optional)",
+      "remarkPlaceholder": "e.g. Peak season lane",
+      "invalidColor": "Enter a valid #RRGGBB color",
+      "markSuccess": "Marked as favorite",
+      "unmarkConfirm": "Remove favorite mark from {0} selected row(s)?",
+      "unmarkSuccess": "Favorite mark removed"
+    },
     "actions": {
       "createRoad": "Enter Truck Rate",
       "createSea": "Enter Ocean Rate",
@@ -276,11 +293,21 @@
       "batchCopyShort": "Copy",
       "batchCopyApply": "Apply Changes",
       "batchCopySkip": "Skip Changes",
+      "batchCopyPreview": "Copy Preview",
+      "batchCopyConfirm": "Confirm Copy",
+      "batchCopyBack": "Back to Edit",
       "batchDelete": "Batch Delete",
+      "batchMenu": "Batch actions",
       "createShort": "Add",
       "templateShort": "Template",
       "batchEditShort": "Edit",
       "batchDeleteShort": "Delete",
+      "selectAllBySearch": "Select All Results",
+      "selectAllAcrossPages": "Select All Pages",
+      "clearSelection": "Clear Selection",
+      "clearSelectAllBySearch": "Clear Selection",
+      "selectCurrentPage": "Page",
+      "selectAllResults": "All",
       "copy": "Copy",
       "copyRecord": "Copy & Enter {0}",
       "renew": "Renew",
@@ -292,6 +319,9 @@
     "hint": {
       "apiPending": "「Enter {0}」 will be available after the cost API is connected.",
       "selectRows": "Select at least one row first",
+      "selectAllAcrossPagesLoading": "Loading all matching records…",
+      "selectAllAcrossPagesEmpty": "No records match the current filters",
+      "selectAllAcrossPagesSuccess": "Selected {0} records across pages",
       "selectFile": "Please select an Excel file",
       "importDrop": "Click or drag Excel file here",
       "renewDesc": "Create a new rate from this row. After you set the new effective date and save, the previous row’s valid date becomes (new effective date − 1 day).",
@@ -337,14 +367,18 @@
       "exporting": "Exporting…",
       "exportSuccess": "Export complete",
       "selectedCount": "{0} selected",
+      "selectedAllBySearch": "All {0} search results selected",
+      "selectedAllBySearchExcluded": "{0} selected (search results, {1} excluded)",
+      "selectAllUncheckHint": "Uncheck rows to exclude them from the selection",
       "batchFill": "Fill only the fields you want to update; blanks are ignored.",
       "batchEmpty": "Fill at least one field to update",
       "batchSelected": "{0} row(s) selected",
-      "batchCopyPrompt": "When copying selected rows, you can optionally unify Fuel and Validity. If you choose Apply Changes, fill at least one of them.",
-      "batchCopyPromptSea": "When copying selected rows, you can unify Freight, Container Type, Fuel Surcharge, OTHERS and their effective/valid dates. Fill at least one field when applying changes. Blank fields keep the source values. ALL IN is calculated by formula.",
-      "batchCopyNeedFields": "Fill Fuel or Validity when applying changes",
+      "batchCopyPrompt": "When copying selected rows, you can unify fees, effective/valid dates and remarks. Fill at least one field when applying changes.",
+      "batchCopyPromptSea": "When copying selected rows, you can unify freight, container type, surcharges, their effective/valid dates and remarks. Fill at least one field when applying changes. Blank fields keep source values. ALL IN is calculated by formula.",
+      "batchCopyNeedFields": "Fill at least one override field when applying changes",
       "batchCopyNeedFieldsSea": "Fill at least one override field when applying changes",
-      "batchCopySuccess": "Copied {0} record(s)"
+      "batchCopySuccess": "Copied {0} record(s)",
+      "batchCopyPreviewHint": "Review {0} copied record(s) below. Data will be saved only after you confirm."
     },
     "search": {
       "zipCodePlaceholder": "Fuzzy-search Zip code"
@@ -465,11 +499,12 @@
     },
     "status": {
       "active": "Active",
+      "pending": "Pending",
       "draft": "Draft",
       "expired": "Expired"
     },
     "statusFilterAll": "All statuses",
-    "statusHelp": "Past validity becomes Expired automatically.",
+    "statusHelp": "Before effective date: Pending. Past validity becomes Expired.",
     "roadGroups": {
       "route": "Route & Base Freight",
       "freight": "ALL IN",
@@ -500,7 +535,10 @@
       "redelivery": "REDELIVERY",
       "prepull": "PREPULL",
       "nsLift": "LIFT",
+      "yardStorage": "YARD STORAGE",
+      "extraChassis": "EXTRA CHASSIS",
       "otherFee": "OTHERS",
+      "operationRemark": "Operation Remark",
       "remark": "REMARK",
       "validDate": "VALID TIME",
       "logYardNameAddress": "PICK UP ADDRESS"
@@ -687,6 +725,8 @@
       "contactName": "Contact",
       "phone": "Phone",
       "email": "Email",
+      "contractNo": "Contract No.",
+      "validUntil": "Valid Until",
       "remark": "Remark",
       "status": "Status",
       "createdBy": "Created By",
@@ -762,6 +802,11 @@
     },
     "sections": {
       "basic": "Basic Info",
+      "serviceFees": "SERVICE FEES",
+      "truckExtras": "Additional Trucking Fees",
+      "fumigation": "Fumigation",
+      "docInsuranceAgent": "Documentation, Insurance & Agent Fees",
+      "sheetRemark": "Remark",
       "fees": "Fee Details",
       "routeKeys": "Route Match Keys",
       "costSource": "Cost Sources",
@@ -792,14 +837,17 @@
       "view": "View",
       "export": "Batch Export",
       "void": "Void",
-      "submit": "Submit Effective",
-      "follow": "Mark Following",
+      "submit": "Submit for Approval",
+      "send": "Send Quote",
+      "reject": "Reject",
+      "cancelApproval": "Cancel Approval",
       "won": "Won",
       "copy": "Copy as New",
       "print": "Print",
       "addFollowUp": "Add Follow-up",
       "backToList": "Back to list",
-      "backToDetail": "Back to detail"
+      "backToDetail": "Back to detail",
+      "generateSheet": "Generate quote sheet"
     },
     "fields": {
       "quoteNo": "Quote No.",
@@ -844,17 +892,22 @@
     },
     "status": {
       "DRAFT": "Draft",
-      "EFFECTIVE": "Effective",
-      "FOLLOWING": "Following",
-      "PENDING": "Pending",
+      "PENDING_APPROVAL": "Pending Approval",
       "SENT": "Sent",
       "WON": "Won",
-      "LOST": "Lost",
+      "REJECTED": "Rejected",
       "EXPIRED": "Expired",
-      "VOIDED": "Voided"
+      "VOIDED": "Voided",
+      "EFFECTIVE": "Effective",
+      "FOLLOWING": "Following",
+      "PENDING": "Pending Approval",
+      "LOST": "Rejected"
     },
     "validation": {
       "customerRequired": "Please select a customer",
+      "porPolRequired": "Please select POR/POL",
+      "podRequired": "Please select POD",
+      "fmExclusive": "FM (NON-OAK) and FM (OAK) cannot both be enabled",
       "followContent": "Please enter follow-up content",
       "followUpBy": "Select follow-up owner"
     },
@@ -864,23 +917,76 @@
       "selectExport": "Select quotes to export",
       "exporting": "Exporting…",
       "exportSuccess": "Export successful",
+      "createSuccess": "Quote {0} created",
+      "saveSuccess": "Quote {0} saved",
+      "deleteSuccess": "Quote {0} deleted",
       "voidSuccess": "Quote voided",
-      "submitSuccess": "Submitted as effective",
-      "followSuccess": "Marked as following",
+      "submitSuccess": "Submitted for approval",
+      "sendSuccess": "Quote sent",
+      "rejectSuccess": "Quote rejected",
+      "cancelApprovalSuccess": "Approval cancelled; quote reverted to draft",
       "wonSuccess": "Marked as won",
       "copySuccess": "Copied as new draft",
+      "copyPrefilled": "Quote content loaded — save to create a new quote",
       "followUpCreated": "Follow-up added",
+      "followSuccess": "Follow-up status updated",
       "noCostSnapshot": "No cost snapshot",
       "noCostImported": "Not imported: {0}",
+      "costExpired": "Only active cost records can be imported. Please select a valid record or update the cost library.",
       "noCostMatchType": "{0}: no matching cost data",
       "costImportedType": "Imported {0}",
+      "sheetGenerated": "Quote sheet generated — you may adjust values before saving",
       "zipSearching": "Searching…"
+    },
+    "ruleHint": {
+      "cost": "Cost"
+    },
+    "sheet": {
+      "title": "Quotation Sheet",
+      "date": "Date",
+      "client": "Client",
+      "pickUpAddress": "PICK UP ADDRESS",
+      "porPol": "POR/POL",
+      "pod": "POD",
+      "selectPort": "Select port",
+      "cifAmount": "CIF Amount",
+      "cifPlaceholder": "Used for insurance & agent fee calculation",
+      "serviceFees": "SERVICE FEES",
+      "oceanFreight": "Ocean Freight",
+      "truckingFee": "Trucking fee",
+      "truckExtras": "Additional Trucking Fees",
+      "nsLift": "NS LIFT",
+      "chassis": "Chassis",
+      "waiting": "Waiting",
+      "redelivery": "REDELIVERY FEE",
+      "truckRemark": "Remark",
+      "fumigation": "Fumigation",
+      "fumigationEnabled": "Fumigation required",
+      "fumigationYes": "Yes",
+      "fumigationNo": "No",
+      "fmNonOak": "FM (NON-OAK)",
+      "fmOak": "FM (OAK)",
+      "docInsuranceAgent": "Documentation, Insurance & Agent Fees",
+      "docFee": "DOC FEE",
+      "cargoInsurance": "CARGO INSURANCE PERM",
+      "cargoAgent": "CARGO AGENT FEE",
+      "remark": "REMARK",
+      "unitPerContainer": "Per Container",
+      "unitNsLift": "Per Container (DETROIT, etc)",
+      "unitChassis": "Per Day if need",
+      "unitWaiting": "Per Hour, 2H Free",
+      "unitPerBill": "PER BILL",
+      "unitPerCif": "PER CIF AMOUNT",
+      "unitBankFee": "BANK FEE AT COST"
     },
     "confirm": {
       "delete": "Delete quote \"{0}\"?",
       "deletePrefix": "Delete quote ",
       "deleteSuffix": "? This cannot be undone.",
       "void": "Void quote \"{0}\"?",
+      "send": "Send quote \"{0}\"?",
+      "reject": "Reject quote \"{0}\"?",
+      "cancelApproval": "Cancel approval and revert \"{0}\" to draft?",
       "won": "Mark this quote as won?",
       "deleteFollowUp": "Delete this follow-up record?"
     },
@@ -913,6 +1019,7 @@
     "usStateZip": "US State Zip Codes",
     "globalPort": "Global Ports",
     "containerType": "Container Types",
+    "quoteRule": "Quote Rules",
     "inlandPor": "Inland POR",
     "baseTag": "Base",
     "hint": {
@@ -941,9 +1048,14 @@
       "syncUnlocodeSuccess": "Sync done: {0} inserted, {1} updated",
       "syncUnlocodeFailed": "Sync failed, please try again later",
       "containerType": "Maintain container types (e.g. 20GP, 40HQ) for sea cost and quotes.",
+      "quoteRule": "Configure markup and calculation rules when generating quote sheets. First matching rule by sort order wins.",
       "inlandPor": "Inland POR points linked to POL for US line rate entry.",
       "exporting": "Exporting…",
-      "exportSuccess": "Export completed"
+      "exportSuccess": "Export completed",
+      "selectRows": "Please select rows to delete"
+    },
+    "confirm": {
+      "batchDelete": "Delete {0} selected record(s)? This cannot be undone."
     },
     "actions": {
       "createCurrency": "New Currency",
@@ -967,9 +1079,12 @@
       "syncUnlocode": "Sync UN/LOCODE",
       "createContainerType": "New Container Type",
       "editContainerType": "Edit Container Type",
+      "createQuoteRule": "New Rule",
+      "editQuoteRule": "Edit Rule",
       "createInlandPor": "New POR",
       "editInlandPor": "Edit POR",
-      "importInlandPor": "Import POR"
+      "importInlandPor": "Import POR",
+      "batchDelete": "Batch Delete"
     },
     "fields": {
       "code": "Code",
@@ -983,6 +1098,42 @@
       "toCurrency": "To",
       "rate": "Rate",
       "effectiveDate": "Effective Date"
+    },
+    "quoteRuleForm": {
+      "fields": {
+        "targetField": "Target Fee",
+        "conditionType": "Condition",
+        "conditionAmount": "Threshold",
+        "calcType": "Calculation",
+        "addAmount": "Markup",
+        "fixedAmount": "Fixed Amount",
+        "cifFactor": "CIF Factor",
+        "cifRate": "CIF Rate"
+      },
+      "targetField": {
+        "OCEAN_FREIGHT": "Ocean Freight",
+        "TRUCKING_FEE": "Trucking",
+        "FM_NON_OAK": "Fumigation NON-OAK",
+        "FM_OAK": "Fumigation OAK",
+        "DOC_FEE": "Documentation",
+        "CARGO_INSURANCE": "Insurance",
+        "CARGO_AGENT": "Agency Fee"
+      },
+      "conditionType": {
+        "ALWAYS": "Always",
+        "FUMIGATION_ENABLED": "Fumigation Yes",
+        "FUMIGATION_DISABLED": "Fumigation No",
+        "POD_CHINA": "POD China",
+        "POD_NOT_CHINA": "POD Non-China",
+        "BASE_GT": "Cost > Threshold",
+        "BASE_LTE": "Cost ≤ Threshold"
+      },
+      "calcType": {
+        "COST_PLUS": "Cost + Markup",
+        "FIXED": "Fixed Amount",
+        "CIF_MULTIPLY": "CIF × Factor × Rate",
+        "CIF_PERCENT": "CIF × Rate"
+      }
     },
     "portType": {
       "SEAPORT": "Port",
@@ -998,6 +1149,7 @@
     "user": "Users",
     "role": "Roles & Permissions",
     "operationLog": "Operation Logs",
+    "announcement": "Announcements",
     "permissionCount": "{0} permissions",
     "permissionShowCodes": "Show codes",
     "entity": {
@@ -1073,7 +1225,81 @@
       "dept": "Maintain department master data. Remove users from a department before deleting it.",
       "user": "Assign departments and roles. Usernames cannot be changed after creation.",
       "role": "Configure data scope and permissions. The built-in super_admin role cannot be deleted.",
-      "operationLog": "Audit trail of create, update, and delete actions on business data."
+      "operationLog": "Audit trail of create, update, and delete actions on business data.",
+      "announcement": "Publish feature update notices. All signed-in users receive a modal popup."
+    },
+    "announcementPage": {
+      "publishSuccess": "Published. Users will see a popup after sign-in.",
+      "draftSuccess": "Draft saved",
+      "updateSuccess": "Announcement updated",
+      "copySuccess": "Copied as draft",
+      "copying": "Copying \"{0}\"…",
+      "copyFailed": "Copy failed. Please try again.",
+      "disableSuccess": "Announcement disabled",
+      "disableFailed": "Disable failed. Please try again.",
+      "deleteFailed": "Delete failed. Please try again.",
+      "saveFailed": "Save failed. Please try again.",
+      "emptyList": "No announcements yet. Click \"New Announcement\" to publish the first notice.",
+      "queueHint": "{0} more announcement(s) to read",
+      "popupEmptyContent": "(No content)",
+      "noExpiry": "No expiry",
+      "validDaysLabel": "{0} days",
+      "readStats": "Read {0} / Unread {1}",
+      "readCountLabel": "Read",
+      "unreadCountLabel": "Unread",
+      "deleteConfirm": "Delete announcement \"{0}\"? Users will no longer see it.",
+      "disableConfirm": "Disable announcement \"{0}\"? It will no longer pop up.",
+      "validation": {
+        "required": "Title and content are required",
+        "titleRequired": "Title is required",
+        "scheduledAtRequired": "Please select a scheduled publish time"
+      },
+      "publishMode": {
+        "immediate": "Publish now",
+        "scheduled": "Schedule"
+      },
+      "status": {
+        "draft": "Draft",
+        "scheduled": "Scheduled",
+        "published": "Published",
+        "expired": "Expired",
+        "disabled": "Disabled"
+      },
+      "actions": {
+        "create": "New Announcement",
+        "edit": "Edit",
+        "copy": "Copy",
+        "disable": "Disable",
+        "saveDraft": "Save Draft",
+        "saveChanges": "Save Changes",
+        "publishNow": "Publish Now",
+        "publishScheduled": "Schedule Publish"
+      },
+      "placeholders": {
+        "title": "e.g. Cost library: mark favorites",
+        "content": "Describe what changed and how to use it. Line breaks are supported.",
+        "validDays": "Leave empty for no expiry"
+      },
+      "searchPlaceholders": {
+        "keyword": "Search title or content",
+        "createdBy": "Publisher name"
+      },
+      "hints": {
+        "validDays": "Leave empty for no expiry. Users will stop seeing the popup after it expires."
+      },
+      "fields": {
+        "keyword": "Keyword",
+        "title": "Title",
+        "content": "Content",
+        "validDays": "Validity",
+        "publishedAt": "Published at",
+        "expiresAt": "Expires at",
+        "createdBy": "Published by",
+        "status": "Status",
+        "publishMode": "Publish mode",
+        "scheduledAt": "Scheduled at",
+        "readStats": "Read stats"
+      }
     },
     "operationLogPage": {
       "detailTitle": "Operation Detail",

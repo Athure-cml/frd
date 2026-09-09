@@ -28,6 +28,9 @@ async function initApplication() {
       source: '',
       sourceDark: '',
     },
+    app: {
+      enableCheckUpdates: true,
+    },
   });
 
   // 启动应用并挂载

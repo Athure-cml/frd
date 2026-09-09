@@ -5,6 +5,7 @@ import type { CurrencyApi } from '#/api/currency';
 import { $t } from '#/locales';
 
 import {
+  buildCheckboxColumn,
   buildOperationColumn,
   buildSeqColumn,
 } from '../../system/shared/columns';
@@ -95,6 +96,7 @@ export function useCurrencyColumns(
   canManage: boolean,
 ): VxeTableGridOptions<CurrencyApi.Currency>['columns'] {
   const columns: VxeTableGridOptions<CurrencyApi.Currency>['columns'] = [
+    buildCheckboxColumn(),
     buildSeqColumn(),
     {
       align: 'left',

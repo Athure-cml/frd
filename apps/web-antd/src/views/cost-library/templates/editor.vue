@@ -4,6 +4,7 @@ import type { CostMode, CostTableTemplateLayout } from '#/api/cost';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
+import { useAccess } from '@vben/access';
 import { Page } from '@vben/common-ui';
 import { ArrowLeft, Download, Pin, Save, Undo2 } from '@vben/icons';
 import { downloadFileFromBlob } from '@vben/utils';
@@ -31,6 +32,7 @@ import {
   invalidateTableTemplateCache,
   saveTemplateId,
 } from '../shared/use-table-templates';
+import { templateEditPermissionForMode } from './data';
 import FieldPanel from './modules/field-panel.vue';
 import PreviewTable from './modules/preview-table.vue';
 
@@ -40,6 +42,7 @@ const COST_MODES: CostMode[] = new Set(['fumigation', 'road', 'sea']);
 
 const route = useRoute();
 const router = useRouter();
+const { hasAccessByCodes } = useAccess();
 const { canViewInternalCodes } = useInternalCodeVisibility();
 
 const saving = ref(false);
@@ -137,6 +140,10 @@ async function loadTemplate(id: number) {
 }
 
 async function initEditor() {
+  if (!hasAccessByCodes([templateEditPermissionForMode(mode.value)])) {
+    await router.replace({ name: 'FallbackForbidden' });
+    return;
+  }
   try {
     if (isCreate.value) {
       templateId.value = undefined;

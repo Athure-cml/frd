@@ -4,6 +4,7 @@ import type { CostImportResult } from '#/api/cost/types';
 
 import { downloadFileFromBlob } from '@vben/utils';
 
+import { IMPORT_REQUEST_TIMEOUT_MS } from '#/api/import-request';
 import { requestClient } from '#/api/request';
 
 export namespace AgentApi {
@@ -78,10 +79,14 @@ export async function reorderAgent(ids: number[]) {
 }
 
 export async function importAgent(file: File, options?: { dryRun?: boolean }) {
-  return requestClient.upload<CostImportResult>(`${BASE}/import`, {
-    dryRun: options?.dryRun,
-    file,
-  });
+  return requestClient.upload<CostImportResult>(
+    `${BASE}/import`,
+    {
+      dryRun: options?.dryRun,
+      file,
+    },
+    { timeout: IMPORT_REQUEST_TIMEOUT_MS },
+  );
 }
 
 export async function exportAgent(params: Recordable<any>) {

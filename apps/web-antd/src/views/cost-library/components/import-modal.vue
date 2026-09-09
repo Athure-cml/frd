@@ -21,6 +21,12 @@ import XLSXStyle from 'xlsx-js-style';
 
 import { $t } from '#/locales';
 
+import {
+  buildSheetMatrix,
+  detectExcelHeaderRowCount,
+  extractPreviewDataMatrix,
+  rowHasContent,
+} from '../shared/excel-import-preview';
 import { enrichRoadPreviewUnits } from '../shared/road-import-unit-enrich';
 import { enrichRoadPreviewZipCodes } from '../shared/road-import-zip-enrich';
 
@@ -86,11 +92,16 @@ const dedupeIssues = ref<string[]>([]);
 const importFailedRowNumbers = ref<number[]>([]);
 /** 原始表头矩阵（1～2 行），用于按模板样式导出失败行 */
 const previewHeaderMatrix = ref<string[][]>([]);
+const previewHeaderRowCount = ref(1);
+/** 预览经去重/卡车 ZIP·单位补全等改写后，确认导入才用重建文件 */
+const previewTransformed = ref(false);
 const tableHostRef = ref<HTMLElement | null>(null);
 const tableScrollY = ref(260);
 let tableResizeObserver: null | ResizeObserver = null;
 /** 防止预览校验被旧文件结果覆盖 */
 let validateToken = 0;
+
+const previewRowCount = computed(() => previewRows.value.length);
 
 const selectedFileName = computed(
   () => fileList.value[0]?.name || fileList.value[0]?.originFileObj?.name || '',
@@ -291,6 +302,8 @@ function clearPreview() {
   dedupeIssues.value = [];
   importFailedRowNumbers.value = [];
   previewHeaderMatrix.value = [];
+  previewHeaderRowCount.value = 1;
+  previewTransformed.value = false;
   validationOkHint.value = '';
 }
 
@@ -306,12 +319,15 @@ function isTextImportFile(file: File) {
   return file.name.toLowerCase().endsWith('.txt');
 }
 
-/** txt 保留原文件（Tab 分隔）；Excel 可按预览重建 */
+/** txt 保留原文件；有预览数据时按预览重建 xlsx，避免原始文件稀疏行/表头差异导致少导入 */
 function resolveUploadFile(file: File) {
   if (isTextImportFile(file)) {
     return file;
   }
-  return hasPreview.value ? buildFileFromPreview(file.name) : file;
+  if (hasPreview.value && previewRows.value.length > 0) {
+    return buildFileFromPreview(file.name);
+  }
+  return file;
 }
 
 async function handleConfirm() {
@@ -368,8 +384,9 @@ async function runPreValidate() {
   importFailedRowNumbers.value = [];
   validationOkHint.value = '';
   try {
-    const uploadFile = resolveUploadFile(file);
-    const result = await props.importFn(uploadFile, { dryRun: true });
+    const result = await props.importFn(resolveUploadFile(file), {
+      dryRun: true,
+    });
     if (token !== validateToken) {
       return;
     }
@@ -640,34 +657,33 @@ async function parseExcelPreview(file: File) {
     return;
   }
   const sheet = workbook.Sheets[sheetName];
-  const matrix = XLSX.utils.sheet_to_json<(boolean | null | number | string)[]>(
-    sheet,
-    {
-      header: 1,
-      defval: '',
-      raw: false,
-    },
-  ) as (boolean | null | number | string)[][];
+  if (!sheet) {
+    clearPreview();
+    previewError.value = $t('page.costLibrary.hint.importPreviewEmpty');
+    return;
+  }
 
-  const nonEmpty = matrix.filter((row) =>
-    row.some((cell) => String(cell ?? '').trim() !== ''),
+  const matrix = buildSheetMatrix(sheet);
+  if (matrix.length === 0 || !matrix.some((row) => rowHasContent(row))) {
+    clearPreview();
+    previewError.value = $t('page.costLibrary.hint.importPreviewEmpty');
+    return;
+  }
+
+  const headerRowCount = detectExcelHeaderRowCount(matrix);
+  previewHeaderRowCount.value = Math.max(1, headerRowCount || 1);
+  const headerRows = matrix.slice(0, previewHeaderRowCount.value);
+  const dataMatrix = extractPreviewDataMatrix(
+    matrix,
+    previewHeaderRowCount.value,
   );
-  if (nonEmpty.length === 0) {
+  if (dataMatrix.length === 0) {
     clearPreview();
     previewError.value = $t('page.costLibrary.hint.importPreviewEmpty');
     return;
   }
 
-  const headerRowCount = detectExcelHeaderRowCount(nonEmpty);
-  const headerRows = nonEmpty.slice(0, headerRowCount);
-  const dataMatrix = nonEmpty.slice(headerRowCount);
-  if (dataMatrix.length === 0 && headerRows.length === 0) {
-    clearPreview();
-    previewError.value = $t('page.costLibrary.hint.importPreviewEmpty');
-    return;
-  }
-
-  const colCount = Math.max(1, ...nonEmpty.map((row) => row.length));
+  const colCount = Math.max(1, ...matrix.map((row) => row.length));
   const headers = buildExcelPreviewHeaders(headerRows, colCount);
   previewHeaderMatrix.value = headerRows.map((row) =>
     Array.from({ length: colCount }, (_, index) =>
@@ -740,7 +756,7 @@ async function applyPreviewDedupe(headers: string[]) {
   let removedFileDup = 0;
 
   previewRows.value.forEach((row, index) => {
-    const excelRowNo = index + 2; // 含表头，按 Excel 习惯从 2 起
+    const excelRowNo = index + previewHeaderRowCount.value + 1;
     const parts = colIndexes.map((colIndex, partIndex) => {
       const raw = String(row[`c${colIndex}`] ?? '');
       const header = keyHeaders[partIndex] ?? '';
@@ -786,6 +802,7 @@ async function applyPreviewDedupe(headers: string[]) {
   dedupeIssues.value = issues;
   const removed = removedExisting + removedFileDup;
   if (removed > 0) {
+    previewTransformed.value = true;
     dedupeHint.value = $t('page.costLibrary.hint.importDedupeSummary', [
       removed,
       removedExisting,
@@ -842,6 +859,14 @@ async function applyRoadZipEnrichment(headers: string[]) {
   try {
     const result = await enrichRoadPreviewZipCodes(headers, previewRows.value);
     previewRows.value = result.rows;
+    if (
+      result.filled > 0 ||
+      result.pending > 0 ||
+      result.issues.length > 0 ||
+      result.citiesNormalized > 0
+    ) {
+      previewTransformed.value = true;
+    }
     zipEnrichIssues.value = result.issues.map((item) => item.message);
     zipEnrichPendingNotes.value = result.pendingNotes.map(
       (item) => item.message,
@@ -887,6 +912,9 @@ async function applyRoadZipEnrichment(headers: string[]) {
     const unitResult = await enrichRoadPreviewUnits(headers, previewRows.value);
     previewRows.value = unitResult.rows;
     if (unitResult.normalized > 0) {
+      previewTransformed.value = true;
+    }
+    if (unitResult.normalized > 0) {
       const unitHint = $t('page.costLibrary.hint.importUnitNormalized', [
         unitResult.normalized,
       ]);
@@ -900,49 +928,8 @@ async function applyRoadZipEnrichment(headers: string[]) {
   }
 }
 
-function detectExcelHeaderRowCount(
-  rows: (boolean | null | number | string)[][],
-): number {
-  if (rows.length === 0) {
-    return 0;
-  }
-  if (rows.length === 1) {
-    return 1;
-  }
-  const row0 = rows[0].map((cell) =>
-    String(cell ?? '')
-      .trim()
-      .toUpperCase(),
-  );
-  const row1 = rows[1].map((cell) =>
-    String(cell ?? '')
-      .trim()
-      .toUpperCase(),
-  );
-  const joined0 = row0.join(' ');
-  if (
-    joined0.includes('FM-OUTDOOR') ||
-    joined0.includes('FM-INDOOR') ||
-    joined0.includes('附加费')
-  ) {
-    return 2;
-  }
-  const subHeaderTokens = new Set([
-    'BUC',
-    'EBS',
-    'GRI',
-    'NON OAK',
-    'OAK',
-    'OTHERS',
-    'VALIDITY',
-    '有效期',
-  ]);
-  const headerLike = row1.filter((text) => subHeaderTokens.has(text)).length;
-  return headerLike >= 2 ? 2 : 1;
-}
-
 function buildExcelPreviewHeaders(
-  headerRows: (boolean | null | number | string)[][],
+  headerRows: string[][],
   colCount: number,
 ): string[] {
   if (headerRows.length === 0) {
@@ -1053,7 +1040,7 @@ defineExpose({ open });
               <template v-else-if="hasPreview">
                 {{
                   $t('page.costLibrary.hint.importPreviewMeta', [
-                    previewRows.length,
+                    previewRowCount,
                   ])
                 }}
               </template>

@@ -4,6 +4,7 @@ import type { ShippingLineApi } from '#/api/shipping-line';
 
 import { $t } from '#/locales';
 
+import { formatDateMd } from '../../cost-library/shared/formatters';
 import { buildDragSortColumn } from '../../shared/party-row-drag';
 import {
   appendPinOperationOptions,
@@ -59,6 +60,18 @@ export function useShippingLineFormSchema(
       componentProps: { maxlength: 128 },
       fieldName: 'email',
       label: t('fields.email'),
+    },
+    {
+      component: 'Input',
+      componentProps: { maxlength: 128 },
+      fieldName: 'contractNo',
+      label: t('fields.contractNo'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: { class: 'w-full', valueFormat: 'YYYY-MM-DD' },
+      fieldName: 'validUntil',
+      label: t('fields.validUntil'),
     },
     {
       component: 'Textarea',
@@ -207,6 +220,18 @@ export function useShippingLineColumns(
       title: t('fields.email'),
     },
     {
+      field: 'contractNo',
+      minWidth: 120,
+      title: t('fields.contractNo'),
+    },
+    {
+      field: 'validUntil',
+      formatter: ({ cellValue }: { cellValue?: string }) =>
+        formatDateMd(cellValue) || '—',
+      minWidth: 120,
+      title: t('fields.validUntil'),
+    },
+    {
       field: 'remark',
       minWidth: 140,
       title: t('fields.remark'),
@@ -241,11 +266,13 @@ export function toShippingLineSavePayload(
 ): ShippingLineApi.ShippingLineSave {
   return {
     contactName: values.contactName?.trim() || undefined,
+    contractNo: values.contractNo?.trim() || undefined,
     email: values.email?.trim() || undefined,
     name: values.name,
     phone: values.phone?.trim() || undefined,
     remark: values.remark?.trim() || undefined,
     shortName: values.shortName?.trim() || undefined,
     status: values.status ?? 1,
+    validUntil: values.validUntil || undefined,
   };
 }

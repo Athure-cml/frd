@@ -4,12 +4,14 @@ import type { CostImportResult } from '#/api/cost/types';
 
 import { downloadFileFromBlob } from '@vben/utils';
 
+import { IMPORT_REQUEST_TIMEOUT_MS } from '#/api/import-request';
 import { requestClient } from '#/api/request';
 
 export namespace ShippingLineApi {
   export interface ShippingLine {
     code: string;
     contactName?: string;
+    contractNo?: string;
     createdAt: string;
     createdByName?: string;
     email?: string;
@@ -21,16 +23,19 @@ export namespace ShippingLineApi {
     shortName?: string;
     status: 0 | 1;
     updatedAt: string;
+    validUntil?: string;
   }
 
   export interface ShippingLineSave {
     contactName?: string;
+    contractNo?: string;
     email?: string;
     name: string;
     phone?: string;
     remark?: string;
     shortName?: string;
     status: 0 | 1;
+    validUntil?: string;
   }
 
   export interface PageResult {
@@ -90,10 +95,14 @@ export async function importShippingLine(
   file: File,
   options?: { dryRun?: boolean },
 ) {
-  return requestClient.upload<CostImportResult>(`${BASE}/import`, {
-    dryRun: options?.dryRun,
-    file,
-  });
+  return requestClient.upload<CostImportResult>(
+    `${BASE}/import`,
+    {
+      dryRun: options?.dryRun,
+      file,
+    },
+    { timeout: IMPORT_REQUEST_TIMEOUT_MS },
+  );
 }
 
 export async function exportShippingLine(params: Recordable<any>) {

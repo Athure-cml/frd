@@ -257,6 +257,23 @@
       "agent": "AGENT (代理)",
       "remark": "REMARK 备注"
     },
+    "highlight": {
+      "onlyFavorites": "仅看常用",
+      "markMenu": "标记操作",
+      "mark": "标记常用",
+      "unmark": "取消常用",
+      "unmarkNone": "所选行中没有本部门标记，无需取消",
+      "markTitle": "标记为常用",
+      "markDesc": "将为选中的 {0} 条记录添加部门常用标记",
+      "pickColor": "选择行背景色",
+      "customColor": "自定义颜色",
+      "remarkOptional": "备注（可选）",
+      "remarkPlaceholder": "如：旺季主力线路",
+      "invalidColor": "请输入有效的 #RRGGBB 颜色",
+      "markSuccess": "已标记为常用",
+      "unmarkConfirm": "确认取消选中的 {0} 条记录的常用标记？",
+      "unmarkSuccess": "已取消常用标记"
+    },
     "actions": {
       "createRoad": "录入卡车运价",
       "createSea": "录入海运运价",
@@ -276,11 +293,21 @@
       "batchCopyShort": "批量复制",
       "batchCopyApply": "确认修改",
       "batchCopySkip": "暂不修改",
+      "batchCopyPreview": "复制预览",
+      "batchCopyConfirm": "确认复制",
+      "batchCopyBack": "返回修改",
       "batchDelete": "批量删除",
+      "batchMenu": "批量操作",
       "createShort": "新增",
       "templateShort": "模板",
       "batchEditShort": "批量改",
       "batchDeleteShort": "批量删",
+      "selectAllBySearch": "全选搜索结果",
+      "selectAllAcrossPages": "跨页全选",
+      "clearSelection": "取消全选",
+      "clearSelectAllBySearch": "取消全选",
+      "selectCurrentPage": "当前",
+      "selectAllResults": "全部",
       "copy": "复制",
       "copyRecord": "复制录入{0}",
       "renew": "续期",
@@ -292,6 +319,9 @@
     "hint": {
       "apiPending": "「录入{0}」功能将在接入后端 API 后开放",
       "selectRows": "请先勾选要操作的记录",
+      "selectAllAcrossPagesLoading": "正在获取全部匹配记录…",
+      "selectAllAcrossPagesEmpty": "当前筛选条件下没有可全选的记录",
+      "selectAllAcrossPagesSuccess": "已跨页全选 {0} 条",
       "selectFile": "请选择要导入的 Excel 文件",
       "importDrop": "点击或拖拽 Excel 文件到此处",
       "renewDesc": "将基于当前运价新建一版；填写新生效期后保存，系统会把「新生效期 − 1 天」写入原记录的有效期。",
@@ -337,14 +367,18 @@
       "exporting": "正在导出…",
       "exportSuccess": "导出完成",
       "selectedCount": "已选 {0} 条",
+      "selectedAllBySearch": "已全选搜索结果 {0} 条",
+      "selectedAllBySearchExcluded": "已选 {0} 条（搜索结果，已排除 {1} 条）",
+      "selectAllUncheckHint": "取消勾选某行即可从全选中排除",
       "batchFill": "仅填写需要批量更新的字段，留空项不会修改。",
       "batchEmpty": "请至少填写一个要批量修改的字段",
       "batchSelected": "已选择 {0} 条记录",
-      "batchCopyPrompt": "复制选中记录时，可选择是否统一修改燃油、有效期；选择「确认修改」时请至少填写其中一项。",
-      "batchCopyPromptSea": "复制选中记录时，可统一修改运费、箱型、燃油附加费、OTHERS 及其生效期/有效期；选择「确认修改」时请至少填写其中一项。留空字段沿用原值，ALL IN 由系统按公式自动计算。",
-      "batchCopyNeedFields": "确认修改时请至少填写燃油或有效期",
+      "batchCopyPrompt": "复制选中记录时，可选择是否统一修改费用、生效期/有效期、备注；选择「确认修改」时请至少填写其中一项。",
+      "batchCopyPromptSea": "复制选中记录时，可统一修改运费、箱型、各附加费及其生效期/有效期、备注；选择「确认修改」时请至少填写其中一项。留空字段沿用原值，ALL IN 由系统按公式自动计算。",
+      "batchCopyNeedFields": "确认修改时请至少填写一项要覆盖的字段",
       "batchCopyNeedFieldsSea": "确认修改时请至少填写一项要覆盖的字段",
-      "batchCopySuccess": "已复制 {0} 条记录"
+      "batchCopySuccess": "已复制 {0} 条记录",
+      "batchCopyPreviewHint": "请确认以下 {0} 条复制结果，确认后将写入数据库。"
     },
     "search": {
       "zipCodePlaceholder": "输入 Zip code 模糊查询"
@@ -464,11 +498,12 @@
     },
     "status": {
       "active": "生效中",
+      "pending": "未生效",
       "draft": "草稿",
       "expired": "已过期"
     },
     "statusFilterAll": "全部状态",
-    "statusHelp": "超过有效期将自动变为已过期。",
+    "statusHelp": "生效期未到为未生效；超过有效期将自动变为已过期。",
     "roadGroups": {
       "route": "路线与基础运费",
       "freight": "ALL IN",
@@ -499,7 +534,10 @@
       "redelivery": "REDELIVERY",
       "prepull": "PREPULL",
       "nsLift": "LIFT",
+      "yardStorage": "YARD STORAGE",
+      "extraChassis": "EXTRA CHASSIS",
       "otherFee": "OTHERS",
+      "operationRemark": "操作备注",
       "remark": "REMARK",
       "validDate": "VALID TIME",
       "logYardNameAddress": "PICK UP ADDRESS"
@@ -686,6 +724,8 @@
       "contactName": "联系人",
       "phone": "电话",
       "email": "邮箱",
+      "contractNo": "约号",
+      "validUntil": "有效期",
       "remark": "备注",
       "status": "状态",
       "createdBy": "创建人",
@@ -761,6 +801,11 @@
     },
     "sections": {
       "basic": "基础信息区",
+      "serviceFees": "SERVICE FEES — 主费用列表",
+      "truckExtras": "卡车额外费用（可选附加费）",
+      "fumigation": "熏蒸费",
+      "docInsuranceAgent": "单证、保险、代理费用",
+      "sheetRemark": "备注",
       "fees": "费用明细区",
       "routeKeys": "路线匹配字段",
       "costSource": "报价成本来源区",
@@ -791,14 +836,17 @@
       "view": "查看",
       "export": "批量导出",
       "void": "作废",
-      "submit": "提交生效",
-      "follow": "标记跟进中",
+      "submit": "提交审批",
+      "send": "发送报价",
+      "reject": "拒绝",
+      "cancelApproval": "取消审批",
       "won": "成交",
       "copy": "复制新建",
       "print": "打印报价单",
       "addFollowUp": "新增跟进",
       "backToList": "返回列表",
-      "backToDetail": "返回详情"
+      "backToDetail": "返回详情",
+      "generateSheet": "生成报价单"
     },
     "fields": {
       "quoteNo": "报价单号",
@@ -843,17 +891,22 @@
     },
     "status": {
       "DRAFT": "草稿",
+      "PENDING_APPROVAL": "待审批",
+      "SENT": "已发送",
+      "WON": "已成交",
+      "REJECTED": "已拒绝",
+      "EXPIRED": "已过期",
+      "VOIDED": "已作废",
       "EFFECTIVE": "已生效",
       "FOLLOWING": "跟进中",
       "PENDING": "待审批",
-      "SENT": "已发送",
-      "WON": "已成交",
-      "LOST": "已丢失",
-      "EXPIRED": "已过期",
-      "VOIDED": "已作废"
+      "LOST": "已拒绝"
     },
     "validation": {
       "customerRequired": "请选择客户",
+      "porPolRequired": "请选择 POR/POL",
+      "podRequired": "请选择 POD",
+      "fmExclusive": "熏蒸费 FM (NON-OAK) 与 FM (OAK) 不能同时启用",
       "followContent": "请填写跟进内容",
       "followUpBy": "请选择跟进人"
     },
@@ -863,23 +916,76 @@
       "selectExport": "请先勾选要导出的报价单",
       "exporting": "正在导出…",
       "exportSuccess": "导出成功",
+      "createSuccess": "报价单 {0} 已创建",
+      "saveSuccess": "报价单 {0} 已保存",
+      "deleteSuccess": "报价单 {0} 已删除",
       "voidSuccess": "已作废",
-      "submitSuccess": "已提交生效",
-      "followSuccess": "已标记跟进中",
+      "submitSuccess": "已提交审批",
+      "sendSuccess": "报价已发送",
+      "rejectSuccess": "已拒绝",
+      "cancelApprovalSuccess": "已取消审批，报价单回到草稿",
       "wonSuccess": "已成交",
       "copySuccess": "已复制为新草稿",
+      "copyPrefilled": "已带入报价内容，保存后将生成新报价单",
       "followUpCreated": "跟进记录已添加",
+      "followSuccess": "跟进状态已更新",
       "noCostSnapshot": "暂无成本匹配快照",
       "noCostImported": "尚未引入{0}",
+      "costExpired": "只能引入生效中的成本数据，请选择有效记录或维护成本库",
       "noCostMatchType": "{0}：无对应成本数据，请先维护成本库",
       "costImportedType": "已引入{0}",
+      "sheetGenerated": "报价单已生成，可手动调整后保存",
       "zipSearching": "查询中…"
+    },
+    "ruleHint": {
+      "cost": "成本"
+    },
+    "sheet": {
+      "title": "报价单",
+      "date": "Date",
+      "client": "Client",
+      "pickUpAddress": "PICK UP ADDRESS",
+      "porPol": "POR/POL",
+      "pod": "POD",
+      "selectPort": "请选择港口",
+      "cifAmount": "CIF 货值",
+      "cifPlaceholder": "用于保险费/代理费自动计算",
+      "serviceFees": "SERVICE FEES — 主费用",
+      "oceanFreight": "海运费 (Ocean Freight)",
+      "truckingFee": "卡车费 (Trucking fee)",
+      "truckExtras": "卡车额外费用",
+      "nsLift": "火车上下车费 NS LIFT",
+      "chassis": "额外底盘费 Chassis",
+      "waiting": "额外等待费 Waiting",
+      "redelivery": "二次送箱费 REDELIVERY FEE",
+      "truckRemark": "备注 (Remark)",
+      "fumigation": "熏蒸费",
+      "fumigationEnabled": "是否熏蒸",
+      "fumigationYes": "是",
+      "fumigationNo": "否",
+      "fmNonOak": "熏蒸费 FM (NON-OAK)",
+      "fmOak": "熏蒸费 FM (OAK)",
+      "docInsuranceAgent": "单证、保险、代理费用",
+      "docFee": "单证费 DOC FEE",
+      "cargoInsurance": "保险费 CARGO INSURANCE PERM",
+      "cargoAgent": "代理费 CARGO AGENT FEE",
+      "remark": "REMARK",
+      "unitPerContainer": "Per Container",
+      "unitNsLift": "Per Container (DETROIT, etc)",
+      "unitChassis": "Per Day if need",
+      "unitWaiting": "Per Hour, 2H Free",
+      "unitPerBill": "PER BILL",
+      "unitPerCif": "PER CIF AMOUNT",
+      "unitBankFee": "BANK FEE AT COST"
     },
     "confirm": {
       "delete": "确定删除报价单「{0}」吗？",
       "deletePrefix": "确定删除报价单 ",
       "deleteSuffix": " 吗？此操作不可恢复。",
       "void": "确定作废报价单「{0}」吗？",
+      "send": "确定发送报价单「{0}」吗？",
+      "reject": "确定拒绝报价单「{0}」吗？",
+      "cancelApproval": "确定取消审批并退回草稿「{0}」吗？",
       "won": "确认将该报价单标记为已成交？",
       "deleteFollowUp": "确定删除这条跟进记录吗？"
     },
@@ -912,6 +1018,7 @@
     "usStateZip": "美国州邮政编码",
     "globalPort": "全球港口档案",
     "containerType": "箱型管理",
+    "quoteRule": "报价单规则",
     "inlandPor": "内陆提货点 POR",
     "baseTag": "基准币",
     "hint": {
@@ -940,9 +1047,14 @@
       "syncUnlocodeSuccess": "同步完成：新增 {0} 条，更新 {1} 条",
       "syncUnlocodeFailed": "同步失败，请稍后重试",
       "containerType": "维护集装箱箱型（如 20GP、40HQ），供海运成本与报价选用。",
+      "quoteRule": "维护报价单生成时的费用加价与计算规则；同一目标费用按排序取首条匹配规则。",
       "inlandPor": "维护内陆提货点 POR，关联 POL，供美国线运价录入时选择。",
       "exporting": "正在导出…",
-      "exportSuccess": "导出成功"
+      "exportSuccess": "导出成功",
+      "selectRows": "请先勾选要删除的记录"
+    },
+    "confirm": {
+      "batchDelete": "确认删除选中的 {0} 条记录？此操作不可恢复。"
     },
     "actions": {
       "createCurrency": "新建币种",
@@ -966,9 +1078,12 @@
       "syncUnlocode": "同步 UN/LOCODE",
       "createContainerType": "新建箱型",
       "editContainerType": "编辑箱型",
+      "createQuoteRule": "新建规则",
+      "editQuoteRule": "编辑规则",
       "createInlandPor": "新建提货点",
       "editInlandPor": "编辑提货点",
-      "importInlandPor": "导入内陆 POR"
+      "importInlandPor": "导入内陆 POR",
+      "batchDelete": "批量删除"
     },
     "fields": {
       "code": "编码",
@@ -982,6 +1097,42 @@
       "toCurrency": "目标币种",
       "rate": "汇率",
       "effectiveDate": "生效日期"
+    },
+    "quoteRuleForm": {
+      "fields": {
+        "targetField": "目标费用",
+        "conditionType": "匹配条件",
+        "conditionAmount": "条件阈值",
+        "calcType": "计算方式",
+        "addAmount": "加价金额",
+        "fixedAmount": "固定金额",
+        "cifFactor": "CIF 系数",
+        "cifRate": "CIF 费率"
+      },
+      "targetField": {
+        "OCEAN_FREIGHT": "海运费",
+        "TRUCKING_FEE": "卡车费",
+        "FM_NON_OAK": "熏蒸 NON-OAK",
+        "FM_OAK": "熏蒸 OAK",
+        "DOC_FEE": "单证费",
+        "CARGO_INSURANCE": "保险费",
+        "CARGO_AGENT": "代理费"
+      },
+      "conditionType": {
+        "ALWAYS": "始终",
+        "FUMIGATION_ENABLED": "有熏蒸",
+        "FUMIGATION_DISABLED": "无熏蒸",
+        "POD_CHINA": "POD 中国",
+        "POD_NOT_CHINA": "POD 非中国",
+        "BASE_GT": "成本 > 阈值",
+        "BASE_LTE": "成本 ≤ 阈值"
+      },
+      "calcType": {
+        "COST_PLUS": "成本 + 加价",
+        "FIXED": "固定金额",
+        "CIF_MULTIPLY": "CIF × 系数 × 费率",
+        "CIF_PERCENT": "CIF × 费率"
+      }
     },
     "portType": {
       "SEAPORT": "港口",
@@ -997,6 +1148,7 @@
     "user": "用户管理",
     "role": "角色权限",
     "operationLog": "操作日志",
+    "announcement": "系统公告",
     "permissionCount": "共 {0} 项权限",
     "permissionShowCodes": "显示权限码",
     "entity": {
@@ -1072,7 +1224,81 @@
       "dept": "维护公司部门主数据；删除前需确保部门下没有用户。",
       "user": "为用户分配部门与角色；账号创建后不可修改。",
       "role": "配置角色的数据范围与功能权限；内置超级管理员角色不可删除。",
-      "operationLog": "记录用户对业务数据的创建、更新、删除操作，便于审计追溯。"
+      "operationLog": "记录用户对业务数据的创建、更新、删除操作，便于审计追溯。",
+      "announcement": "发布功能更新通知，所有在线用户登录后将收到弹窗提醒。"
+    },
+    "announcementPage": {
+      "publishSuccess": "公告已发布，用户登录后将收到弹窗提醒",
+      "draftSuccess": "草稿已保存",
+      "updateSuccess": "公告已更新",
+      "copySuccess": "已复制为草稿",
+      "copying": "正在复制「{0}」…",
+      "copyFailed": "复制失败，请稍后重试",
+      "disableSuccess": "公告已停用",
+      "disableFailed": "停用失败，请稍后重试",
+      "deleteFailed": "删除失败，请稍后重试",
+      "saveFailed": "保存失败，请稍后重试",
+      "emptyList": "暂无公告，点击「新建公告」发布第一条通知。",
+      "queueHint": "还有 {0} 条公告待阅读",
+      "popupEmptyContent": "（暂无正文）",
+      "noExpiry": "长期有效",
+      "validDaysLabel": "{0} 天",
+      "readStats": "已读 {0} / 未读 {1}",
+      "readCountLabel": "已读",
+      "unreadCountLabel": "未读",
+      "deleteConfirm": "确定删除公告「{0}」吗？删除后用户将不再看到该通知。",
+      "disableConfirm": "确定停用公告「{0}」吗？停用后将不再弹窗展示。",
+      "validation": {
+        "required": "请填写标题和正文",
+        "titleRequired": "请填写标题",
+        "scheduledAtRequired": "请选择预约发布时间"
+      },
+      "publishMode": {
+        "immediate": "立即发布",
+        "scheduled": "预约发布"
+      },
+      "status": {
+        "draft": "草稿",
+        "scheduled": "待发布",
+        "published": "已发布",
+        "expired": "已过期",
+        "disabled": "已停用"
+      },
+      "actions": {
+        "create": "新建公告",
+        "edit": "编辑",
+        "copy": "复制",
+        "disable": "停用",
+        "saveDraft": "保存草稿",
+        "saveChanges": "保存修改",
+        "publishNow": "立即发布",
+        "publishScheduled": "预约发布"
+      },
+      "placeholders": {
+        "title": "例如：成本库新增「标记常用」功能",
+        "content": "简要说明本次更新内容与使用方式，支持换行",
+        "validDays": "留空表示长期有效"
+      },
+      "searchPlaceholders": {
+        "keyword": "搜索标题或正文",
+        "createdBy": "发布人姓名"
+      },
+      "hints": {
+        "validDays": "留空表示长期有效；到期后不再向用户弹窗展示。"
+      },
+      "fields": {
+        "keyword": "关键词",
+        "title": "标题",
+        "content": "正文",
+        "validDays": "有效期",
+        "publishedAt": "发布时间",
+        "expiresAt": "过期时间",
+        "createdBy": "发布人",
+        "status": "状态",
+        "publishMode": "发布方式",
+        "scheduledAt": "预约时间",
+        "readStats": "阅读情况"
+      }
     },
     "operationLogPage": {
       "detailTitle": "操作详情",

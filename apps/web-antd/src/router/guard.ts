@@ -7,6 +7,7 @@ import { startProgress, stopProgress } from '@vben/utils';
 
 import { accessRoutes, coreRouteNames } from '#/router/routes';
 import { useAuthStore } from '#/store';
+import { isTemplateRouteAllowed } from '#/views/cost-library/templates/route-access';
 
 import { generateAccess } from './access';
 
@@ -87,6 +88,12 @@ function setupAccessGuard(router: Router) {
 
     // 是否已经生成过动态路由
     if (accessStore.isAccessChecked) {
+      if (!isTemplateRouteAllowed(to, accessStore.accessCodes)) {
+        return {
+          name: 'FallbackForbidden',
+          replace: true,
+        };
+      }
       return true;
     }
 

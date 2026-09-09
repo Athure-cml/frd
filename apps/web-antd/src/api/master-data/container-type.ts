@@ -46,6 +46,10 @@ export async function deleteContainerType(id: number) {
   return requestClient.delete(`${BASE}/${id}`);
 }
 
+export async function batchDeleteContainerType(ids: number[]) {
+  return requestClient.post(`${BASE}/batch-delete`, { ids });
+}
+
 export async function getEnabledContainerTypeOptions() {
   const list = await getEnabledContainerTypes();
   return list.map((item) => ({

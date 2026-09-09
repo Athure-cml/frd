@@ -8,6 +8,32 @@ import { $t } from '#/locales';
 const BasicLayout = () => import('#/layouts/basic.vue');
 const AuthPageLayout = () => import('#/layouts/auth.vue');
 /** 全局404页面 */
+const fallbackForbiddenRoute: RouteRecordRaw = {
+  component: BasicLayout,
+  meta: {
+    hideInBreadcrumb: true,
+    hideInMenu: true,
+    hideInTab: true,
+    title: '403',
+  },
+  name: 'FallbackForbidden',
+  path: '/403',
+  children: [
+    {
+      component: () => import('#/views/_core/fallback/forbidden.vue'),
+      meta: {
+        hideInBreadcrumb: true,
+        hideInMenu: true,
+        hideInTab: true,
+        title: '403',
+      },
+      name: 'FallbackForbiddenPage',
+      path: '',
+    },
+  ],
+};
+
+/** 全局404页面 */
 const fallbackNotFoundRoute: RouteRecordRaw = {
   component: () => import('#/views/_core/fallback/not-found.vue'),
   meta: {
@@ -94,4 +120,4 @@ const coreRoutes: RouteRecordRaw[] = [
   },
 ];
 
-export { coreRoutes, fallbackNotFoundRoute };
+export { coreRoutes, fallbackForbiddenRoute, fallbackNotFoundRoute };

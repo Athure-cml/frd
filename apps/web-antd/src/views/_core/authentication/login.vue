@@ -17,28 +17,41 @@ const devUsername = import.meta.env.VITE_DEV_LOGIN_USERNAME || 'vben';
 const devPassword = import.meta.env.VITE_DEV_LOGIN_PASSWORD || '123456';
 
 const formSchema = computed((): VbenFormSchema[] => {
+  const usernameTip = $t('authentication.usernameTip');
+  const passwordTip = $t('authentication.passwordTip');
+
   return [
     {
       component: 'VbenInput',
       componentProps: {
         autocomplete: 'username',
-        placeholder: $t('authentication.usernameTip'),
+        placeholder: usernameTip,
       },
       defaultValue: isDev ? devUsername : undefined,
       fieldName: 'username',
       label: $t('authentication.username'),
-      rules: z.string().min(1, { message: $t('authentication.usernameTip') }),
+      rules: z
+        .string({
+          required_error: usernameTip,
+          invalid_type_error: usernameTip,
+        })
+        .min(1, { message: usernameTip }),
     },
     {
       component: 'VbenInputPassword',
       componentProps: {
         autocomplete: 'current-password',
-        placeholder: $t('authentication.passwordTip'),
+        placeholder: passwordTip,
       },
       defaultValue: isDev ? devPassword : undefined,
       fieldName: 'password',
       label: $t('authentication.password'),
-      rules: z.string().min(1, { message: $t('authentication.passwordTip') }),
+      rules: z
+        .string({
+          required_error: passwordTip,
+          invalid_type_error: passwordTip,
+        })
+        .min(1, { message: passwordTip }),
     },
     {
       component: markRaw(SliderCaptcha),

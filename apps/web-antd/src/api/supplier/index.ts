@@ -4,6 +4,7 @@ import type { CostImportResult } from '#/api/cost/types';
 
 import { downloadFileFromBlob } from '@vben/utils';
 
+import { IMPORT_REQUEST_TIMEOUT_MS } from '#/api/import-request';
 import { requestClient } from '#/api/request';
 
 export namespace SupplierApi {
@@ -114,11 +115,15 @@ export async function importSupplier(
   category: SupplierApi.SupplierCategory = 'TRUCK',
   options?: { dryRun?: boolean },
 ) {
-  return requestClient.upload<CostImportResult>(`${BASE}/import`, {
-    category,
-    dryRun: options?.dryRun,
-    file,
-  });
+  return requestClient.upload<CostImportResult>(
+    `${BASE}/import`,
+    {
+      category,
+      dryRun: options?.dryRun,
+      file,
+    },
+    { timeout: IMPORT_REQUEST_TIMEOUT_MS },
+  );
 }
 
 export async function exportSupplier(params: Recordable<any>) {

@@ -4,6 +4,7 @@ import type { CostImportResult, PageResult } from '#/api/cost/types';
 
 import { downloadFileFromBlob } from '@vben/utils';
 
+import { IMPORT_REQUEST_TIMEOUT_MS } from '#/api/import-request';
 import { requestClient } from '#/api/request';
 
 export namespace UsStateZipApi {
@@ -58,7 +59,7 @@ export async function getUsStateZipCityNodes(
   );
 }
 
-/** 熏蒸 REGION 等：按关键词搜索去重城市名 */
+/** 按关键词搜索去重城市名（如卡车 CITY 等） */
 export async function searchDestCityNameOptions(params?: {
   keyword?: string;
   limit?: number;
@@ -126,14 +127,22 @@ export async function deleteUsStateZip(id: number) {
   return requestClient.delete(`${BASE}/zips/${id}`);
 }
 
+export async function batchDeleteUsStateZip(ids: number[]) {
+  return requestClient.post(`${BASE}/zips/batch-delete`, { ids });
+}
+
 export async function importUsStateZip(
   file: File,
   options?: { dryRun?: boolean },
 ) {
-  return requestClient.upload<CostImportResult>(`${BASE}/import`, {
-    dryRun: options?.dryRun,
-    file,
-  });
+  return requestClient.upload<CostImportResult>(
+    `${BASE}/import`,
+    {
+      dryRun: options?.dryRun,
+      file,
+    },
+    { timeout: IMPORT_REQUEST_TIMEOUT_MS },
+  );
 }
 
 export async function importUsStateZipGeonames(
@@ -143,7 +152,7 @@ export async function importUsStateZipGeonames(
   return requestClient.upload<CostImportResult>(
     `${BASE}/import-geonames`,
     { dryRun: options?.dryRun, file },
-    { timeout: 600_000 },
+    { timeout: IMPORT_REQUEST_TIMEOUT_MS },
   );
 }
 

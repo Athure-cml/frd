@@ -310,7 +310,7 @@ export function applyLayoutFieldItems(
   };
 
   for (const item of items) {
-    if (item.isCustom) {
+    if (item.isCustom || isCustomFieldKey(item.field)) {
       customFieldMap.set(item.field, {
         dataType: item.dataType,
         field: item.field,
@@ -610,7 +610,7 @@ export function addCatalogField(
     {
       dataType: 'text' as const,
       field,
-      isCustom: false,
+      isCustom: isCustomFieldKey(field),
       required: false,
       sortable: false,
       title: getFieldLabel(mode, field),

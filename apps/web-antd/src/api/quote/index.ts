@@ -11,6 +11,8 @@ export type QuoteStatus =
   | 'FOLLOWING'
   | 'LOST'
   | 'PENDING'
+  | 'PENDING_APPROVAL'
+  | 'REJECTED'
   | 'SENT'
   | 'VOIDED'
   | 'WON';
@@ -19,21 +21,34 @@ export type QuoteCostType = 'FUMIGATION' | 'ROAD' | 'SEA';
 
 export namespace QuoteApi {
   export interface QuoteSheetFields {
+    cargoAgentFee?: string;
+    cargoInsurancePremium?: string;
     cargoMaxWeightTon?: string;
+    cifAmount?: number;
+    chassis?: number;
     city?: string;
     docUsd?: string;
     fmNonOak?: number;
     fmOak?: number;
-    ofUsd?: string;
+    fumigationEnabled?: boolean;
+    nsLift?: number;
+    oceanFreight?: string;
+    pickUpAddress?: string;
     pod?: string;
     pol?: string;
     por?: string;
+    redeliveryFee?: number;
     sheetRemark?: string;
     ssl?: string;
     state?: string;
+    truckRemark?: string;
+    truckingFee?: number;
     truckingNonOakUsd?: number;
     truckingOakUsd?: number;
+    waiting?: number;
     zipCode?: string;
+    /** @deprecated 使用 oceanFreight */
+    ofUsd?: string;
   }
 
   export interface QuoteCostMatchItem {
@@ -56,6 +71,7 @@ export namespace QuoteApi {
 
   export interface QuoteListItem {
     createdAt: string;
+    createdBy: number;
     createdByName: string;
     currency: string;
     customerId?: number;
@@ -72,6 +88,8 @@ export namespace QuoteApi {
     updatedAt: string;
     validUntil?: string;
     voided: boolean;
+    /** 当前用户是否可操作（创建人或超级管理员） */
+    operable: boolean;
   }
 
   export interface QuoteDetail extends QuoteListItem {
@@ -80,6 +98,7 @@ export namespace QuoteApi {
     createdBy: number;
     deptId?: number;
     editable: boolean;
+    operable: boolean;
     exchangeRate?: number;
     followUps: QuoteFollowUp[];
     lines: QuoteLine[];
@@ -146,6 +165,22 @@ export namespace QuoteApi {
     matches: QuoteCostMatchItem[];
     suggestedFields: QuoteSheetFields;
   }
+
+  export interface GenerateSheetRequest {
+    cifAmount?: number;
+    fumigationEnabled?: boolean;
+    pickUpAddress?: string;
+    pod?: string;
+    pol?: string;
+    por?: string;
+    quoteDate?: string;
+  }
+
+  export interface GenerateSheetResponse {
+    costMatches: QuoteCostMatchItem[];
+    quoteDate: string;
+    sheet: QuoteSheetFields;
+  }
 }
 
 export async function lookupQuoteZip(keyword: string, limit = 20) {
@@ -188,12 +223,34 @@ export async function matchQuoteCosts(data: QuoteApi.MatchCostsRequest) {
   );
 }
 
+export async function generateQuoteSheet(data: QuoteApi.GenerateSheetRequest) {
+  return requestClient.post<QuoteApi.GenerateSheetResponse>(
+    '/quotes/generate-sheet',
+    data,
+  );
+}
+
 export async function submitQuote(id: number) {
   return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/submit`);
 }
 
+export async function cancelQuoteApproval(id: number) {
+  return requestClient.post<QuoteApi.QuoteDetail>(
+    `/quotes/${id}/cancel-approval`,
+  );
+}
+
+export async function sendQuote(id: number) {
+  return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/send`);
+}
+
+export async function rejectQuote(id: number) {
+  return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/reject`);
+}
+
+/** @deprecated 使用 sendQuote */
 export async function followQuote(id: number) {
-  return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/follow`);
+  return sendQuote(id);
 }
 
 export async function wonQuote(id: number) {

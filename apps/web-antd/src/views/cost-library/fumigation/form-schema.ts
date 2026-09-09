@@ -1,18 +1,23 @@
 import type { VbenFormSchema } from '#/adapter/form';
 import type { FumigationCostRecord, FumigationCostSave } from '#/api/cost';
+import type { GlobalPortApi } from '#/api/master-data/global-port';
 
-import { reactive } from 'vue';
-
-import { useDebounceFn } from '@vueuse/core';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 
-import { searchDestCityNameOptions } from '#/api/master-data/us-state-zip';
 import { $t } from '#/locales';
+
+import { createPortSelectProps } from '../shared/freight-schema';
 
 dayjs.extend(customParseFormat);
 
 const f = (key: string) => $t(`page.costLibrary.fumigationFields.${key}`);
+
+const FUMIGATION_REGION_PORT_TYPES: GlobalPortApi.PortType[] = [
+  'SEAPORT',
+  'RAIL',
+  'INLAND',
+];
 
 const VALIDITY_PARSE_FORMATS = [
   'YYYY/M/D',
@@ -24,28 +29,17 @@ const VALIDITY_PARSE_FORMATS = [
 const VALIDITY_RANGE_RE =
   /^(\d{4}[/-]\d{1,2}[/-]\d{1,2})\s*[-–—]\s*(\d{4}[/-]\d{1,2}[/-]\d{1,2})$/;
 
-export function createCitySelectProps() {
-  const params = reactive({ keyword: '' });
-  const setKeyword = useDebounceFn((keyword: string) => {
-    params.keyword = keyword.trim();
-  }, 280);
+/** 录入/编辑：REGION 从全球港口档案选择 */
+export function createRegionPortSelectProps() {
+  return createPortSelectProps({ portTypes: FUMIGATION_REGION_PORT_TYPES });
+}
 
-  return {
-    allowClear: true,
-    api: async (p: { keyword?: string }) =>
-      searchDestCityNameOptions({
-        keyword: p?.keyword,
-        limit: 50,
-      }),
-    class: 'w-full',
-    filterOption: false,
-    optionFilterProp: 'label',
-    params,
-    showSearch: true,
-    onSearch: (keyword: string) => {
-      setKeyword(keyword);
-    },
-  };
+/** 搜索栏：输入关键词后检索港口 */
+export function createRegionPortSearchProps() {
+  return createPortSelectProps({
+    portTypes: FUMIGATION_REGION_PORT_TYPES,
+    requireKeyword: true,
+  });
 }
 
 function datePickerProps() {
@@ -93,7 +87,7 @@ export function useFumigationFormSchema(): VbenFormSchema[] {
   return [
     {
       component: 'ApiSelect',
-      componentProps: createCitySelectProps(),
+      componentProps: createRegionPortSelectProps(),
       fieldName: 'region',
       label: f('region'),
     },

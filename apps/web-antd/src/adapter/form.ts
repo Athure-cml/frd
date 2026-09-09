@@ -8,7 +8,20 @@ import type { ComponentPropsMap, ComponentType } from './component';
 import { setupVbenForm, useVbenForm as useForm, z } from '@vben/common-ui';
 import { $t } from '@vben/locales';
 
+import * as zod from 'zod';
+
 async function initSetupVbenForm() {
+  zod.setErrorMap((issue, ctx) => {
+    if (
+      issue.code === zod.ZodIssueCode.invalid_type &&
+      (issue.received === 'undefined' || issue.received === 'null') &&
+      issue.expected === 'string'
+    ) {
+      return { message: $t('ui.placeholder.input') };
+    }
+    return { message: ctx.defaultError };
+  });
+
   setupVbenForm<ComponentType>({
     config: {
       // ant design vue组件库默认都是 v-model:value
@@ -18,6 +31,7 @@ async function initSetupVbenForm() {
       modelPropNameMap: {
         Checkbox: 'checked',
         Radio: 'checked',
+        RichEditor: 'modelValue',
         Switch: 'checked',
         Upload: 'fileList',
       },

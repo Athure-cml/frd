@@ -247,6 +247,12 @@ const MENU_SCHEMA: MenuModuleDef[] = [
         titleKey: 'page.system.operationLog',
         match: (code) => code.startsWith('sys:operation_log:'),
       },
+      {
+        kind: 'group',
+        segment: 'announcement',
+        titleKey: 'page.system.announcement',
+        match: (code) => code.startsWith('sys:announcement:'),
+      },
     ],
   },
   {

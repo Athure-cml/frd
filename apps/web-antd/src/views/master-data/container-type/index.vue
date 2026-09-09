@@ -13,12 +13,17 @@ import { Button, message } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import {
+  batchDeleteContainerType,
   deleteContainerType,
   getContainerTypeList,
 } from '#/api/master-data/container-type';
 import { $t } from '#/locales';
 
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
+import {
+  masterDataCheckboxConfig,
+  useMasterDataBatchDelete,
+} from '../shared/use-batch-delete';
 import { useContainerTypeColumns, useContainerTypeSearchSchema } from './data';
 import Form from './modules/form.vue';
 
@@ -80,6 +85,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
     id: 'md-container-type-list',
+    checkboxConfig: masterDataCheckboxConfig,
     columns: useContainerTypeColumns(onActionClick, canManage),
     height: 'auto',
     pagerConfig: { enabled: false },
@@ -103,6 +109,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
   } as VxeTableGridOptions<ContainerTypeApi.ContainerType>,
 });
+
+const { onBatchDelete } = useMasterDataBatchDelete({
+  batchDelete: batchDeleteContainerType,
+  gridApi,
+});
 </script>
 
 <template>
@@ -113,9 +124,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
     <FormModal @success="gridApi.query()" />
     <Grid class="system-grid" :form-options="searchFormOptions">
       <template #toolbar-tools>
-        <Button v-if="canManage" type="primary" @click="onCreate">
+        <Button v-if="canManage" class="mr-2" type="primary" @click="onCreate">
           <Plus class="size-4" />
           {{ $t('page.masterData.actions.createContainerType') }}
+        </Button>
+        <Button v-if="canManage" class="mr-2" danger @click="onBatchDelete">
+          {{ $t('page.masterData.actions.batchDelete') }}
         </Button>
       </template>
       <template #code="{ row }">

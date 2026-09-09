@@ -21,6 +21,8 @@
     "deleteConfirm": "Are you sure to delete {0}?",
     "deleting": "Deleting {0} ...",
     "deleteSuccess": "{0} deleted successfully",
+    "createSuccess": "{0} created successfully",
+    "updateSuccess": "{0} saved successfully",
     "operationSuccess": "Operation succeeded",
     "operationFailed": "Operation failed"
   },
@@ -135,8 +137,10 @@
     "notifications": "Notifications",
     "markAllAsRead": "Make All as Read",
     "clearNotifications": "Clear",
-    "checkUpdatesTitle": "New Version Available",
-    "checkUpdatesDescription": "Click to refresh and get the latest version",
+    "checkUpdatesTitle": "System Updated",
+    "checkUpdatesDescription": "Your page is outdated and some features may not work correctly. Click refresh to load the latest version.",
+    "announcementTitle": "Feature Update",
+    "announcementConfirm": "Got it",
     "search": {
       "title": "Search",
       "searchNavigate": "Search Navigation",

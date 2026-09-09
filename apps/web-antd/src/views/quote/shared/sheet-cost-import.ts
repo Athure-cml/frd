@@ -28,7 +28,6 @@ export function getInitialSearchValues(
   if (type === 'ROAD') {
     return {
       city: keys.city ?? '',
-      pol: keys.pol ?? '',
       por: keys.por ?? '',
       state: keys.state ?? '',
       supplier: keys.supplier ?? '',
@@ -37,9 +36,6 @@ export function getInitialSearchValues(
   }
   if (type === 'SEA') {
     return {
-      carrier: keys.ssl ?? '',
-      destination: keys.pod ?? '',
-      origin: keys.pol ?? '',
       pod: keys.pod ?? '',
       pol: keys.pol ?? '',
       por: keys.por ?? '',
@@ -47,7 +43,7 @@ export function getInitialSearchValues(
     };
   }
   return {
-    port: keys.pod ?? '',
+    region: keys.pod ?? '',
   };
 }
 
@@ -72,80 +68,133 @@ export function normalizeSnapshotRow(
   snapshot: Record<string, unknown> = {},
   costRefId: number,
 ): Record<string, unknown> {
+  const base: Record<string, unknown> = { ...snapshot, id: costRefId };
+
   if (type === 'ROAD') {
     return {
-      id: costRefId,
-      allInFmOneWay:
-        snapshot.allInFmOneWay ?? snapshot.allInOak ?? snapshot.allIn,
-      allInFmRound: snapshot.allInFmRound ?? snapshot.allIn,
-      allInNoFm: snapshot.allInNoFm ?? snapshot.allInNonOak ?? snapshot.allIn,
-      baseFreight: snapshot.baseFreight,
-      chassis: snapshot.chassis,
-      city: snapshot.city,
-      extraFields: snapshot.extraFields,
-      fsc: snapshot.fsc ?? snapshot.psc,
-      logYardNameAddress: snapshot.logYardNameAddress,
-      otherFee: snapshot.otherFee ?? snapshot.otrwFee,
-      pol: snapshot.pol,
-      por: snapshot.por ?? snapshot.city,
-      prepull: snapshot.prepull,
-      redelivery: snapshot.redelivery,
-      remark: snapshot.remark,
-      split: snapshot.split,
-      state: snapshot.state,
-      stopOff: snapshot.stopOff ?? snapshot.stopsFf,
-      supplier: snapshot.supplier,
-      nsLift: snapshot.nsLift ?? snapshot.toLift ?? snapshot.usLift,
-      triTandemAxle:
-        snapshot.triTandemAxle ?? snapshot.owTriAxle ?? snapshot.overweight,
-      validDate: snapshot.validDate,
-      waitingFee: snapshot.waitingFee,
-      zipCode: snapshot.zipCode,
+      ...base,
+      allInFmOneWay: base.allInFmOneWay ?? base.allInOak ?? base.allIn,
+      allInFmRound: base.allInFmRound ?? base.allIn,
+      allInNoFm: base.allInNoFm ?? base.allInNonOak ?? base.allIn,
+      fsc: base.fsc ?? base.psc,
+      otherFee: base.otherFee ?? base.otrwFee,
+      por: base.por ?? base.city,
+      stopOff: base.stopOff ?? base.stopsFf,
+      nsLift: base.nsLift ?? base.toLift ?? base.usLift,
+      triTandemAxle: base.triTandemAxle ?? base.owTriAxle ?? base.overweight,
+      status: base.status ?? resolveSnapshotStatus(type, base),
     };
   }
 
   if (type === 'SEA') {
     return {
-      id: costRefId,
-      agent: snapshot.agent,
-      allIn: snapshot.allIn,
-      buc: snapshot.buc,
-      bucValidDate: snapshot.bucValidDate,
-      cnShortName: snapshot.cnShortName,
-      containerType: snapshot.containerType,
-      ebs: snapshot.ebs,
-      ebsValidDate: snapshot.ebsValidDate,
-      enProductName: snapshot.enProductName,
-      extraFields: snapshot.extraFields,
-      freight: snapshot.freight ?? snapshot.baseFreight ?? snapshot.unitPrice,
-      freightValidDate: snapshot.freightValidDate ?? snapshot.validDate,
-      gri: snapshot.gri,
-      griValidDate: snapshot.griValidDate,
-      others: snapshot.others,
-      othersValidDate: snapshot.othersValidDate,
-      pod: (snapshot.pod ?? snapshot.destination) as string,
-      pol: (snapshot.pol ?? snapshot.origin) as string,
-      por: snapshot.por,
-      remark: snapshot.remark,
-      ssl: (snapshot.ssl ?? snapshot.carrier ?? snapshot.supplier) as string,
-      updatedAt: snapshot.updatedAt as string | undefined,
+      ...base,
+      freight: base.freight ?? base.baseFreight ?? base.unitPrice,
+      freightValidDate: base.freightValidDate ?? base.validDate,
+      pod: (base.pod ?? base.destination) as string,
+      pol: (base.pol ?? base.origin) as string,
+      ssl: (base.ssl ?? base.carrier ?? base.supplier) as string,
+      status: base.status ?? resolveSnapshotStatus(type, base),
     };
   }
 
   return {
-    id: costRefId,
-    address: snapshot.address,
-    extraFields: snapshot.extraFields,
-    indoorNonOak: snapshot.indoorNonOak,
-    indoorOak: snapshot.indoorOak,
-    indoorValidity: snapshot.indoorValidity,
-    outdoorNonOak: snapshot.outdoorNonOak,
-    outdoorOak: snapshot.outdoorOak,
-    outdoorValidity: snapshot.outdoorValidity,
-    region: (snapshot.region ?? snapshot.port) as string,
-    station: snapshot.station,
-    updatedAt: snapshot.updatedAt,
+    ...base,
+    region: (base.region ?? base.port) as string,
+    status: base.status ?? resolveSnapshotStatus(type, base),
   };
+}
+
+function parseValidityEnd(raw: unknown): Date | undefined {
+  if (raw === null || raw === undefined || raw === '') {
+    return undefined;
+  }
+  const text = String(raw).trim();
+  const range = text.match(
+    /^(\d{4}[/.-]\d{1,2}[/.-]\d{1,2})\s*[-–—~至到]\s*(\d{4}[/.-]\d{1,2}[/.-]\d{1,2})$/,
+  );
+  const dateText = range?.[2] ?? text;
+  const normalized = dateText.replaceAll('.', '-').replaceAll('/', '-');
+  const parsed = Date.parse(normalized);
+  if (Number.isNaN(parsed)) {
+    return undefined;
+  }
+  const date = new Date(parsed);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function parseEffectiveStart(raw: unknown): Date | undefined {
+  if (raw === null || raw === undefined || raw === '') {
+    return undefined;
+  }
+  const text = String(raw).trim();
+  const range = text.match(
+    /^(\d{4}[/.-]\d{1,2}[/.-]\d{1,2})\s*[-–—~至到]\s*(\d{4}[/.-]\d{1,2}[/.-]\d{1,2})$/,
+  );
+  const dateText = range?.[1] ?? text;
+  const normalized = dateText.replaceAll('.', '-').replaceAll('/', '-');
+  const parsed = Date.parse(normalized);
+  if (Number.isNaN(parsed)) {
+    return undefined;
+  }
+  const date = new Date(parsed);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function readRoadEffective(row: Record<string, unknown>): unknown {
+  const extra = row.extraFields;
+  if (extra && typeof extra === 'object' && !Array.isArray(extra)) {
+    return (extra as Record<string, unknown>).cf_road_eff;
+  }
+  return undefined;
+}
+
+/** 旧快照无 status 时，按生效期+有效期推算（与成本库 active/pending/expired 一致） */
+function resolveSnapshotStatus(
+  type: QuoteCostType,
+  row: Record<string, unknown>,
+): 'active' | 'expired' | 'pending' | undefined {
+  const effectiveTexts: unknown[] =
+    type === 'ROAD' ? [readRoadEffective(row)] : [];
+  const validityTexts: unknown[] =
+    type === 'ROAD'
+      ? [row.validDate]
+      : type === 'SEA'
+        ? [row.freightValidDate]
+        : [row.outdoorValidity, row.indoorValidity];
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (const text of effectiveTexts) {
+    const start = parseEffectiveStart(text);
+    if (start && start > today) {
+      return 'pending';
+    }
+  }
+
+  let latestEnd: Date | undefined;
+  for (const text of validityTexts) {
+    const end = parseValidityEnd(text);
+    if (end && (!latestEnd || end > latestEnd)) {
+      latestEnd = end;
+    }
+  }
+  if (!latestEnd) {
+    return undefined;
+  }
+  return latestEnd < today ? 'expired' : 'active';
+}
+
+/** 报价引入成本：仅允许生效中记录 */
+export function isActiveCostRecord(
+  type: QuoteCostType,
+  record: Record<string, unknown>,
+): boolean {
+  const status = record.status ?? resolveSnapshotStatus(type, record);
+  return status === 'active';
 }
 
 export function recordToCostMatchItem(
@@ -192,14 +241,33 @@ export function applyCostToSheet(
 ) {
   if (type === 'ROAD') {
     const row = record as RoadCostRecord;
+    sheet.truckingFee = row.allInNoFm;
     sheet.truckingNonOakUsd = row.allInNoFm;
     sheet.truckingOakUsd = row.allInFmOneWay;
+    sheet.nsLift = row.nsLift;
+    sheet.chassis = row.chassis;
+    sheet.waiting = row.waitingFee;
+    sheet.redeliveryFee = row.redelivery;
+    sheet.truckRemark = row.remark;
+    sheet.por = row.por ?? sheet.por;
+    sheet.pol = row.pol ?? sheet.pol;
+    sheet.zipCode = row.zipCode ?? sheet.zipCode;
+    sheet.city = row.city ?? sheet.city;
+    sheet.state = row.state ?? sheet.state;
+    sheet.pickUpAddress =
+      row.logYardNameAddress ||
+      [sheet.zipCode, sheet.city, sheet.state].filter(Boolean).join(', ') ||
+      sheet.pickUpAddress;
     return;
   }
 
   if (type === 'SEA') {
     const row = record as FreightCostRecord;
-    sheet.ofUsd = formatSeaOfRate(row);
+    sheet.oceanFreight = formatSeaOfRate(row);
+    sheet.ofUsd = sheet.oceanFreight;
     sheet.ssl = row.ssl;
+    sheet.pod = row.pod ?? sheet.pod;
+    sheet.pol = row.pol ?? sheet.pol;
+    sheet.por = row.por ?? sheet.por;
   }
 }

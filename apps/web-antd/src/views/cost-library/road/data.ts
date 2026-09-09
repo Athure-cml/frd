@@ -164,6 +164,17 @@ export function useRoadSearchSchema(): VbenFormSchema[] {
         format: 'YYYY-MM-DD',
         valueFormat: 'YYYY-MM-DD',
       },
+      fieldName: 'effectiveDate',
+      label: 'EFFECTIVE TIME',
+    },
+    {
+      component: 'DatePicker',
+      componentProps: {
+        allowClear: true,
+        class: 'w-full',
+        format: 'YYYY-MM-DD',
+        valueFormat: 'YYYY-MM-DD',
+      },
       fieldName: 'validDate',
       label: t('validDate'),
     },

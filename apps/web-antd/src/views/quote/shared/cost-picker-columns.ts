@@ -43,6 +43,7 @@ export function buildCostSnapshotColumns(
   return (
     buildColumnsFromTemplate({
       canEdit: false,
+      includeCheckbox: false,
       includeOperation: false,
       mode,
       nameField,

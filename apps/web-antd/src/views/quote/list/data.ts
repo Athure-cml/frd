@@ -6,7 +6,17 @@ import { getCustomerList } from '#/api/customer';
 import { $t } from '#/locales';
 
 import { buildOperationColumn } from '../../system/shared/columns';
-import { QUOTE_SHEET_COLUMNS, sheetCellValue } from '../shared/sheet-columns';
+import {
+  canShowQuoteVoid,
+  isQuoteDeletable,
+  isQuoteEditable,
+  normalizeQuoteStatus,
+} from '../shared/quote-status';
+import {
+  formatQuoteDate,
+  QUOTE_SHEET_COLUMNS,
+  sheetCellValue,
+} from '../shared/sheet-columns';
 
 const t = (key: string) => $t(`page.quote.${key}`);
 
@@ -26,14 +36,25 @@ export const transportModeTagOptions = () => [
 
 export const statusTagOptions = () => [
   { color: 'default', label: t('status.DRAFT'), value: 'DRAFT' },
-  { color: 'success', label: t('status.EFFECTIVE'), value: 'EFFECTIVE' },
-  { color: 'processing', label: t('status.FOLLOWING'), value: 'FOLLOWING' },
+  {
+    color: 'processing',
+    label: t('status.PENDING_APPROVAL'),
+    value: 'PENDING_APPROVAL',
+  },
+  { color: 'blue', label: t('status.SENT'), value: 'SENT' },
   { color: 'success', label: t('status.WON'), value: 'WON' },
+  { color: 'warning', label: t('status.REJECTED'), value: 'REJECTED' },
   { color: 'warning', label: t('status.EXPIRED'), value: 'EXPIRED' },
   { color: 'error', label: t('status.VOIDED'), value: 'VOIDED' },
-  { color: 'processing', label: t('status.PENDING'), value: 'PENDING' },
-  { color: 'blue', label: t('status.SENT'), value: 'SENT' },
-  { color: 'error', label: t('status.LOST'), value: 'LOST' },
+  // 兼容旧数据展示
+  {
+    color: 'processing',
+    label: t('status.PENDING_APPROVAL'),
+    value: 'PENDING',
+  },
+  { color: 'blue', label: t('status.SENT'), value: 'EFFECTIVE' },
+  { color: 'blue', label: t('status.SENT'), value: 'FOLLOWING' },
+  { color: 'warning', label: t('status.REJECTED'), value: 'LOST' },
 ];
 
 export function useQuoteSearchSchema(): VbenFormSchema[] {
@@ -138,17 +159,25 @@ export function useQuoteColumns(
   canEdit: boolean,
   canDelete: boolean,
   canVoid: boolean,
+  canApprove = false,
+  canOperateRow: (row: QuoteApi.QuoteListItem) => boolean = () => true,
 ): VxeTableGridOptions<QuoteApi.QuoteListItem>['columns'] {
   const operationOptions: Array<Record<string, any> | string> = [
     { code: 'view', text: t('actions.view') },
   ];
+  if (canApprove) {
+    operationOptions.push({
+      code: 'send',
+      show: (row: QuoteApi.QuoteListItem) =>
+        normalizeQuoteStatus(row.status) === 'PENDING_APPROVAL',
+      text: t('actions.send'),
+    });
+  }
   if (canEdit) {
     operationOptions.push({
       code: 'edit',
       show: (row: QuoteApi.QuoteListItem) =>
-        row.status === 'DRAFT' ||
-        row.status === 'EFFECTIVE' ||
-        row.status === 'FOLLOWING',
+        canOperateRow(row) && isQuoteEditable(row.status),
       text: $t('common.edit'),
     });
   }
@@ -157,7 +186,7 @@ export function useQuoteColumns(
       code: 'void',
       danger: true,
       show: (row: QuoteApi.QuoteListItem) =>
-        !row.voided && row.status !== 'WON',
+        canOperateRow(row) && canShowQuoteVoid(row.status),
       text: t('actions.void'),
     });
   }
@@ -165,17 +194,18 @@ export function useQuoteColumns(
     operationOptions.push({
       code: 'delete',
       danger: true,
-      show: (row: QuoteApi.QuoteListItem) => row.status === 'DRAFT',
+      show: (row: QuoteApi.QuoteListItem) =>
+        canOperateRow(row) && isQuoteDeletable(row.status),
       text: $t('common.delete'),
     });
   }
 
   const operationColumn = buildOperationColumn(
-    canEdit || canDelete || canVoid,
+    canEdit || canDelete || canVoid || canApprove,
     onActionClick,
     {
       nameField: 'quoteNo',
-      nameTitle: t('fields.quoteNo'),
+      nameTitle: 'QUOTE NO',
       operationOptions,
     },
   );
@@ -196,24 +226,21 @@ export function useQuoteColumns(
       fixed: 'left',
       minWidth: 130,
       slots: { default: 'quoteNo' },
-      title: t('fields.quoteNo'),
+      title: 'QUOTE NO',
     },
     {
       field: 'customerName',
       fixed: 'left',
       minWidth: 120,
-      title: t('fields.customerName'),
+      title: 'CLINET',
     },
     ...sheetCols,
     {
-      field: 'currency',
-      title: t('fields.currency'),
-      width: 72,
-    },
-    {
-      field: 'validUntil',
-      title: t('fields.validUntil'),
-      width: 110,
+      field: 'createdAt',
+      formatter: ({ cellValue }: { cellValue?: string }) =>
+        formatQuoteDate(cellValue),
+      minWidth: 120,
+      title: 'QUOTE DATA',
     },
     {
       align: 'center',
@@ -222,30 +249,16 @@ export function useQuoteColumns(
         options: statusTagOptions(),
       },
       field: 'status',
-      title: t('fields.status'),
+      fixed: 'right',
+      title: '状态',
       width: 96,
-    },
-    {
-      field: 'followUpByName',
-      title: t('fields.followUpBy'),
-      width: 96,
-    },
-    {
-      field: 'createdByName',
-      title: t('fields.createdBy'),
-      width: 88,
-    },
-    {
-      field: 'updatedAt',
-      formatter: ({ cellValue }: { cellValue?: string }) => cellValue || '—',
-      title: t('fields.updatedAt'),
-      width: 160,
     },
   ];
 
   if (operationColumn) {
     operationColumn.minWidth = 220;
     operationColumn.width = 220;
+    operationColumn.fixed = 'right';
     columns.push(operationColumn);
   }
 

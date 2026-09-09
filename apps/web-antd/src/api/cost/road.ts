@@ -1,6 +1,7 @@
 import type { Recordable } from '@vben/types';
 
 import type {
+  CostBatchCopyResult,
   CostBatchUpdatePayload,
   CostImportResult,
   PageResult,
@@ -8,12 +9,17 @@ import type {
   RoadCostSave,
 } from './types';
 
+import { IMPORT_REQUEST_TIMEOUT_MS } from '#/api/import-request';
 import { requestClient } from '#/api/request';
 
 const BASE = '/cost-library/road';
 
 export async function getRoadCostList(params: Recordable<any>) {
   return requestClient.get<PageResult<RoadCostRecord>>(BASE, { params });
+}
+
+export async function listRoadCostIds(params: Recordable<any>) {
+  return requestClient.get<number[]>(`${BASE}/ids`, { params });
 }
 
 export async function getRoadCost(id: number) {
@@ -50,11 +56,14 @@ export async function batchUpdateRoadCost(data: CostBatchUpdatePayload) {
 
 export async function batchCopyRoadCost(data: {
   applyOverrides?: boolean;
-  fsc?: number;
+  fields?: Record<string, unknown>;
   ids: number[];
-  validDate?: string;
+  previewOnly?: boolean;
 }) {
-  return requestClient.post<{ created: number }>(`${BASE}/batch-copy`, data);
+  return requestClient.post<CostBatchCopyResult<RoadCostRecord>>(
+    `${BASE}/batch-copy`,
+    data,
+  );
 }
 
 export async function importRoadCost(
@@ -62,11 +71,15 @@ export async function importRoadCost(
   templateId?: number,
   dryRun?: boolean,
 ) {
-  return requestClient.upload<CostImportResult>(`${BASE}/import`, {
-    file,
-    ...(typeof templateId === 'number' ? { templateId } : {}),
-    ...(dryRun ? { dryRun: true } : {}),
-  });
+  return requestClient.upload<CostImportResult>(
+    `${BASE}/import`,
+    {
+      file,
+      ...(typeof templateId === 'number' ? { templateId } : {}),
+      ...(dryRun ? { dryRun: true } : {}),
+    },
+    { timeout: IMPORT_REQUEST_TIMEOUT_MS },
+  );
 }
 
 export async function exportRoadCost(params: Recordable<any>) {

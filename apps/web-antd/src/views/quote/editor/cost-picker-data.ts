@@ -4,11 +4,9 @@ import type { CostMode } from '#/api/cost';
 
 import { $t } from '#/locales';
 
-import { useFumigationSearchSchema } from '../../cost-library/fumigation/data';
-import { useRoadSearchSchema } from '../../cost-library/road/data';
 import { formatAmount } from '../../cost-library/road/formatters';
-import { useSeaSearchSchema } from '../../cost-library/sea/data';
 import { buildCostCheckboxColumn } from '../../cost-library/shared/columns';
+import { getCostSearchSchema } from '../../cost-library/shared/cost-search-schema';
 
 const roadT = (key: string) => $t(`page.costLibrary.roadFields.${key}`);
 const fumT = (key: string) => $t(`page.costLibrary.fumigationFields.${key}`);
@@ -21,13 +19,7 @@ export function costModeToPickerMode(
 }
 
 export function getCostPickerSearchSchema(mode: CostMode): VbenFormSchema[] {
-  if (mode === 'road') {
-    return useRoadSearchSchema();
-  }
-  if (mode === 'fumigation') {
-    return useFumigationSearchSchema();
-  }
-  return useSeaSearchSchema();
+  return getCostSearchSchema(mode);
 }
 
 function moneyFormatter({ cellValue }: { cellValue: number }) {

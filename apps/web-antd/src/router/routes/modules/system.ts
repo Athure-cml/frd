@@ -49,14 +49,19 @@ const routes: RouteRecordRaw[] = [
         path: '/system/operation-log',
         component: () => import('#/views/system/operation-log/index.vue'),
         meta: {
-          authority: [
-            'sys:operation_log:view',
-            'super_admin',
-            'super',
-            'admin',
-          ],
+          authority: ['sys:operation_log:view'],
           icon: 'lucide:scroll-text',
           title: $t('page.system.operationLog'),
+        },
+      },
+      {
+        name: 'SystemAnnouncement',
+        path: '/system/announcement',
+        component: () => import('#/views/system/announcement/index.vue'),
+        meta: {
+          authority: ['sys:announcement:view'],
+          icon: 'lucide:megaphone',
+          title: $t('page.system.announcement'),
         },
       },
     ],

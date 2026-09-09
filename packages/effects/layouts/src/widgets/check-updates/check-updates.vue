@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { inject, onMounted, onUnmounted, ref } from 'vue';
 
 import { $t } from '@vben/locales';
 
 import { useVbenModal } from '@vben-core/popup-ui';
+
+import { MODAL_POPUP_GATE_KEY } from './modal-popup-gate';
 
 interface Props {
   // 轮询时间，分钟
@@ -24,6 +26,8 @@ const currentVersionTag = ref('');
 const lastVersionTag = ref('');
 const timer = ref<ReturnType<typeof setInterval>>();
 
+const modalPopupGate = inject(MODAL_POPUP_GATE_KEY, null);
+
 const [UpdateNoticeModal, modalApi] = useVbenModal({
   closable: false,
   closeOnPressEscape: false,
@@ -33,7 +37,17 @@ const [UpdateNoticeModal, modalApi] = useVbenModal({
     window.location.reload();
     // handleSubmitLogout();
   },
+  onOpenChange(isOpen) {
+    modalPopupGate?.setVersionUpdateModalOpen(isOpen);
+  },
 });
+
+function extractVersionTag(source: string) {
+  const configMatch = source.match(/_app-config-[\d.]+-([a-f0-9]+)\.js/i);
+  const entryMatch = source.match(/\/jse\/index-index-[^"'\s>]+\.js/i);
+  const parts = [entryMatch?.[0], configMatch?.[1]].filter(Boolean);
+  return parts.length > 0 ? parts.join('|') : null;
+}
 
 async function getVersionTag() {
   try {
@@ -43,12 +57,20 @@ async function getVersionTag() {
     ) {
       return null;
     }
-    const response = await fetch(props.checkUpdateUrl, {
+    const baseUrl = props.checkUpdateUrl || '/';
+    const url = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}_vcheck=${Date.now()}`;
+    const response = await fetch(url, {
       cache: 'no-cache',
-      method: 'HEAD',
-      redirect: 'manual',
+      method: 'GET',
     });
-
+    if (!response.ok) {
+      return null;
+    }
+    const html = await response.text();
+    const tag = extractVersionTag(html);
+    if (tag) {
+      return tag;
+    }
     return (
       response.headers.get('etag') || response.headers.get('last-modified')
     );
@@ -58,19 +80,29 @@ async function getVersionTag() {
   }
 }
 
+function getLoadedVersionTag() {
+  const configScript = document.querySelector('script[src*="_app-config-"]');
+  const configSrc = configScript?.getAttribute('src') ?? '';
+  const entryScript = document.querySelector(
+    'script[src*="/jse/index-index-"]',
+  );
+  const entrySrc = entryScript?.getAttribute('src') ?? '';
+  return extractVersionTag(`${configSrc} ${entrySrc}`) ?? '';
+}
+
 async function checkForUpdates() {
   const versionTag = await getVersionTag();
   if (!versionTag) {
     return;
   }
 
-  // 首次运行时不提示更新
-  if (!lastVersionTag.value) {
+  const loadedTag = lastVersionTag.value || getLoadedVersionTag();
+  if (!loadedTag) {
     lastVersionTag.value = versionTag;
     return;
   }
 
-  if (lastVersionTag.value !== versionTag && versionTag) {
+  if (loadedTag !== versionTag) {
     clearInterval(timer.value);
     handleNotice(versionTag);
   }
@@ -111,6 +143,8 @@ function stop() {
 }
 
 onMounted(() => {
+  lastVersionTag.value = getLoadedVersionTag();
+  void checkForUpdates();
   start();
   document.addEventListener('visibilitychange', handleVisibilitychange);
 });

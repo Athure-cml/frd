@@ -256,6 +256,7 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
   layout: CostTableTemplateLayout,
   options: {
     canEdit?: boolean;
+    includeCheckbox?: boolean;
     includeOperation?: boolean;
     nameField?: string;
     nameTitle?: string;
@@ -265,6 +266,7 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
 ): VxeTableGridOptions<T>['columns'] {
   const {
     canEdit = false,
+    includeCheckbox = true,
     includeOperation = true,
     nameField = 'region',
     nameTitle = $t('page.costLibrary.fumigationFields.region'),
@@ -311,7 +313,7 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
     .filter(Boolean);
 
   const columns = [
-    buildCostCheckboxColumn(),
+    ...(includeCheckbox ? [buildCostCheckboxColumn()] : []),
     {
       fixed: 'left' as const,
       title: '#',
@@ -321,12 +323,11 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
     ...dataColumns,
   ] as VxeTableGridOptions<T>['columns'];
 
+  appendCostStatusColumn(columns);
+
   if (!includeOperation) {
-    appendCostStatusColumn(columns);
     return columns;
   }
-
-  appendCostStatusColumn(columns);
 
   return appendCostOperationColumn(
     columns,

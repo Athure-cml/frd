@@ -5,6 +5,7 @@ import { getEnabledUnitOptions } from '#/api/unit';
 import { $t } from '#/locales';
 
 import { isRoadFeeUnitField } from './fee-unit-pairs';
+import { ROAD_REMARK_FIELD } from './field-catalog/road';
 import {
   buildLayoutFieldItems,
   isCustomFieldKey,
@@ -63,6 +64,33 @@ function isCustomDateField(field: string, dataType?: string, title?: string) {
   );
 }
 
+function applyTemplateFieldValidation(
+  item: { required: boolean },
+  base: VbenFormSchema,
+): Pick<VbenFormSchema, 'dependencies' | 'rules'> {
+  if (item.required) {
+    return {
+      dependencies: base.dependencies,
+      rules: 'required',
+    };
+  }
+
+  if (!base.dependencies?.rules) {
+    return {
+      dependencies: base.dependencies,
+      rules: undefined,
+    };
+  }
+
+  return {
+    dependencies: {
+      ...base.dependencies,
+      rules: () => null,
+    },
+    rules: undefined,
+  };
+}
+
 export function buildTemplateFormSchema(
   mode: CostMode,
   template: CostTableTemplate | undefined,
@@ -113,16 +141,32 @@ export function buildTemplateFormSchema(
           rules: item.required ? 'required' : undefined,
         });
       } else {
-        ordered.push({
-          component: item.dataType === 'number' ? 'InputNumber' : 'Input',
-          componentProps:
-            item.dataType === 'number'
-              ? { class: 'w-full', precision: 2 }
-              : undefined,
-          fieldName: `extraFields.${item.field}`,
-          label: item.title,
-          rules: item.required ? 'required' : undefined,
-        });
+        const isRemarkField = item.field === ROAD_REMARK_FIELD;
+        if (isRemarkField) {
+          ordered.push({
+            component: 'Textarea',
+            componentProps: { maxlength: 512, rows: 2, showCount: true },
+            fieldName: `extraFields.${item.field}`,
+            formItemClass: 'col-span-full',
+            label: item.title,
+            rules: item.required ? 'required' : undefined,
+          });
+        } else if (item.dataType === 'number') {
+          ordered.push({
+            component: 'InputNumber',
+            componentProps: { class: 'w-full', precision: 2 },
+            fieldName: `extraFields.${item.field}`,
+            label: item.title,
+            rules: item.required ? 'required' : undefined,
+          });
+        } else {
+          ordered.push({
+            component: 'Input',
+            fieldName: `extraFields.${item.field}`,
+            label: item.title,
+            rules: item.required ? 'required' : undefined,
+          });
+        }
       }
       continue;
     }
@@ -169,11 +213,7 @@ export function buildTemplateFormSchema(
       ...base,
       ...(forceNewRow ? { formItemClass: 'col-start-1' } : {}),
       label: item.title,
-      rules: item.required
-        ? 'required'
-        : base.rules === 'required'
-          ? 'required'
-          : base.rules,
+      ...applyTemplateFieldValidation(item, base),
     });
   }
 

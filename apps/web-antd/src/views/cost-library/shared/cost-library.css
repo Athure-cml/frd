@@ -4,15 +4,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 视图模板配置的列背景色（params.bgColor → cellStyle；单元格继承） */
-.cost-library-grid .vxe-header--column.col-tmpl-bg .vxe-cell,
+/* 视图模板配置的列背景色（params.bgColor → cellStyle；仅数据行） */
 .cost-library-grid .vxe-body--column.col-tmpl-bg .vxe-cell {
   color: var(--col-tmpl-fg, inherit);
   background-color: var(--col-tmpl-bg, inherit) !important;
 }
 
 /* 暗色主题：浅色列底与卡片混色，文字跟随主题前景色 */
-.dark .cost-library-grid .vxe-header--column.col-tmpl-bg .vxe-cell,
 .dark .cost-library-grid .vxe-body--column.col-tmpl-bg .vxe-cell {
   color: hsl(var(--foreground)) !important;
   background-color: color-mix(
@@ -20,6 +18,39 @@
     var(--col-tmpl-bg, hsl(var(--card))) 38%,
     hsl(var(--card))
   ) !important;
+}
+
+/* 部门常用行背景（rowStyle 注入 --cost-row-highlight-*） */
+.cost-library-grid .vxe-body--row.cost-row-highlight .vxe-body--column .vxe-cell {
+  color: var(--cost-row-highlight-fg, inherit);
+  background-color: var(--cost-row-highlight-bg, inherit) !important;
+}
+
+.dark .cost-library-grid .vxe-body--row.cost-row-highlight .vxe-body--column .vxe-cell {
+  color: hsl(var(--foreground)) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--cost-row-highlight-bg, hsl(var(--card))) 38%,
+    hsl(var(--card))
+  ) !important;
+}
+
+.cost-library-grid .vxe-body--row.cost-row-multi-dept .vxe-body--column:first-child .vxe-cell {
+  position: relative;
+}
+
+.cost-library-grid
+  .vxe-body--row.cost-row-multi-dept
+  .vxe-body--column:first-child
+  .vxe-cell::before {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  content: '';
+  background: hsl(var(--primary));
+  border-radius: 999px;
 }
 
 .cost-library-grid.road-cost-grid .road-header-route {
@@ -80,6 +111,23 @@
   color: hsl(var(--muted-foreground));
 }
 
+/* 海运 REMARK：加粗加深；无模板底色时用主题前景色 */
+.cost-library-grid.sea-cost-grid .vxe-body--column.col-remark:not(.col-tmpl-bg) .vxe-cell,
+.cost-library-grid.sea-cost-grid .vxe-header--column.col-remark:not(.col-tmpl-bg) .vxe-cell {
+  font-weight: 700;
+  color: hsl(var(--foreground));
+}
+
+.dark .cost-library-grid.sea-cost-grid .vxe-body--column.col-remark:not(.col-tmpl-bg) .vxe-cell,
+.dark .cost-library-grid.sea-cost-grid .vxe-header--column.col-remark:not(.col-tmpl-bg) .vxe-cell {
+  color: hsl(var(--foreground));
+}
+
+/* 有模板列底色时只加粗，字色交给 contrastTextColorForBg / 暗色 col-tmpl-bg 规则 */
+.cost-library-grid.sea-cost-grid .vxe-body--column.col-remark.col-tmpl-bg .vxe-cell {
+  font-weight: 700;
+}
+
 .cost-library-grid .col-required-mark {
   margin-right: 2px;
   color: #ff4d4f;
@@ -132,6 +180,17 @@
   padding-left: 12px;
   margin-left: 4px;
   border-left: 1px solid hsl(var(--border));
+}
+
+.cost-clear-selection-btn {
+  font-weight: 500;
+  border-width: 1.5px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 24%, transparent);
+}
+
+.cost-clear-selection-btn:not(:disabled):hover {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 2px color-mix(in srgb, hsl(var(--primary)) 20%, transparent);
 }
 
 .cost-toolbar__template {

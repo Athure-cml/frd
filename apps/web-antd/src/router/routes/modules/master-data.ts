@@ -80,6 +80,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: 'MasterDataQuoteRule',
+        path: '/master-data/quote-rule',
+        component: () => import('#/views/master-data/quote-rule/index.vue'),
+        meta: {
+          icon: 'lucide:scale',
+          title: $t('page.masterData.quoteRule'),
+        },
+      },
+      {
         name: 'MasterDataInlandPorRedirect',
         path: '/master-data/inland-por',
         redirect: '/master-data/global-port',

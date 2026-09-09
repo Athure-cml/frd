@@ -5,6 +5,7 @@ import type { ContainerTypeApi } from '#/api/master-data/container-type';
 import { $t } from '#/locales';
 
 import {
+  buildCheckboxColumn,
   buildOperationColumn,
   buildSeqColumn,
 } from '../../system/shared/columns';
@@ -84,6 +85,7 @@ export function useContainerTypeColumns(
 ): VxeTableGridOptions<ContainerTypeApi.ContainerType>['columns'] {
   const columns: VxeTableGridOptions<ContainerTypeApi.ContainerType>['columns'] =
     [
+      buildCheckboxColumn(),
       buildSeqColumn(),
       {
         align: 'left',

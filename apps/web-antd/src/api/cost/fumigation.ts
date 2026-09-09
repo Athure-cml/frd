@@ -8,6 +8,7 @@ import type {
   PageResult,
 } from './types';
 
+import { IMPORT_REQUEST_TIMEOUT_MS } from '#/api/import-request';
 import { requestClient } from '#/api/request';
 
 const base = '/cost-library/fumigation';
@@ -29,16 +30,23 @@ export const fumigationCostApi = {
     return requestClient.download(`${base}/export`, { params });
   },
   importExcel(file: File, templateId?: number, dryRun?: boolean) {
-    return requestClient.upload<CostImportResult>(`${base}/import`, {
-      file,
-      ...(typeof templateId === 'number' ? { templateId } : {}),
-      ...(dryRun ? { dryRun: true } : {}),
-    });
+    return requestClient.upload<CostImportResult>(
+      `${base}/import`,
+      {
+        file,
+        ...(typeof templateId === 'number' ? { templateId } : {}),
+        ...(dryRun ? { dryRun: true } : {}),
+      },
+      { timeout: IMPORT_REQUEST_TIMEOUT_MS },
+    );
   },
   list(params: Recordable<any>) {
     return requestClient.get<PageResult<FumigationCostRecord>>(base, {
       params,
     });
+  },
+  listIds(params: Recordable<any>) {
+    return requestClient.get<number[]>(`${base}/ids`, { params });
   },
   get(id: number) {
     return requestClient.get<FumigationCostRecord>(`${base}/${id}`);

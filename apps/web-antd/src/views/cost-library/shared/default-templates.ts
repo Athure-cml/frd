@@ -4,6 +4,8 @@ import type {
   CostTableTemplateLayout,
 } from '#/api/cost';
 
+import { ROAD_REMARK_FIELD } from './field-catalog/road';
+
 export const BUILTIN_TEMPLATE_ID = 1;
 
 const ROAD_YARD_STORAGE = 'cf_road_yard_storage';
@@ -46,6 +48,11 @@ const ROAD_DEFAULT_LAYOUT: CostTableTemplateLayout = {
       field: ROAD_EFF,
       title: 'EFFECTIVE TIME',
     },
+    {
+      dataType: 'text',
+      field: ROAD_REMARK_FIELD,
+      title: 'REMARK',
+    },
   ],
   fieldOrder: [
     'zipCode',
@@ -73,6 +80,7 @@ const ROAD_DEFAULT_LAYOUT: CostTableTemplateLayout = {
     'nsLift',
     'otherFee',
     'remark',
+    ROAD_REMARK_FIELD,
     ROAD_EFF,
     'validDate',
     'logYardNameAddress',
@@ -97,7 +105,8 @@ const ROAD_DEFAULT_LAYOUT: CostTableTemplateLayout = {
     por: { required: true, title: 'POR' },
     prepull: { title: 'PREPULL' },
     redelivery: { title: 'REDELIVERY' },
-    remark: { title: 'REMARK' },
+    remark: { title: '操作备注' },
+    [ROAD_REMARK_FIELD]: { title: 'REMARK' },
     split: { title: 'SPLIT' },
     state: { required: true, title: 'STATE' },
     stopOff: { title: 'STOP OFF' },

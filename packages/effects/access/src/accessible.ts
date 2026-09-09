@@ -157,6 +157,13 @@ async function generateRoutes(
 }
 
 /**
+ * mixed 模式下，仅合并后端已下发的菜单路由；前端额外路由只允许 hideInMenu 的补全项（如编辑页）。
+ */
+function isSupplementalFrontendRoute(route: RouteRecordRaw) {
+  return !!route.meta?.hideInMenu;
+}
+
+/**
  * 根据 name 合并前后端路由
  * @param baseRoutes 后端路由
  * @param extraRoutes 前端路由
@@ -203,7 +210,7 @@ function mergeRoutesByName(
       }
 
       Object.assign(existing, merged);
-    } else {
+    } else if (isSupplementalFrontendRoute(route)) {
       const clone = { ...route } as RouteRecordRaw;
       result.push(clone);
       if (clone.name && isString(clone.name)) {

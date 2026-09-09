@@ -14,6 +14,7 @@ import { Alert, Button, message, Popconfirm } from 'ant-design-vue';
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { getUsStateList } from '#/api/master-data/us-state';
 import {
+  batchDeleteUsStateZip,
   deleteUsStateZip,
   downloadUsStateZipExport,
   exportUsStateZip,
@@ -31,6 +32,7 @@ import {
   buildCheckboxColumn,
   buildSeqColumn,
 } from '../../system/shared/columns';
+import { useMasterDataBatchDelete } from '../shared/use-batch-delete';
 import { useUsStateZipSearchSchema } from './data';
 import Form from './modules/form.vue';
 
@@ -187,6 +189,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     toolbarConfig: { custom: true, refresh: true, search: true, zoom: true },
   } as VxeTableGridOptions<UsStateZipApi.Row>,
 });
+
+const { onBatchDelete } = useMasterDataBatchDelete({
+  batchDelete: batchDeleteUsStateZip,
+  gridApi,
+});
 </script>
 
 <template>
@@ -239,6 +246,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
         <Button v-if="canManage" class="mr-2" @click="importModalRef?.open()">
           <ArrowUpToLine class="size-4" />
           {{ t('import') }}
+        </Button>
+        <Button v-if="canManage" class="mr-2" danger @click="onBatchDelete">
+          {{ $t('page.masterData.actions.batchDelete') }}
         </Button>
         <Button :loading="exporting" @click="onExport">
           <Download class="size-4" />

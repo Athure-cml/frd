@@ -26,7 +26,6 @@ import {
 } from 'ant-design-vue';
 
 import {
-  copyQuote,
   createQuoteFollowUp,
   deleteQuoteFollowUp,
   followQuote,
@@ -41,6 +40,7 @@ import { $t } from '#/locales';
 
 import { statusTagOptions } from '../list/data';
 import CostSourceTables from '../shared/cost-source-tables.vue';
+import { stashQuoteCopySource } from '../shared/quote-copy';
 import { QUOTE_SHEET_COLUMNS, sheetCellValue } from '../shared/sheet-columns';
 
 import '../shared/quote.css';
@@ -101,6 +101,7 @@ const ROUTE_SHEET_FIELDS: Array<keyof QuoteApi.QuoteSheetFields> = [
   'zipCode',
   'city',
   'state',
+  'pickUpAddress',
   'por',
   'pol',
   'pod',
@@ -108,24 +109,33 @@ const ROUTE_SHEET_FIELDS: Array<keyof QuoteApi.QuoteSheetFields> = [
 ];
 
 const FEE_SHEET_FIELDS: Array<keyof QuoteApi.QuoteSheetFields> = [
-  'ofUsd',
-  'truckingNonOakUsd',
-  'truckingOakUsd',
+  'oceanFreight',
+  'truckingFee',
+  'nsLift',
+  'chassis',
+  'waiting',
+  'redeliveryFee',
+  'truckRemark',
   'fmNonOak',
   'fmOak',
   'docUsd',
-  'cargoMaxWeightTon',
+  'cargoInsurancePremium',
+  'cargoAgentFee',
   'sheetRemark',
 ];
 
 const AMOUNT_FIELDS = new Set<keyof QuoteApi.QuoteSheetFields>([
-  'cargoMaxWeightTon',
+  'cargoAgentFee',
+  'cargoInsurancePremium',
+  'chassis',
   'docUsd',
   'fmNonOak',
   'fmOak',
-  'ofUsd',
-  'truckingNonOakUsd',
-  'truckingOakUsd',
+  'nsLift',
+  'oceanFreight',
+  'redeliveryFee',
+  'truckingFee',
+  'waiting',
 ]);
 
 const operationLogColumns = [
@@ -278,10 +288,9 @@ async function onVoid() {
   });
 }
 
-async function onCopy() {
-  const copied = await copyQuote(quoteId.value);
-  message.success($t('page.quote.message.copySuccess'));
-  router.push({ name: 'QuoteEdit', params: { id: copied.id } });
+function onCopy() {
+  stashQuoteCopySource(quoteId.value);
+  router.push({ name: 'QuoteCreate' });
 }
 
 function onEdit() {

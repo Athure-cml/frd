@@ -43,7 +43,10 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'QuoteDetail',
         path: '/quotes/:id',
-        component: () => import('#/views/quote/detail/index.vue'),
+        redirect: (to) => ({
+          name: 'QuoteEdit',
+          params: { id: to.params.id },
+        }),
         meta: {
           hideInMenu: true,
           title: $t('page.quote.viewTitle'),

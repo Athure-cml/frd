@@ -21,6 +21,8 @@
     "deleteConfirm": "确定删除 {0} 吗？",
     "deleting": "正在删除 {0} ...",
     "deleteSuccess": "{0} 删除成功",
+    "createSuccess": "{0} 创建成功",
+    "updateSuccess": "{0} 保存成功",
     "operationSuccess": "操作成功",
     "operationFailed": "操作失败"
   },
@@ -135,8 +137,10 @@
     "notifications": "通知",
     "markAllAsRead": "全部标记为已读",
     "clearNotifications": "清空",
-    "checkUpdatesTitle": "新版本可用",
-    "checkUpdatesDescription": "点击刷新以获取最新版本",
+    "checkUpdatesTitle": "系统已更新",
+    "checkUpdatesDescription": "当前页面版本较旧，继续使用可能导致部分功能异常。请点击刷新加载最新版本。",
+    "announcementTitle": "功能更新通知",
+    "announcementConfirm": "我知道了",
     "search": {
       "title": "搜索",
       "searchNavigate": "搜索导航菜单",

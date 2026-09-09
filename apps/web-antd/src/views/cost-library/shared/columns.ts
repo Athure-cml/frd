@@ -19,7 +19,7 @@ export function buildCostCheckboxColumn() {
   };
 }
 
-/** 状态标签「生效中 / 已过期」内容宽度 */
+/** 状态标签「未生效 / 生效中 / 已过期」内容宽度 */
 const COST_STATUS_COL_WIDTH = 76;
 /** 操作「修改 / 复制 / 删除」 */
 const COST_OPERATION_COL_WIDTH_DEFAULT = 148;

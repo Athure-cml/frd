@@ -20,6 +20,7 @@ import {
   deleteQuote,
   exportQuotes,
   getQuoteList,
+  sendQuote,
   voidQuote,
 } from '#/api/quote';
 import { $t } from '#/locales';
@@ -43,15 +44,20 @@ const canCreate = hasAccessByCodes(['quote:create']);
 const canEdit = hasAccessByCodes(['quote:edit']);
 const canDelete = hasAccessByCodes(['quote:delete']);
 const canVoid = hasAccessByCodes(['quote:approve']);
+const canApprove = hasAccessByCodes(['quote:approve']);
 const canExport = hasAccessByCodes(['quote:export']);
 const exporting = ref(false);
+
+function canOperateRow(row: QuoteApi.QuoteListItem) {
+  return row.operable === true;
+}
 
 async function onCreate() {
   await router.push({ name: 'QuoteCreate' });
 }
 
 function onView(row: QuoteApi.QuoteListItem) {
-  router.push({ name: 'QuoteDetail', params: { id: row.id } });
+  router.push({ name: 'QuoteEdit', params: { id: row.id } });
 }
 
 function onEdit(row: QuoteApi.QuoteListItem) {
@@ -87,6 +93,18 @@ function onVoid(row: QuoteApi.QuoteListItem) {
   });
 }
 
+function onSend(row: QuoteApi.QuoteListItem) {
+  Modal.confirm({
+    title: $t('page.quote.actions.send'),
+    content: $t('page.quote.confirm.send', [row.quoteNo]),
+    onOk: async () => {
+      await sendQuote(row.id);
+      message.success($t('page.quote.message.sendSuccess'));
+      gridApi.query();
+    },
+  });
+}
+
 function onActionClick({
   code,
   row,
@@ -101,6 +119,10 @@ function onActionClick({
   }
   if (code === 'void') {
     onVoid(row);
+    return;
+  }
+  if (code === 'send') {
+    onSend(row);
     return;
   }
   if (code === 'delete') {
@@ -146,7 +168,14 @@ const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
     id: 'quote-list',
-    columns: useQuoteColumns(onActionClick, canEdit, canDelete, canVoid),
+    columns: useQuoteColumns(
+      onActionClick,
+      canEdit,
+      canDelete,
+      canVoid,
+      canApprove,
+      canOperateRow,
+    ),
     height: 'auto',
     pagerConfig: {},
     proxyConfig: {

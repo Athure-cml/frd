@@ -45,8 +45,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
     columns: buildCostSnapshotColumns(mode.value),
     data: tableData.value,
-    maxHeight: 320,
-    minHeight: 120,
+    height: 'auto',
     pagerConfig: {
       enabled: false,
     },
@@ -93,7 +92,13 @@ watch(
 </template>
 
 <style scoped>
-.quote-cost-snapshot-grid {
-  min-height: 120px;
+/* 覆盖成本库列表 min-height:360px，快照仅 1 行时按内容撑开 */
+:deep(.vxe-grid.cost-library-grid.quote-cost-snapshot-grid) {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+:deep(.quote-cost-snapshot-grid .vxe-table--body-wrapper) {
+  min-height: 0 !important;
 }
 </style>

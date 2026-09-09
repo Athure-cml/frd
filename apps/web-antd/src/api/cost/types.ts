@@ -1,6 +1,15 @@
 export type CostMode = 'fumigation' | 'road' | 'sea';
 
-export type CostStatus = 'active' | 'expired';
+export type CostStatus = 'active' | 'expired' | 'pending';
+
+export interface CostHighlightView {
+  color: string;
+  deptCount?: number;
+  deptName?: string;
+  remark?: string;
+  /** 当前用户所在部门是否已标记该行 */
+  viewerDeptMarked?: boolean;
+}
 
 export interface PageResult<T> {
   items: T[];
@@ -20,6 +29,11 @@ export interface CostBatchUpdatePayload {
   ids: number[];
 }
 
+export interface CostBatchCopyResult<T> {
+  created: number;
+  items: T[];
+}
+
 export interface FreightCostRecord {
   agent?: string;
   allIn?: number;
@@ -35,6 +49,7 @@ export interface FreightCostRecord {
   freightValidDate?: string;
   gri?: number;
   griValidDate?: string;
+  highlight?: CostHighlightView | null;
   id: number;
   others?: number;
   othersValidDate?: string;
@@ -81,6 +96,7 @@ export interface RoadCostRecord {
   city: string;
   extraFields?: Record<string, unknown>;
   fsc?: number;
+  highlight?: CostHighlightView | null;
   id: number;
   logYardNameAddress?: string;
   otherFee?: number;
@@ -107,6 +123,7 @@ export type RoadCostSave = Omit<RoadCostRecord, 'id' | 'updatedAt'>;
 export interface FumigationCostRecord {
   address?: string;
   extraFields?: Record<string, unknown>;
+  highlight?: CostHighlightView | null;
   id: number;
   indoorNonOak?: number;
   indoorOak?: number;

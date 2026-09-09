@@ -378,6 +378,10 @@ async function importFn(file: File, options?: { dryRun?: boolean }) {
     />
     <Grid class="customer-grid" :form-options="searchFormOptions">
       <template #toolbar-tools>
+        <Button v-if="canCreate" class="mr-2" type="primary" @click="onCreate">
+          <Plus class="size-4" />
+          {{ $t('page.supplier.actions.create') }}
+        </Button>
         <Button
           v-if="canEdit && supportsTypes(category)"
           class="mr-2"
@@ -400,10 +404,6 @@ async function importFn(file: File, options?: { dryRun?: boolean }) {
         </Button>
         <Button v-if="canDelete" class="mr-2" danger @click="onBatchDelete">
           {{ $t('page.supplier.actions.batchDelete') }}
-        </Button>
-        <Button v-if="canCreate" type="primary" @click="onCreate">
-          <Plus class="size-4" />
-          {{ $t('page.supplier.actions.create') }}
         </Button>
       </template>
       <template v-if="canViewInternalCodes" #code="{ row }">

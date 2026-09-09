@@ -13,16 +13,23 @@ import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { getCostApi } from '#/api/cost';
 import { $t } from '#/locales';
 
-import { useFumigationSearchSchema } from '../../cost-library/fumigation/data';
-import { useRoadSearchSchema } from '../../cost-library/road/data';
-import { useSeaSearchSchema } from '../../cost-library/sea/data';
+import { createTemplateColumnBgStyleHandlers } from '../../cost-library/shared/column-bg-style';
+import { adaptCostColumnsForViewport } from '../../cost-library/shared/columns';
+import {
+  getCostGridClass,
+  getCostSearchSchema,
+} from '../../cost-library/shared/cost-search-schema';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import {
   buildQuoteCostPickerColumns,
   quoteCostTypeToMode,
 } from './cost-picker-columns';
-import { getInitialSearchValues } from './sheet-cost-import';
+import {
+  getInitialSearchValues,
+  isActiveCostRecord,
+} from './sheet-cost-import';
 
+import '../../cost-library/shared/cost-library.css';
 import './quote.css';
 
 const emit = defineEmits<{
@@ -37,6 +44,8 @@ const pendingOpen = ref<null | {
   type: QuoteCostType;
 }>(null);
 
+const pickerMode = computed(() => quoteCostTypeToMode(costType.value));
+
 const modalTitle = computed(() => {
   const titleMap: Record<QuoteCostType, string> = {
     ROAD: $t('page.quote.actions.importCostRoad'),
@@ -46,23 +55,23 @@ const modalTitle = computed(() => {
   return titleMap[costType.value];
 });
 
-function resolveSearchSchema() {
-  const mode = quoteCostTypeToMode(costType.value);
-  if (mode === 'road') {
-    return useRoadSearchSchema();
-  }
-  if (mode === 'fumigation') {
-    return useFumigationSearchSchema();
-  }
-  return useSeaSearchSchema();
-}
-
 const searchFormOptions = useI18nFormOptions(() => ({
   collapsed: true,
-  schema: resolveSearchSchema(),
+  collapsedRows: 1,
+  schema: getCostSearchSchema(pickerMode.value),
   showCollapseButton: true,
   submitOnChange: false,
 }));
+
+const pickerGridClass = computed(
+  () => `quote-cost-picker-grid ${getCostGridClass(pickerMode.value)}`,
+);
+
+function resolvePickerColumns() {
+  return adaptCostColumnsForViewport(
+    buildQuoteCostPickerColumns(pickerMode.value),
+  );
+}
 
 const [Modal, modalApi] = useVbenModal({
   class: 'quote-cost-picker-modal w-[96vw] max-w-[1600px]',
@@ -83,7 +92,7 @@ const [Modal, modalApi] = useVbenModal({
 const [Grid, gridApi] = useVbenVxeGrid({
   class: 'min-h-0 flex-1',
   formOptions: searchFormOptions.value,
-  gridClass: 'quote-cost-picker-grid',
+  gridClass: pickerGridClass.value,
   gridEvents: {
     cellClick: ({ row }: { row: CostLibraryRecord }) => {
       selectedRow.value = row;
@@ -96,27 +105,31 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
   },
   gridOptions: {
-    columns: buildQuoteCostPickerColumns('road'),
+    columns: resolvePickerColumns(),
     height: '100%',
     minHeight: 480,
     pagerConfig: {},
     proxyConfig: {
       ajax: {
-        query: async ({ page }, formValues) => {
-          const api = getCostApi(quoteCostTypeToMode(costType.value));
+        query: async ({ page, sort }, formValues) => {
+          const api = getCostApi(pickerMode.value);
           return api.list({
             page: page.currentPage,
             pageSize: page.pageSize,
+            sortField: sort.field,
+            sortOrder: sort.order,
             ...formValues,
           });
         },
       },
+      sort: true,
     },
     radioConfig: {
       highlight: true,
       trigger: 'row',
     },
     rowConfig: {
+      isHover: true,
       keyField: 'id',
     },
     scrollX: {
@@ -126,10 +139,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
       enabled: true,
       gt: 0,
     },
+    sortConfig: {
+      remote: true,
+      trigger: 'default',
+    },
     toolbarConfig: {
       refresh: true,
       search: true,
     },
+    ...createTemplateColumnBgStyleHandlers(),
   },
 });
 
@@ -152,6 +170,15 @@ async function confirmPick(row?: CostLibraryRecord | null) {
   const picked = row ?? resolveSelectedRow();
   if (!picked) {
     message.warning($t('page.quote.costPicker.selectOne'));
+    return false;
+  }
+  if (
+    !isActiveCostRecord(
+      costType.value,
+      picked as unknown as Record<string, unknown>,
+    )
+  ) {
+    message.error($t('page.quote.message.costExpired'));
     return false;
   }
   selectedRow.value = picked;
@@ -188,12 +215,29 @@ async function applyOpenSearch() {
   const { keys, type } = pending;
   costType.value = type;
   matchKeys.value = keys;
+  const mode = quoteCostTypeToMode(type);
 
+  await nextTick();
+
+  gridApi.setState({
+    formOptions: {
+      collapsed: true,
+      collapsedRows: 1,
+      schema: getCostSearchSchema(mode),
+      showCollapseButton: true,
+      submitOnChange: false,
+      wrapperClass: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
+    },
+    gridClass: `quote-cost-picker-grid ${getCostGridClass(mode)}`,
+  });
   gridApi.setGridOptions({
-    columns: buildQuoteCostPickerColumns(quoteCostTypeToMode(type)),
+    columns: adaptCostColumnsForViewport(buildQuoteCostPickerColumns(mode)),
   });
 
-  const initialValues = getInitialSearchValues(type, keys);
+  const initialValues = {
+    ...getInitialSearchValues(type, keys),
+    status: 'active',
+  };
   await gridApi.formApi?.resetForm?.();
   await gridApi.formApi?.setValues?.(initialValues);
   gridApi.formApi?.setLatestSubmissionValues?.(initialValues);

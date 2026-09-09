@@ -22,9 +22,11 @@ export const overridesPreferences = defineOverridesPreferences({
     name: appTitle,
     defaultHomePath: '/analytics',
     layout: 'sidebar-mixed-nav',
-    // mixed：后端 /menu/all 控制菜单；纯 frontend 会丢失权限菜单
+    // mixed：菜单由后端 /menu/all 按权限码过滤；前端仅补 hideInMenu 的隐藏路由
     accessMode: 'mixed',
-    enableCheckUpdates: false,
+    enableCheckUpdates: true,
+    checkUpdatesInterval: 3,
+    // 强制开启更新检测，避免被本地偏好缓存关闭
   },
   breadcrumb: {
     styleType: 'background',

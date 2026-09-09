@@ -1,3 +1,5 @@
+import type { TableColumnsType } from 'ant-design-vue';
+
 import type { FieldCatalogEntry } from './field-catalog';
 
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
@@ -46,6 +48,7 @@ import {
 export interface BuildColumnsOptions<T extends { id: number }> {
   canEdit: boolean;
   enableRenew?: boolean;
+  includeCheckbox?: boolean;
   includeOperation?: boolean;
   mode: CostMode;
   nameField: string;
@@ -471,6 +474,7 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
   const {
     canEdit,
     enableRenew = false,
+    includeCheckbox = true,
     includeOperation = true,
     mode,
     nameField,
@@ -483,6 +487,7 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
   if (mode === 'fumigation') {
     return buildFumigationColumnsFromLayout(template.layout, {
       canEdit,
+      includeCheckbox,
       includeOperation,
       nameField: 'region',
       nameTitle: $t('page.costLibrary.fumigationFields.region'),
@@ -509,7 +514,7 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
   );
 
   const columns = [
-    buildCostCheckboxColumn(),
+    ...(includeCheckbox ? [buildCostCheckboxColumn()] : []),
     {
       fixed: 'left' as const,
       title: '#',
@@ -521,6 +526,10 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
 
   appendCostStatusColumn(columns);
 
+  if (!includeOperation) {
+    return columns;
+  }
+
   return appendCostOperationColumn(
     columns,
     canEdit,
@@ -529,4 +538,116 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
     nameTitle,
     { enableRenew: enableRenew || mode === 'road' },
   );
+}
+
+function readPreviewCellValue(record: Record<string, unknown>, field: string) {
+  if (isCustomFieldKey(field)) {
+    const extra = record.extraFields as Record<string, unknown> | undefined;
+    return extra?.[field];
+  }
+  return record[field];
+}
+
+export function formatPreviewCellValue(
+  mode: CostMode,
+  field: string,
+  entry: FieldCatalogEntry | undefined,
+  title: string,
+  record: Record<string, unknown>,
+): string {
+  const cellValue = readPreviewCellValue(record, field);
+  if (cellValue === null || cellValue === undefined || cellValue === '') {
+    return '—';
+  }
+  if (entry?.format === 'tag') {
+    return String(cellValue);
+  }
+  const unitField = resolveRoadFeeUnitField(field);
+  if (entry?.format === 'amount') {
+    const amount = coerceAmountValue(cellValue);
+    if (amount === null) {
+      return String(cellValue);
+    }
+    return formatAmountWithUnit(
+      formatAmount(amount),
+      readRowUnit(
+        record as { extraFields?: Record<string, unknown> },
+        unitField,
+      ),
+    );
+  }
+  if (entry?.format === 'percent') {
+    return formatPercent(Number(cellValue));
+  }
+  if (entry?.format === 'price') {
+    return formatPrice(Number(cellValue));
+  }
+  if (
+    entry?.format === 'dateMd' ||
+    entry?.format === 'dateMmDd' ||
+    isTableDateField(mode, field, { title })
+  ) {
+    return formatListDate(
+      mode,
+      entry?.format ?? listDateFormat(mode),
+      typeof cellValue === 'string' || typeof cellValue === 'number'
+        ? cellValue
+        : String(cellValue),
+    );
+  }
+  if (unitField) {
+    const amount = coerceAmountValue(cellValue);
+    if (amount !== null) {
+      return formatAmountWithUnit(
+        formatAmount(amount),
+        readRowUnit(
+          record as { extraFields?: Record<string, unknown> },
+          unitField,
+        ),
+      );
+    }
+  }
+  return String(cellValue);
+}
+
+/** 批量复制预览：列与当前视图模板表头一致（不含序号/操作） */
+export function buildPreviewAntColumns(
+  mode: CostMode,
+  template?: CostTableTemplate,
+): TableColumnsType {
+  const resolvedTemplate = template ?? getDefaultTemplate(mode);
+  const layout =
+    mode === 'road'
+      ? ensureRoadFeeUnitFields(resolvedTemplate.layout)
+      : resolvedTemplate.layout;
+  const catalogMap = buildCatalogMap(mode, layout);
+  const fieldOrder = resolveLayoutFieldOrder(mode, layout).filter(
+    (field) =>
+      isFieldVisibleInLayout(layout, field) &&
+      !(mode === 'road' && isRoadFeeUnitField(field)),
+  );
+
+  const columns: TableColumnsType = fieldOrder.map((field) => {
+    const entry = catalogMap.get(field);
+    const title = resolveFieldTitle(mode, field, layout);
+    const size = resolveCompactColumnSize(title, entry ?? { field }, {});
+    return {
+      ellipsis: true,
+      key: field,
+      title,
+      width: size.width ?? size.minWidth ?? 100,
+      customRender: ({ record }: { record: Record<string, unknown> }) =>
+        formatPreviewCellValue(mode, field, entry, title, record),
+    };
+  });
+
+  columns.push({
+    key: 'status',
+    title: $t('page.costLibrary.fields.status'),
+    width: 88,
+    customRender: ({ record }: { record: Record<string, unknown> }) =>
+      String(record.status ?? '—'),
+  });
+
+  return columns;
 }

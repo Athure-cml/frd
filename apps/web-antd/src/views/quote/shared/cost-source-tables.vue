@@ -44,13 +44,7 @@ const sections = computed(() =>
         <span class="quote-cost-source__title">{{
           tabLabel(section.type)
         }}</span>
-        <template v-if="section.match">
-          <Tag>ID {{ section.match.costRefId }}</Tag>
-          <Tag v-if="section.match.costVersion" color="blue">
-            {{ section.match.costVersion }}
-          </Tag>
-        </template>
-        <Tag v-else color="default">
+        <Tag v-if="!section.match" color="default">
           {{ $t('page.quote.message.noCostSnapshot') }}
         </Tag>
       </div>

@@ -7,7 +7,7 @@ import { ROAD_FIELD_CATALOG } from './road';
 import { SEA_FIELD_CATALOG } from './sea';
 
 export { FUMIGATION_FIELD_CATALOG } from './fumigation';
-export { ROAD_FIELD_CATALOG } from './road';
+export { ROAD_FIELD_CATALOG, ROAD_REMARK_FIELD } from './road';
 export { SEA_FIELD_CATALOG } from './sea';
 export type { FieldCatalogEntry, FieldFormat } from './types';
 

@@ -2,13 +2,17 @@ import type { VbenFormSchema } from '#/adapter/form';
 
 import { $t } from '#/locales';
 
-/** 成本库列表通用「状态」筛选（按有效期推算：生效中 / 已过期） */
+/** 成本库列表通用「状态」筛选（按生效期+有效期推算：未生效 / 生效中 / 已过期） */
 export function createCostStatusSearchField(): VbenFormSchema {
   return {
     component: 'Select',
     componentProps: {
       allowClear: true,
       options: [
+        {
+          label: $t('page.costLibrary.status.pending'),
+          value: 'pending',
+        },
         {
           label: $t('page.costLibrary.status.active'),
           value: 'active',

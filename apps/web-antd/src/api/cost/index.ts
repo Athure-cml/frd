@@ -8,6 +8,7 @@ import * as roadApi from './road';
 
 export { seaCostApi } from './freight';
 export { fumigationCostApi } from './fumigation';
+export * from './highlight';
 export * from './road';
 export * from './templates';
 export * from './types';
@@ -23,6 +24,7 @@ export const costApiMap = {
     export: roadApi.exportRoadCost,
     importExcel: roadApi.importRoadCost,
     list: roadApi.getRoadCostList,
+    listIds: roadApi.listRoadCostIds,
     update: roadApi.updateRoadCost,
   },
   sea: seaCostApi,

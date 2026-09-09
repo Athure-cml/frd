@@ -18,6 +18,7 @@ import { lookupQuoteZip } from '#/api/quote';
 import { getSupplierList } from '#/api/supplier';
 import { $t } from '#/locales';
 
+import { ROAD_REMARK_FIELD } from '../shared/field-catalog/road';
 import {
   feeValuesFromForm,
   FormulaEvalError,
@@ -427,7 +428,7 @@ export function useRoadFormSchema(): VbenFormSchema[] {
       componentProps: { maxlength: 512, rows: 2, showCount: true },
       fieldName: 'remark',
       formItemClass: 'col-span-full',
-      label: t('remark'),
+      label: t('operationRemark'),
     },
     {
       component: 'DatePicker',
@@ -445,6 +446,7 @@ export function useRoadFormSchema(): VbenFormSchema[] {
 }
 
 export function useRoadBatchSchema(): VbenFormSchema[] {
+  // 字段顺序与默认表头 fieldOrder 一致（仅含可批量修改项）
   return [
     {
       component: 'InputNumber',
@@ -457,11 +459,110 @@ export function useRoadBatchSchema(): VbenFormSchema[] {
       fieldName: 'fsc',
       label: t('fsc'),
     },
+    amountField('chassis', 'chassis'),
+    amountField('triTandemAxle', 'triTandemAxle'),
+    amountField('split', 'split'),
+    amountField('stopOff', 'stopOff'),
+    amountField('waitingFee', 'waitingFee'),
+    amountField('redelivery', 'redelivery'),
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'cf_road_yard_storage',
+      label: t('yardStorage'),
+    },
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'cf_road_extra_chassis',
+      label: t('extraChassis'),
+    },
+    amountField('prepull', 'prepull'),
+    amountField('otherFee', 'otherFee'),
+    {
+      component: 'Textarea',
+      componentProps: { maxlength: 512, rows: 2, showCount: true },
+      fieldName: 'remark',
+      formItemClass: 'col-span-full',
+      label: t('operationRemark'),
+    },
+    {
+      component: 'Textarea',
+      componentProps: { maxlength: 512, rows: 2, showCount: true },
+      fieldName: ROAD_REMARK_FIELD,
+      formItemClass: 'col-span-full',
+      label: t('remark'),
+    },
     {
       component: 'DatePicker',
       componentProps: datePickerProps(),
       fieldName: 'validDate',
       label: t('validDate'),
+    },
+  ];
+}
+
+/** 批量复制：费用 / 时间 / 备注相关字段（与表头可覆盖项一致） */
+export function useRoadBatchCopySchema(): VbenFormSchema[] {
+  return [
+    amountField('baseFreight', 'baseFreight'),
+    {
+      component: 'InputNumber',
+      componentProps: {
+        addonAfter: '%',
+        class: 'w-full',
+        min: 0,
+        precision: 2,
+      },
+      fieldName: 'fsc',
+      label: t('fsc'),
+    },
+    amountField('chassis', 'chassis'),
+    amountField('triTandemAxle', 'triTandemAxle'),
+    amountField('split', 'split'),
+    amountField('stopOff', 'stopOff'),
+    amountField('waitingFee', 'waitingFee'),
+    amountField('redelivery', 'redelivery'),
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'cf_road_yard_storage',
+      label: t('yardStorage'),
+    },
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'cf_road_extra_chassis',
+      label: t('extraChassis'),
+    },
+    amountField('prepull', 'prepull'),
+    amountField('nsLift', 'nsLift'),
+    amountField('otherFee', 'otherFee'),
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'cf_road_eff',
+      label: 'EFFECTIVE TIME',
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'validDate',
+      label: t('validDate'),
+    },
+    {
+      component: 'Textarea',
+      componentProps: { maxlength: 512, rows: 2, showCount: true },
+      fieldName: 'remark',
+      formItemClass: 'col-span-full',
+      label: t('operationRemark'),
+    },
+    {
+      component: 'Textarea',
+      componentProps: { maxlength: 512, rows: 2, showCount: true },
+      fieldName: ROAD_REMARK_FIELD,
+      formItemClass: 'col-span-full',
+      label: t('remark'),
     },
   ];
 }

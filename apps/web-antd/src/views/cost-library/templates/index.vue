@@ -36,6 +36,7 @@ import {
   templateEditPermissionForMode,
   templatePageDesc,
   templatePageTitle,
+  templateViewPermissionForMode,
   useTemplateColumns,
 } from './data';
 
@@ -73,6 +74,20 @@ function syncActiveTemplateId(templates: CostTableTemplate[]) {
 
 const canEdit = computed(() =>
   hasAccessByCodes([templateEditPermissionForMode(activeMode.value)]),
+);
+
+const canView = computed(() =>
+  hasAccessByCodes([templateViewPermissionForMode(activeMode.value)]),
+);
+
+watch(
+  canView,
+  (allowed) => {
+    if (!allowed) {
+      router.replace({ name: 'FallbackForbidden' });
+    }
+  },
+  { immediate: true },
 );
 
 const canDelete = computed(() =>

@@ -6,7 +6,11 @@ import type {
   OnActionClickParams,
   VxeTableGridOptions,
 } from '#/adapter/vxe-table';
-import type { CostMode, CostTableTemplate } from '#/api/cost';
+import type {
+  CostHighlightView,
+  CostMode,
+  CostTableTemplate,
+} from '#/api/cost';
 import type {
   AiCostPrefillMode,
   AiCostPrefillPayload,
@@ -29,10 +33,14 @@ import { Page, useVbenDrawer } from '@vben/common-ui';
 import { ArrowUpToLine, Download, Plus, Settings } from '@vben/icons';
 import { usePreferences } from '@vben/preferences';
 
-import { Button, message, Modal, Tag } from 'ant-design-vue';
+import { Button, Dropdown, Menu, message, Modal, Tag } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { downloadCostExport, getCostApi } from '#/api/cost';
+import {
+  downloadCostExport,
+  getCostApi,
+  unmarkCostHighlight,
+} from '#/api/cost';
 import {
   aiPrefillEventName,
   consumeAiCostPrefill,
@@ -45,6 +53,8 @@ import { createTemplateColumnBgStyleHandlers } from '../shared/column-bg-style';
 import { adaptCostColumnsForViewport } from '../shared/columns';
 import { getDefaultTemplate } from '../shared/default-templates';
 import { toCopyDrawerData, toRenewDrawerData } from '../shared/drawer-data';
+import { createHighlightOnlySearchField } from '../shared/highlight-only-search';
+import { createCostRowHighlightStyleHandlers } from '../shared/row-highlight-style';
 import {
   getGridStorageId,
   getTemplateLayoutSignature,
@@ -55,6 +65,7 @@ import {
 } from '../shared/use-table-templates';
 import BatchCopyModal from './batch-copy-modal.vue';
 import BatchEditModal from './batch-edit-modal.vue';
+import HighlightColorModal from './highlight-color-modal.vue';
 import ImportModal from './import-modal.vue';
 
 import '../shared/cost-library.css';
@@ -103,7 +114,16 @@ let appliedLayoutSignature = '';
 const importModalRef = ref<InstanceType<typeof ImportModal>>();
 const batchModalRef = ref<InstanceType<typeof BatchEditModal>>();
 const batchCopyModalRef = ref<InstanceType<typeof BatchCopyModal>>();
+const highlightModalRef = ref<InstanceType<typeof HighlightColorModal>>();
 const selectedCount = ref(0);
+const selectedIds = ref<number[]>([]);
+/** 勾选行中本部门已标记的 ID（用于控制「取消常用」可见性） */
+const selectedViewerMarkedIds = ref<number[]>([]);
+const selectingAllPages = ref(false);
+const crossPageSelectActive = ref(false);
+const searchResultTotal = ref(0);
+const lastSearchKey = ref('');
+const lastSort = ref<{ field?: string; order?: string }>({});
 const exporting = ref(false);
 const templates = ref<CostTableTemplate[]>([getDefaultTemplate(props.mode)]);
 const activeTemplateId = ref(getDefaultTemplate(props.mode).id);
@@ -231,6 +251,7 @@ onMounted(() => {
   refreshTemplates();
   applyAiCostPrefill(consumeAiCostPrefill(props.mode as AiCostPrefillMode));
   window.addEventListener(aiPrefillEventName(props.mode), onAiCostPrefillEvent);
+  void nextTick(() => patchSearchFormReset());
 });
 
 onActivated(() => {
@@ -239,6 +260,7 @@ onActivated(() => {
   appliedLayoutSignature = '';
   refreshTemplates();
   applyAiCostPrefill(consumeAiCostPrefill(props.mode as AiCostPrefillMode));
+  void nextTick(() => patchSearchFormReset());
 });
 
 onDeactivated(() => {
@@ -311,25 +333,239 @@ function onActionClick(params: OnActionClickParams<any>) {
 }
 
 function getSelectedIds() {
-  const current = gridApi.grid?.getCheckboxRecords?.() ?? [];
-  const reserved = gridApi.grid?.getCheckboxReserveRecords?.() ?? [];
-  const ids = new Set<number>();
-  for (const row of [...current, ...reserved] as Array<{ id?: number }>) {
-    if (typeof row?.id === 'number') {
-      ids.add(row.id);
+  return [...selectedIds.value];
+}
+
+const selectedIdSet = computed(() => new Set(selectedIds.value));
+
+type CostGridRow = {
+  highlight?: CostHighlightView | null;
+  id?: number;
+};
+
+function isViewerDeptMarked(row?: CostGridRow | null) {
+  return row?.highlight?.viewerDeptMarked === true;
+}
+
+function syncViewerMarkedIdsFromRows(rows: CostGridRow[]) {
+  const next = new Set(selectedViewerMarkedIds.value);
+  for (const row of rows) {
+    if (typeof row.id !== 'number' || !selectedIdSet.value.has(row.id)) {
+      continue;
+    }
+    if (isViewerDeptMarked(row)) {
+      next.add(row.id);
+    } else {
+      next.delete(row.id);
     }
   }
-  return [...ids];
+  selectedViewerMarkedIds.value = [...next];
+}
+
+function getCurrentPageRows(): CostGridRow[] {
+  const $grid = gridApi.grid as null | {
+    getTableData?: () => { tableData?: Array<{ id?: number }> };
+  };
+  return $grid?.getTableData?.()?.tableData ?? [];
+}
+
+let applyingSelection = false;
+/** 最近一次 query 返回的当前页行，供 dataRendered 回显勾选 */
+let lastPageItems: CostGridRow[] = [];
+
+async function applySelectionToRows(rows?: Array<{ id?: number }>) {
+  applyingSelection = true;
+  try {
+    await nextTick();
+    const $grid = gridApi.grid as null | {
+      clearCheckboxRow?: () => void;
+      setCheckboxRow?: (rows: Array<{ id?: number }>, checked: boolean) => void;
+    };
+    if (!$grid) {
+      return;
+    }
+    if (selectedIds.value.length === 0) {
+      $grid.clearCheckboxRow?.();
+      return;
+    }
+    const pageRows = rows?.length ? rows : getCurrentPageRows();
+    if (pageRows.length === 0) {
+      return;
+    }
+    const active = selectedIdSet.value;
+    const toUncheck = pageRows.filter(
+      (row) => typeof row.id === 'number' && !active.has(row.id),
+    );
+    const toCheck = pageRows.filter(
+      (row) => typeof row.id === 'number' && active.has(row.id),
+    );
+    if (toUncheck.length > 0) {
+      $grid.setCheckboxRow?.(toUncheck, false);
+    }
+    if (toCheck.length > 0) {
+      $grid.setCheckboxRow?.(toCheck, true);
+    }
+  } finally {
+    applyingSelection = false;
+  }
+}
+
+function updateSelectedIds(updater: (current: Set<number>) => void) {
+  const next = new Set(selectedIds.value);
+  updater(next);
+  selectedIds.value = [...next];
+  syncSelection();
 }
 
 function syncSelection() {
-  selectedCount.value = getSelectedIds().length;
+  selectedCount.value = selectedIds.value.length;
+  if (crossPageSelectActive.value && selectedCount.value === 0) {
+    crossPageSelectActive.value = false;
+  }
 }
 
 function clearSelection() {
+  selectedIds.value = [];
+  selectedViewerMarkedIds.value = [];
+  crossPageSelectActive.value = false;
   gridApi.grid?.clearCheckboxRow?.();
-  gridApi.grid?.clearCheckboxReserve?.();
   syncSelection();
+}
+
+function onSearchCriteriaChange() {
+  selectedIds.value = [];
+  selectedViewerMarkedIds.value = [];
+  crossPageSelectActive.value = false;
+  gridApi.grid?.clearCheckboxRow?.();
+  syncSelection();
+}
+
+function onCheckboxChange(params: { checked: boolean; row: CostGridRow }) {
+  if (applyingSelection) {
+    return;
+  }
+  const rowId = params.row?.id;
+  if (typeof rowId !== 'number') {
+    return;
+  }
+  updateSelectedIds((current) => {
+    if (params.checked) {
+      current.add(rowId);
+    } else {
+      current.delete(rowId);
+    }
+  });
+  const marked = new Set(selectedViewerMarkedIds.value);
+  if (params.checked && isViewerDeptMarked(params.row)) {
+    marked.add(rowId);
+  } else {
+    marked.delete(rowId);
+  }
+  selectedViewerMarkedIds.value = [...marked];
+}
+
+function onCheckboxAll(params: { checked: boolean }) {
+  if (applyingSelection) {
+    return;
+  }
+  const pageRows = getCurrentPageRows();
+  const pageIds = pageRows
+    .map((row) => row.id)
+    .filter((id): id is number => typeof id === 'number');
+  updateSelectedIds((current) => {
+    for (const id of pageIds) {
+      if (params.checked) {
+        current.add(id);
+      } else {
+        current.delete(id);
+      }
+    }
+  });
+  const marked = new Set(selectedViewerMarkedIds.value);
+  for (const row of pageRows) {
+    if (typeof row.id !== 'number') {
+      continue;
+    }
+    if (params.checked && isViewerDeptMarked(row)) {
+      marked.add(row.id);
+    } else if (!params.checked) {
+      marked.delete(row.id);
+    }
+  }
+  selectedViewerMarkedIds.value = [...marked];
+}
+
+type PatchedResetFn = (() => Promise<void>) & {
+  __costSelectionPatched?: boolean;
+};
+
+function patchSearchFormReset() {
+  const formApi = gridApi.formApi as
+    | undefined
+    | {
+        getState?: () => { handleReset?: PatchedResetFn };
+        setState?: (patch: { handleReset: PatchedResetFn }) => void;
+      };
+  if (!formApi?.getState || !formApi?.setState) {
+    return;
+  }
+  const original = formApi.getState()?.handleReset;
+  if (!original || original.__costSelectionPatched) {
+    return;
+  }
+  const patched: PatchedResetFn = async () => {
+    lastSearchKey.value = '';
+    onSearchCriteriaChange();
+    await original();
+  };
+  patched.__costSelectionPatched = true;
+  formApi.setState({ handleReset: patched });
+}
+
+async function onSelectAllAcrossPages() {
+  if (selectingAllPages.value) {
+    return;
+  }
+  const formValues = await gridApi.formApi?.getLatestSubmissionValues?.();
+  selectingAllPages.value = true;
+  const hideLoading = message.loading({
+    content: $t('page.costLibrary.hint.selectAllAcrossPagesLoading'),
+    duration: 0,
+    key: 'cost_select_all_msg',
+  });
+  try {
+    const ids = await api.listIds({
+      ...normalizeListParams(formValues),
+      sortField: lastSort.value.field,
+      sortOrder: lastSort.value.order,
+    });
+    if (ids.length === 0) {
+      message.warning({
+        content: $t('page.costLibrary.hint.selectAllAcrossPagesEmpty'),
+        key: 'cost_select_all_msg',
+      });
+      return;
+    }
+    selectedIds.value = ids;
+    crossPageSelectActive.value = true;
+    await applySelectionToRows(lastPageItems);
+    syncSelection();
+    message.success({
+      content: $t('page.costLibrary.hint.selectAllAcrossPagesSuccess', [
+        ids.length,
+      ]),
+      key: 'cost_select_all_msg',
+    });
+  } catch {
+    hideLoading();
+  } finally {
+    selectingAllPages.value = false;
+  }
+}
+
+function onBatchSuccess() {
+  clearSelection();
+  onRefresh();
 }
 
 function onBatchDelete() {
@@ -343,8 +579,7 @@ function onBatchDelete() {
     onOk: async () => {
       await api.batchDelete(ids);
       message.success($t('ui.actionMessage.operationSuccess'));
-      clearSelection();
-      gridApi.query();
+      onBatchSuccess();
     },
     title: $t('common.prompt'),
   });
@@ -366,6 +601,40 @@ function onBatchCopy() {
     return;
   }
   batchCopyModalRef.value?.open(ids);
+}
+
+function onMarkHighlight() {
+  const ids = getSelectedIds();
+  if (ids.length === 0) {
+    message.warning($t('page.costLibrary.hint.selectRows'));
+    return;
+  }
+  highlightModalRef.value?.open(ids);
+}
+
+function onUnmarkHighlight() {
+  const ids = [...selectedViewerMarkedIds.value];
+  if (ids.length === 0) {
+    message.warning($t('page.costLibrary.highlight.unmarkNone'));
+    return;
+  }
+  Modal.confirm({
+    content: $t('page.costLibrary.highlight.unmarkConfirm', [ids.length]),
+    onOk: async () => {
+      await unmarkCostHighlight(props.mode, ids);
+      message.success($t('page.costLibrary.highlight.unmarkSuccess'));
+      onBatchSuccess();
+    },
+    title: $t('common.prompt'),
+  });
+}
+
+function normalizeListParams(formValues?: Record<string, unknown>) {
+  const params = { ...formValues } as Record<string, unknown>;
+  if (params.highlightOnly !== true) {
+    delete params.highlightOnly;
+  }
+  return params;
 }
 
 async function onExport() {
@@ -398,18 +667,13 @@ function onImport() {
   importModalRef.value?.open();
 }
 
-function onBatchSuccess() {
-  clearSelection();
-  onRefresh();
-}
-
 const searchFormOptions = useI18nFormOptions(() => {
   void isMobile.value;
   return {
     // collapse search by default
     collapsed: true,
     collapsedRows: 1,
-    schema: props.searchSchema(),
+    schema: [...props.searchSchema(), createHighlightOnlySearchField()],
     showCollapseButton: true,
     submitOnChange: false,
   };
@@ -418,15 +682,18 @@ const searchFormOptions = useI18nFormOptions(() => {
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridEvents: {
-    checkboxAll: syncSelection,
-    checkboxChange: syncSelection,
+    checkboxAll: onCheckboxAll,
+    checkboxChange: onCheckboxChange,
+    dataRendered: () => {
+      syncViewerMarkedIdsFromRows(lastPageItems);
+      void applySelectionToRows(lastPageItems);
+      syncSelection();
+    },
   },
   gridOptions: {
     checkboxConfig: {
       highlight: true,
-      // cross-page reserve; header shows indeterminate when reserved
-      reserve: true,
-      showReserveStatus: true,
+      reserve: false,
     },
     columns: resolveColumns(),
     // 由 .cost-library-grid CSS 覆盖全局 height:auto，保证加载态可见
@@ -439,23 +706,33 @@ const [Grid, gridApi] = useVbenVxeGrid({
     pagerConfig: {},
     proxyConfig: {
       ajax: {
-        query: async ({ page }, formValues) => {
+        query: async ({ page, sort }, formValues) => {
+          lastSort.value = { field: sort.field, order: sort.order };
+          const searchKey = JSON.stringify(formValues ?? {});
+          if (searchKey !== lastSearchKey.value) {
+            lastSearchKey.value = searchKey;
+            onSearchCriteriaChange();
+          }
           const result = await api.list({
             page: page.currentPage,
             pageSize: page.pageSize,
-            ...formValues,
+            sortField: sort.field,
+            sortOrder: sort.order,
+            ...normalizeListParams(formValues),
           });
-          queueMicrotask(syncSelection);
+          lastPageItems = result.items ?? [];
+          searchResultTotal.value = result.total;
           return result;
         },
       },
+      sort: true,
     },
     rowConfig: {
       keyField: 'id',
     },
-    // 勾选「排序」的列可本地升/降序（当前页数据）；proxy 下需显式关闭远程排序
+    // 远程排序：按当前搜索条件全库排序后再分页
     sortConfig: {
-      remote: false,
+      remote: true,
       trigger: 'default',
     },
     scrollX: props.scrollX ? { enabled: true } : undefined,
@@ -467,6 +744,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       zoom: !isMobile.value,
     },
     ...createTemplateColumnBgStyleHandlers(),
+    ...createCostRowHighlightStyleHandlers(),
   } as VxeTableGridOptions,
 });
 
@@ -521,6 +799,68 @@ const batchDeleteBtnLabel = computed(() =>
     : $t('page.costLibrary.actions.batchDelete'),
 );
 
+const highlightMenuItems = computed(() => [
+  {
+    disabled: selectedCount.value === 0,
+    key: 'mark',
+    label: $t('page.costLibrary.highlight.mark'),
+  },
+  {
+    disabled: selectedViewerMarkedIds.value.length === 0,
+    key: 'unmark',
+    label: $t('page.costLibrary.highlight.unmark'),
+  },
+]);
+
+const batchMenuItems = computed(() => {
+  const disabled = selectedCount.value === 0;
+  const items: Array<Record<string, unknown>> = [
+    {
+      disabled,
+      key: 'edit',
+      label: batchEditBtnLabel.value,
+    },
+  ];
+  if (props.enableBatchCopy) {
+    items.push({
+      disabled,
+      key: 'copy',
+      label: batchCopyBtnLabel.value,
+    });
+  }
+  items.push(
+    { type: 'divider' },
+    {
+      danger: true,
+      disabled,
+      key: 'delete',
+      label: batchDeleteBtnLabel.value,
+    },
+  );
+  return items;
+});
+
+function onHighlightMenuClick({ key }: { key: string }) {
+  if (key === 'mark') {
+    onMarkHighlight();
+  }
+  if (key === 'unmark') {
+    onUnmarkHighlight();
+  }
+}
+
+function onBatchMenuClick({ key }: { key: string }) {
+  if (key === 'edit') {
+    onBatchEdit();
+  }
+  if (key === 'copy') {
+    onBatchCopy();
+  }
+  if (key === 'delete') {
+    onBatchDelete();
+  }
+}
+
 function onRefresh() {
   gridApi.query();
 }
@@ -544,13 +884,19 @@ function onRefresh() {
       :batch-update-fn="(ids, fields) => api.batchUpdate({ ids, fields })"
       :schema="batchEditSchema"
       :title="batchEditTitle"
-      :wide="mode === 'sea'"
+      :wide="mode === 'sea' || mode === 'road'"
       @success="onBatchSuccess"
     />
     <BatchCopyModal
       v-if="enableBatchCopy"
       ref="batchCopyModalRef"
       :mode="mode === 'sea' ? 'sea' : 'road'"
+      :template="activeTemplate"
+      @success="onBatchSuccess"
+    />
+    <HighlightColorModal
+      ref="highlightModalRef"
+      :mode="mode"
       @success="onBatchSuccess"
     />
     <Grid
@@ -586,36 +932,51 @@ function onRefresh() {
               {{ $t('page.costLibrary.actions.export') }}
             </Button>
           </div>
-          <div
-            v-if="canEdit"
-            class="cost-toolbar__group cost-toolbar__group--batch"
-          >
+          <div class="cost-toolbar__group cost-toolbar__group--batch">
             <Tag v-if="selectedCount > 0" class="m-0" color="processing">
               {{ $t('page.costLibrary.hint.selectedCount', [selectedCount]) }}
             </Tag>
             <Button
-              :disabled="selectedCount === 0"
+              v-if="!crossPageSelectActive"
+              :loading="selectingAllPages"
               :size="toolbarSize"
-              @click="onBatchEdit"
+              @click="onSelectAllAcrossPages"
             >
-              {{ batchEditBtnLabel }}
+              {{ $t('page.costLibrary.actions.selectAllAcrossPages') }}
             </Button>
             <Button
-              v-if="enableBatchCopy"
-              :disabled="selectedCount === 0"
+              v-if="crossPageSelectActive"
+              class="cost-clear-selection-btn"
+              ghost
+              type="primary"
               :size="toolbarSize"
-              @click="onBatchCopy"
+              @click="clearSelection"
             >
-              {{ batchCopyBtnLabel }}
+              {{ $t('page.costLibrary.actions.clearSelection') }}
             </Button>
-            <Button
-              danger
+            <Dropdown :trigger="['click']">
+              <Button :size="toolbarSize">
+                {{ $t('page.costLibrary.highlight.markMenu') }}
+              </Button>
+              <template #overlay>
+                <Menu
+                  :items="highlightMenuItems"
+                  @click="onHighlightMenuClick"
+                />
+              </template>
+            </Dropdown>
+            <Dropdown
+              v-if="canEdit"
               :disabled="selectedCount === 0"
-              :size="toolbarSize"
-              @click="onBatchDelete"
+              :trigger="['click']"
             >
-              {{ batchDeleteBtnLabel }}
-            </Button>
+              <Button :disabled="selectedCount === 0" :size="toolbarSize">
+                {{ $t('page.costLibrary.actions.batchMenu') }}
+              </Button>
+              <template #overlay>
+                <Menu :items="batchMenuItems" @click="onBatchMenuClick" />
+              </template>
+            </Dropdown>
           </div>
         </div>
       </template>

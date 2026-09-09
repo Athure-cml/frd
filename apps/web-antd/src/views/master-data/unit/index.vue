@@ -12,10 +12,14 @@ import { Plus } from '@vben/icons';
 import { Button, message } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteUnit, getUnitList } from '#/api/unit';
+import { batchDeleteUnit, deleteUnit, getUnitList } from '#/api/unit';
 import { $t } from '#/locales';
 
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
+import {
+  masterDataCheckboxConfig,
+  useMasterDataBatchDelete,
+} from '../shared/use-batch-delete';
 import { filterUnits, useUnitColumns, useUnitSearchSchema } from './data';
 import Form from './modules/form.vue';
 
@@ -74,6 +78,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
     id: 'md-unit-list',
+    checkboxConfig: masterDataCheckboxConfig,
     columns: useUnitColumns(onActionClick, canManage),
     height: 'auto',
     pagerConfig: { enabled: false },
@@ -95,6 +100,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
   } as VxeTableGridOptions<UnitApi.Unit>,
 });
+
+const { onBatchDelete } = useMasterDataBatchDelete({
+  batchDelete: batchDeleteUnit,
+  gridApi,
+});
 </script>
 
 <template>
@@ -102,9 +112,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
     <FormModal @success="gridApi.query()" />
     <Grid class="system-grid" :form-options="searchFormOptions">
       <template #toolbar-tools>
-        <Button v-if="canManage" type="primary" @click="onCreate">
+        <Button v-if="canManage" class="mr-2" type="primary" @click="onCreate">
           <Plus class="size-4" />
           {{ $t('page.masterData.actions.createUnit') }}
+        </Button>
+        <Button v-if="canManage" class="mr-2" danger @click="onBatchDelete">
+          {{ $t('page.masterData.actions.batchDelete') }}
         </Button>
       </template>
       <template #code="{ row }">

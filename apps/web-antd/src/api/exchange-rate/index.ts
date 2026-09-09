@@ -52,3 +52,7 @@ export async function updateExchangeRate(
 export async function deleteExchangeRate(id: number) {
   return requestClient.delete(`/exchange-rates/${id}`);
 }
+
+export async function batchDeleteExchangeRate(ids: number[]) {
+  return requestClient.post('/exchange-rates/batch-delete', { ids });
+}

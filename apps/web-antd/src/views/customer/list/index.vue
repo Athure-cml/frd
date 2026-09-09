@@ -276,6 +276,10 @@ function onRefresh() {
     />
     <Grid class="customer-grid" :form-options="searchFormOptions">
       <template #toolbar-tools>
+        <Button v-if="canCreate" class="mr-2" type="primary" @click="onCreate">
+          <Plus class="size-4" />
+          {{ $t('page.customer.actions.create') }}
+        </Button>
         <Button v-if="canCreate" class="mr-2" @click="importModalRef?.open()">
           <ArrowUpToLine class="size-4" />
           {{ $t('page.customer.actions.import') }}
@@ -291,10 +295,6 @@ function onRefresh() {
         </Button>
         <Button v-if="canDelete" class="mr-2" danger @click="onBatchDelete">
           {{ $t('page.customer.actions.batchDelete') }}
-        </Button>
-        <Button v-if="canCreate" type="primary" @click="onCreate">
-          <Plus class="size-4" />
-          {{ $t('page.customer.actions.create') }}
         </Button>
       </template>
       <template v-if="canViewInternalCodes" #code="{ row }">

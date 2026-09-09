@@ -2,6 +2,9 @@ import type { FieldCatalogEntry } from './types';
 
 const road = (key: string) => `page.costLibrary.roadFields.${key}`;
 
+/** 业务 Excel REMARK 列（extraFields） */
+export const ROAD_REMARK_FIELD = 'cf_road_remark';
+
 const amount = (
   field: string,
   group: FieldCatalogEntry['group'],
@@ -51,6 +54,13 @@ export const ROAD_FIELD_CATALOG: FieldCatalogEntry[] = [
   {
     className: 'col-remark',
     field: 'remark',
+    group: 'extra',
+    labelKey: road('operationRemark'),
+    showOverflow: true,
+  },
+  {
+    className: 'col-remark',
+    field: ROAD_REMARK_FIELD,
     group: 'extra',
     labelKey: road('remark'),
     showOverflow: true,

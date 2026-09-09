@@ -15,6 +15,7 @@ import { Button, message } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import {
+  batchDeleteGlobalPort,
   deleteGlobalPort,
   downloadGlobalPortExport,
   exportGlobalPort,
@@ -29,6 +30,7 @@ import {
   getGridSelectedIds,
 } from '../../shared/export-params';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
+import { useMasterDataBatchDelete } from '../shared/use-batch-delete';
 import {
   getGlobalPortRowName,
   useGlobalPortColumns,
@@ -167,6 +169,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     toolbarConfig: { custom: true, refresh: true, search: true, zoom: true },
   } as VxeTableGridOptions<GlobalPortApi.GlobalPort>,
 });
+
+const { onBatchDelete } = useMasterDataBatchDelete({
+  batchDelete: batchDeleteGlobalPort,
+  gridApi,
+});
 </script>
 
 <template>
@@ -187,6 +194,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
     />
     <Grid class="system-grid" :form-options="searchFormOptions">
       <template #toolbar-tools>
+        <Button v-if="canManage" class="mr-2" type="primary" @click="onCreate">
+          <Plus class="size-4" />
+          {{ $t('page.masterData.actions.createGlobalPort') }}
+        </Button>
         <Button v-if="canManage" class="mr-2" @click="importModalRef?.open()">
           <ArrowUpToLine class="size-4" />
           {{ $t('page.masterData.actions.import') }}
@@ -195,9 +206,8 @@ const [Grid, gridApi] = useVbenVxeGrid({
           <Download class="size-4" />
           {{ $t('page.masterData.actions.export') }}
         </Button>
-        <Button v-if="canManage" type="primary" @click="onCreate">
-          <Plus class="size-4" />
-          {{ $t('page.masterData.actions.createGlobalPort') }}
+        <Button v-if="canManage" class="mr-2" danger @click="onBatchDelete">
+          {{ $t('page.masterData.actions.batchDelete') }}
         </Button>
       </template>
     </Grid>

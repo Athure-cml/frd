@@ -1,4 +1,4 @@
-/** 视图模板列背景色：写入 column.params.bgColor，由表格 cellStyle 渲染 */
+/** 视图模板列背景色：写入 column.params.bgColor，由表格 cellStyle 渲染（仅数据行，表头不着色） */
 
 export type ColumnWithBgParams = {
   params?: {
@@ -124,9 +124,7 @@ export function applyColumnBgParams(
     return;
   }
   const prevClass = String(column.className ?? '');
-  const prevHeader = String(column.headerClassName ?? '');
   column.className = `${prevClass} col-tmpl-bg`.trim();
-  column.headerClassName = `${prevHeader} col-tmpl-bg`.trim();
   column.params = {
     ...(column.params as Record<string, unknown> | undefined),
     bgColor: color,
@@ -147,7 +145,5 @@ export function createTemplateColumnBgStyleHandlers() {
 
   return {
     cellStyle: ({ column }: { column: ColumnWithBgParams }) => resolve(column),
-    headerCellStyle: ({ column }: { column: ColumnWithBgParams }) =>
-      resolve(column),
   };
 }

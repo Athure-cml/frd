@@ -210,6 +210,12 @@ export function useCustomerColumns(
       title: t('fields.phone'),
     },
     {
+      field: 'address',
+      minWidth: 180,
+      showOverflow: 'ellipsis',
+      title: t('fields.address'),
+    },
+    {
       align: 'center',
       cellRender: {
         name: 'CellTag',

@@ -3,6 +3,9 @@
 }
 
 .system-drawer-form :deep(.ant-select),
+.system-drawer-form :deep(.ant-input),
+.system-drawer-form :deep(.ant-input-number),
+.system-drawer-form :deep(.ant-input-number-input),
 .system-drawer-form :deep(.ant-input-textarea),
 .system-drawer-form :deep(textarea.ant-input) {
   width: 100%;
@@ -19,6 +22,92 @@
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
+}
+
+/* 系统公告：列表阅读统计（单行） */
+.sys-announcement-read-stats {
+  white-space: nowrap;
+}
+
+.system-announcement-grid :deep(.col-sys-num) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 系统公告：表单分区与页脚 */
+.system-announcement-form :deep(.sys-announcement-rich-field) {
+  width: 100%;
+}
+
+.system-announcement-form :deep(.sys-announcement-rich-field .vben-tiptap) {
+  width: 100%;
+}
+
+.system-announcement-form :deep(.sys-announcement-content-field) {
+  padding-top: 16px;
+  margin-top: 4px;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.system-announcement-form :deep(.sys-announcement-publish-mode) {
+  margin-bottom: 4px;
+}
+
+.sys-announcement-form-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.system-announcement-form :deep(.ant-select),
+.system-announcement-form :deep(.ant-input),
+.system-announcement-form :deep(.ant-input-number),
+.system-announcement-form :deep(.ant-input-number-input),
+.system-announcement-form :deep(.ant-input-textarea),
+.system-announcement-form :deep(textarea.ant-input),
+.system-announcement-form :deep(.ant-picker) {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .sys-announcement-form-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sys-announcement-form-footer .ant-space {
+    justify-content: flex-end;
+    width: 100%;
+  }
+}
+
+/* 系统公告：用户弹窗正文 */
+.sys-announcement-popup-body {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: hsl(var(--foreground));
+}
+
+.sys-announcement-popup-body :deep(p) {
+  margin: 0 0 0.75em;
+}
+
+.sys-announcement-popup-body :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.sys-announcement-popup-body--empty {
+  color: hsl(var(--muted-foreground));
+}
+
+.sys-announcement-popup-queue {
+  margin: 0;
+  margin-right: auto;
+  font-size: 14px;
+  color: hsl(var(--muted-foreground));
 }
 
 .sys-perm-trigger:focus-visible {

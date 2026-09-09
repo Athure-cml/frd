@@ -6,6 +6,7 @@ import { getBaseCurrencyCode, getEnabledCurrencyOptions } from '#/api/currency';
 import { $t } from '#/locales';
 
 import {
+  buildCheckboxColumn,
   buildOperationColumn,
   buildSeqColumn,
 } from '../../system/shared/columns';
@@ -98,6 +99,7 @@ export function useExchangeRateColumns(
 ): VxeTableGridOptions<ExchangeRateApi.ExchangeRate>['columns'] {
   const columns: VxeTableGridOptions<ExchangeRateApi.ExchangeRate>['columns'] =
     [
+      buildCheckboxColumn(),
       buildSeqColumn(),
       {
         align: 'left',

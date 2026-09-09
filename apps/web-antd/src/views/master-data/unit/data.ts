@@ -5,6 +5,7 @@ import type { UnitApi } from '#/api/unit';
 import { $t } from '#/locales';
 
 import {
+  buildCheckboxColumn,
   buildOperationColumn,
   buildSeqColumn,
 } from '../../system/shared/columns';
@@ -84,6 +85,7 @@ export function useUnitColumns(
   canManage: boolean,
 ): VxeTableGridOptions<UnitApi.Unit>['columns'] {
   const columns: VxeTableGridOptions<UnitApi.Unit>['columns'] = [
+    buildCheckboxColumn(),
     buildSeqColumn(),
     {
       align: 'left',

@@ -12,10 +12,18 @@ import { Plus } from '@vben/icons';
 import { Button, message } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteCurrency, getCurrencyList } from '#/api/currency';
+import {
+  batchDeleteCurrency,
+  deleteCurrency,
+  getCurrencyList,
+} from '#/api/currency';
 import { $t } from '#/locales';
 
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
+import {
+  masterDataCheckboxConfig,
+  useMasterDataBatchDelete,
+} from '../shared/use-batch-delete';
 import {
   filterCurrencies,
   useCurrencyColumns,
@@ -81,6 +89,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
     id: 'md-currency-list',
+    checkboxConfig: masterDataCheckboxConfig,
     columns: useCurrencyColumns(onActionClick, canManage),
     height: 'auto',
     pagerConfig: { enabled: false },
@@ -102,6 +111,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
   } as VxeTableGridOptions<CurrencyApi.Currency>,
 });
+
+const { onBatchDelete } = useMasterDataBatchDelete({
+  batchDelete: batchDeleteCurrency,
+  gridApi,
+});
 </script>
 
 <template>
@@ -109,9 +123,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
     <FormModal @success="gridApi.query()" />
     <Grid class="system-grid" :form-options="searchFormOptions">
       <template #toolbar-tools>
-        <Button v-if="canManage" type="primary" @click="onCreate">
+        <Button v-if="canManage" class="mr-2" type="primary" @click="onCreate">
           <Plus class="size-4" />
           {{ $t('page.masterData.actions.createCurrency') }}
+        </Button>
+        <Button v-if="canManage" class="mr-2" danger @click="onBatchDelete">
+          {{ $t('page.masterData.actions.batchDelete') }}
         </Button>
       </template>
       <template #code="{ row }">

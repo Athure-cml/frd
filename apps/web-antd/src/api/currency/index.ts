@@ -38,6 +38,10 @@ export async function deleteCurrency(id: number) {
   return requestClient.delete(`/currencies/${id}`);
 }
 
+export async function batchDeleteCurrency(ids: number[]) {
+  return requestClient.post('/currencies/batch-delete', { ids });
+}
+
 export async function getEnabledCurrencyOptions() {
   const list = await getCurrencyList({ status: 1 });
   return list.map((item) => ({
