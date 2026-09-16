@@ -41,6 +41,8 @@ import { $t } from '#/locales';
 import { statusTagOptions } from '../list/data';
 import CostSourceTables from '../shared/cost-source-tables.vue';
 import { stashQuoteCopySource } from '../shared/quote-copy';
+import { printQuoteSheet } from '../shared/quote-print';
+import QuotePrintSheet from '../shared/quote-print-sheet.vue';
 import { QUOTE_SHEET_COLUMNS, sheetCellValue } from '../shared/sheet-columns';
 
 import '../shared/quote.css';
@@ -63,6 +65,7 @@ const followContent = ref('');
 const followUpById = ref<number>();
 const userOptions = ref<Array<{ label: string; value: number }>>([]);
 const logsTabKey = ref('follow');
+const printPreviewOpen = ref(false);
 
 const quoteId = computed(() => Number(route.params.id));
 
@@ -297,8 +300,12 @@ function onEdit() {
   router.push({ name: 'QuoteEdit', params: { id: quoteId.value } });
 }
 
+function openPrintPreview() {
+  printPreviewOpen.value = true;
+}
+
 function onPrint() {
-  window.print();
+  printQuoteSheet();
 }
 
 async function onAddFollowUp() {
@@ -441,7 +448,7 @@ onMounted(async () => {
               </Button>
               <Button
                 class="quote-action-btn quote-action-btn--print"
-                @click="onPrint"
+                @click="openPrintPreview"
               >
                 <IconifyIcon class="mr-1 size-4" icon="lucide:printer" />
                 {{ $t('page.quote.actions.print') }}
@@ -675,6 +682,29 @@ onMounted(async () => {
           </section>
         </div>
       </Card>
+      <Modal
+        v-if="detail"
+        v-model:open="printPreviewOpen"
+        class="quote-print-modal"
+        :title="$t('page.quote.sections.printPreview')"
+        width="1040px"
+      >
+        <QuotePrintSheet
+          :cost-snapshots="detail.costSnapshots"
+          :customer-name="detail.customerName"
+          :quote-date="detail.createdAt"
+          :sheet="detail.sheet"
+        />
+        <template #footer>
+          <Button @click="printPreviewOpen = false">
+            {{ $t('common.cancel') }}
+          </Button>
+          <Button type="primary" @click="onPrint">
+            <IconifyIcon class="mr-1 size-4" icon="lucide:printer" />
+            {{ $t('page.quote.actions.print') }}
+          </Button>
+        </template>
+      </Modal>
     </div>
   </Page>
 </template>

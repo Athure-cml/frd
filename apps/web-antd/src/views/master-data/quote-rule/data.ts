@@ -46,6 +46,7 @@ export const conditionTypeOptions = () => [
   },
   { label: t('quoteRuleForm.conditionType.BASE_GT'), value: 'BASE_GT' },
   { label: t('quoteRuleForm.conditionType.BASE_LTE'), value: 'BASE_LTE' },
+  { label: t('quoteRuleForm.conditionType.POR_IN'), value: 'POR_IN' },
 ];
 
 export const calcTypeOptions = () => [
@@ -219,6 +220,20 @@ export function useQuoteRuleFormSchema(): VbenFormSchema[] {
         showCount: true,
       },
       controlClass: 'w-full max-w-none',
+      dependencies: {
+        componentProps(values) {
+          if (values?.conditionType === 'POR_IN') {
+            return {
+              placeholder: t('quoteRuleForm.fields.porListPlaceholder'),
+            };
+          }
+          return {};
+        },
+        rules(values) {
+          return values?.conditionType === 'POR_IN' ? 'required' : null;
+        },
+        triggerFields: ['conditionType'],
+      },
       fieldName: 'remark',
       formItemClass: 'col-span-full sys-remark-field',
       label: t('fields.remark'),

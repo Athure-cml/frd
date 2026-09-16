@@ -186,8 +186,11 @@ defineExpose({ fmSelection, quoteDate });
   <div class="frd-quote-sheet">
     <header class="frd-quote-sheet__header">
       <div class="frd-quote-sheet__brand">
-        <div class="frd-quote-sheet__logo">FRD</div>
-        <div class="frd-quote-sheet__company">FRD GLOBAL (SH) CO., LTD.</div>
+        <img
+          alt="FRD GLOBAL (SH) CO., LTD."
+          class="frd-quote-sheet__logo"
+          src="/static/frd-quote-logo.jpg"
+        />
       </div>
       <h1 class="frd-quote-sheet__title">{{ $t('page.quote.sheet.title') }}</h1>
     </header>

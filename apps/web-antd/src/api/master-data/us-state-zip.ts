@@ -59,7 +59,12 @@ export async function getUsStateZipCityNodes(
   );
 }
 
-/** 按关键词搜索去重城市名（如卡车 CITY 等） */
+export interface DestCityStateOption {
+  city: string;
+  stateCode: string;
+}
+
+/** 按关键词搜索去重城市名（如熏蒸 REGION 等） */
 export async function searchDestCityNameOptions(params?: {
   keyword?: string;
   limit?: number;
@@ -74,6 +79,24 @@ export async function searchDestCityNameOptions(params?: {
     label: name,
     value: name,
   }));
+}
+
+/** 按关键词搜索城市+州（报价 CITY 下拉） */
+export async function searchDestCityStateOptions(params?: {
+  keyword?: string;
+  limit?: number;
+  stateCode?: string;
+}) {
+  return requestClient.get<DestCityStateOption[]>(
+    `${BASE}/cities/state-options`,
+    {
+      params: {
+        keyword: params?.keyword || undefined,
+        stateCode: params?.stateCode || undefined,
+        limit: params?.limit ?? 50,
+      },
+    },
+  );
 }
 
 export type DestZipResolveStatus =

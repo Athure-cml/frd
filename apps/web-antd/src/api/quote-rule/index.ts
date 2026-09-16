@@ -17,7 +17,8 @@ export namespace QuoteRuleApi {
     | 'FUMIGATION_DISABLED'
     | 'FUMIGATION_ENABLED'
     | 'POD_CHINA'
-    | 'POD_NOT_CHINA';
+    | 'POD_NOT_CHINA'
+    | 'POR_IN';
 
   export type CalcType = 'CIF_MULTIPLY' | 'CIF_PERCENT' | 'COST_PLUS' | 'FIXED';
 

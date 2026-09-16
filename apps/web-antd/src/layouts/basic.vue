@@ -26,6 +26,7 @@ import { FRD_LOGO_SRC, FRD_LOGO_SRC_DARK } from '#/constants/brand';
 import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 import LoginForm from '#/views/_core/authentication/login.vue';
+import { resolveAvatarUrl } from '#/views/_core/profile/profile-utils';
 import { mapDashboardNotification } from '#/views/dashboard/workspace/map-workspace';
 
 const notifications = ref<NotificationItem[]>([]);
@@ -50,9 +51,9 @@ const menus = computed(() => [
   },
 ]);
 
-const avatar = computed(() => {
-  return userStore.userInfo?.avatar ?? preferences.app.defaultAvatar;
-});
+const avatar = computed(() =>
+  resolveAvatarUrl(userStore.userInfo?.avatar, preferences.app.defaultAvatar),
+);
 
 async function handleLogout() {
   await authStore.logout(false);

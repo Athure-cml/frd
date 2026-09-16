@@ -411,6 +411,91 @@ function readFormFee(
   return 0;
 }
 
+export function hasSupplierAllInFormula(
+  formulas: null | SupplierAllInFormulas | undefined,
+): boolean {
+  return !!(
+    formulaForAllInField(formulas, 'allInNoFm') ||
+    formulaForAllInField(formulas, 'allInFmOneWay') ||
+    formulaForAllInField(formulas, 'allInFmRound')
+  );
+}
+
+function readRecordFee(
+  row: Record<string, unknown>,
+  field: keyof RoadFormulaFeeValues,
+  extraKey?: string,
+): number {
+  const direct = row[field];
+  if (direct !== null && direct !== undefined && direct !== '') {
+    const n = Number(direct);
+    return Number.isFinite(n) ? n : 0;
+  }
+  if (extraKey) {
+    const extra = row.extraFields as Record<string, unknown> | undefined;
+    const nested = extra?.[extraKey];
+    if (nested !== null && nested !== undefined && nested !== '') {
+      const n = Number(nested);
+      return Number.isFinite(n) ? n : 0;
+    }
+  }
+  return 0;
+}
+
+export function feeValuesFromRecord(
+  row: Record<string, unknown>,
+): RoadFormulaFeeValues {
+  return {
+    baseFreight: readRecordFee(row, 'baseFreight'),
+    chassis: readRecordFee(row, 'chassis'),
+    extraChassis: readRecordFee(row, 'extraChassis', ROAD_EXTRA_CHASSIS_FIELD),
+    fsc: readRecordFee(row, 'fsc'),
+    nsLift: readRecordFee(row, 'nsLift'),
+    otherFee: readRecordFee(row, 'otherFee'),
+    prepull: readRecordFee(row, 'prepull'),
+    redelivery: readRecordFee(row, 'redelivery'),
+    split: readRecordFee(row, 'split'),
+    stopOff: readRecordFee(row, 'stopOff'),
+    triTandemAxle: readRecordFee(row, 'triTandemAxle'),
+    waitingFee: readRecordFee(row, 'waitingFee'),
+    yardStorage: readRecordFee(row, 'yardStorage', ROAD_YARD_STORAGE_FIELD),
+  };
+}
+
+/** 按供应商公式重算 ALL IN；无公式的列保留原值。 */
+export function applyAllInFormulasToRoadRecord<
+  T extends {
+    allInFmOneWay?: null | number;
+    allInFmRound?: null | number;
+    allInNoFm?: null | number;
+  },
+>(row: T, formulas: null | SupplierAllInFormulas | undefined): T {
+  if (!hasSupplierAllInFormula(formulas)) {
+    return row;
+  }
+  let computed: ReturnType<typeof resolveAllInFromFormulas>;
+  try {
+    computed = resolveAllInFromFormulas(
+      formulas,
+      feeValuesFromRecord(row as Record<string, unknown>),
+    );
+  } catch {
+    return row;
+  }
+  return {
+    ...row,
+    allInNoFm: formulaForAllInField(formulas, 'allInNoFm')
+      ? (computed.allInNoFm ?? row.allInNoFm)
+      : row.allInNoFm,
+    allInFmOneWay: formulaForAllInField(formulas, 'allInFmOneWay')
+      ? (computed.allInFmOneWay ?? row.allInFmOneWay)
+      : row.allInFmOneWay,
+    allInFmRound: formulaForAllInField(formulas, 'allInFmRound')
+      ? (computed.allInFmRound ?? row.allInFmRound)
+      : row.allInFmRound,
+  };
+}
+
 export function feeValuesFromForm(
   values: Record<string, unknown>,
 ): RoadFormulaFeeValues {

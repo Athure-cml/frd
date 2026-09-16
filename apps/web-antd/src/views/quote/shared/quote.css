@@ -161,8 +161,55 @@
 }
 
 @media print {
-  .quote-editor-page .quote-editor-nav__actions {
-    display: none;
+  @page {
+    margin: 8mm;
+  }
+
+  html.quote-printing,
+  html.quote-printing body {
+    height: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  html.quote-printing body * {
+    visibility: hidden;
+  }
+
+  html.quote-printing .quote-print-sheet--printing,
+  html.quote-printing .quote-print-sheet--printing * {
+    visibility: visible;
+  }
+
+  html.quote-printing .quote-print-sheet--printing {
+    position: absolute;
+    top: 0;
+    left: 0;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    min-height: 100vh;
+    margin: 0;
+    transform: none;
+  }
+
+  html.quote-printing .ant-modal-mask,
+  html.quote-printing .ant-modal-header,
+  html.quote-printing .ant-modal-footer {
+    display: none !important;
+  }
+
+  html.quote-printing .ant-modal-wrap,
+  html.quote-printing .ant-modal,
+  html.quote-printing .ant-modal-content,
+  html.quote-printing .ant-modal-body {
+    position: static !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 }
 
@@ -607,6 +654,54 @@
   grid-column: 1 / -1;
 }
 
+.quote-editor-page .quote-sheet-basic-row {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 16px 20px;
+  align-items: start;
+  width: 100%;
+}
+
+.quote-editor-page .quote-sheet-basic-row--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.quote-editor-page .quote-sheet-basic-row--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.quote-editor-page .quote-sheet-location-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-column: 1 / -1;
+  gap: 16px 20px;
+  align-items: start;
+  width: 100%;
+}
+
+.quote-editor-page .quote-sheet-sea-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-column: 1 / -1;
+  gap: 16px 20px;
+  align-items: start;
+  width: 100%;
+}
+
+@media (width < 768px) {
+  .quote-editor-page .quote-sheet-sea-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (width < 768px) {
+  .quote-editor-page .quote-sheet-basic-row--2,
+  .quote-editor-page .quote-sheet-basic-row--3,
+  .quote-editor-page .quote-sheet-location-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (width < 768px) {
   .quote-editor-page .quote-sheet-fields .quote-sheet-field--full {
     grid-column: auto;
@@ -784,6 +879,31 @@
   overflow: hidden;
 }
 
+/*
+ * 弹窗内 vben 折叠行数计算常失效，用 CSS 对齐成本库：
+ * lg 折叠 = 首行 3 字段 + 右侧按钮；展开 = 一行 4 字段。
+ */
+@media (max-width: 767.98px) {
+  .quote-cost-picker__grid.quote-cost-search--collapsed
+    :deep(form .flex-col.grid > *:nth-child(n + 2):not(:last-child)) {
+    display: none !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .quote-cost-picker__grid.quote-cost-search--collapsed
+    :deep(form .flex-col.grid > *:nth-child(n + 3):not(:last-child)) {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .quote-cost-picker__grid.quote-cost-search--collapsed
+    :deep(form .flex-col.grid > *:nth-child(n + 4):not(:last-child)) {
+    display: none !important;
+  }
+}
+
 .quote-cost-picker-grid:deep(.vxe-grid) {
   display: flex;
   flex: 1;
@@ -811,6 +931,17 @@
 .quote-cost-picker-grid :deep(.quote-cost-picker-row--used .vxe-cell--checkbox) {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+/* 报价页成本快照：外层按行数定高，覆盖列表页 min-height:360px */
+:root .quote-cost-snapshot .vxe-grid.cost-library-grid.quote-cost-snapshot-grid {
+  flex: none;
+  min-height: 0 !important;
+}
+
+:root .quote-cost-snapshot-scroll .vxe-table--header-wrapper,
+:root .quote-cost-snapshot-scroll .vxe-table--body-wrapper {
+  overflow: auto hidden !important;
 }
 
 .quote-cost-picker__footer {

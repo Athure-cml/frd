@@ -24,13 +24,23 @@ if (!profileContext) {
 const authStore = useAuthStore();
 const userStore = useUserStore();
 const uploading = ref(false);
+const previewUrl = ref('');
+const avatarVersion = ref(0);
 
-const avatarSrc = computed(() =>
-  resolveAvatarUrl(
+const avatarSrc = computed(() => {
+  if (previewUrl.value) {
+    return previewUrl.value;
+  }
+  const resolved = resolveAvatarUrl(
     userStore.userInfo?.avatar ?? profileContext.profileData.value?.avatar,
     preferences.app.defaultAvatar,
-  ),
-);
+  );
+  if (!resolved || resolved === preferences.app.defaultAvatar) {
+    return resolved;
+  }
+  const joiner = resolved.includes('?') ? '&' : '?';
+  return `${resolved}${joiner}v=${avatarVersion.value}`;
+});
 
 async function handleBeforeUpload(file: File) {
   const isImage = file.type.startsWith('image/');
@@ -43,14 +53,23 @@ async function handleBeforeUpload(file: File) {
     return Upload.LIST_IGNORE;
   }
 
+  previewUrl.value = URL.createObjectURL(file);
   uploading.value = true;
   try {
     const userInfo = await uploadAvatarApi(file);
     userStore.setUserInfo(userInfo);
     await authStore.fetchUserInfo();
     await profileContext.reloadProfile();
+    avatarVersion.value += 1;
     message.success($t('page.profile.avatar.uploadSuccess'));
+  } catch {
+    previewUrl.value = '';
+    message.error($t('page.profile.avatar.uploadFailed'));
   } finally {
+    if (previewUrl.value) {
+      URL.revokeObjectURL(previewUrl.value);
+      previewUrl.value = '';
+    }
     uploading.value = false;
   }
 

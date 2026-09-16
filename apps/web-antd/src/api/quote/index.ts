@@ -31,6 +31,7 @@ export namespace QuoteApi {
     fmNonOak?: number;
     fmOak?: number;
     fumigationEnabled?: boolean;
+    fumigationPoint?: string;
     nsLift?: number;
     oceanFreight?: string;
     pickUpAddress?: string;
@@ -152,6 +153,7 @@ export namespace QuoteApi {
   export interface MatchCostsRequest {
     city?: string;
     costType?: QuoteCostType;
+    fumigationPoint?: string;
     pod?: string;
     pol?: string;
     por?: string;
@@ -168,18 +170,37 @@ export namespace QuoteApi {
 
   export interface GenerateSheetRequest {
     cifAmount?: number;
+    city?: string;
     fumigationEnabled?: boolean;
+    fumigationPoint?: string;
     pickUpAddress?: string;
     pod?: string;
     pol?: string;
     por?: string;
     quoteDate?: string;
+    state?: string;
+    zipCode?: string;
   }
 
   export interface GenerateSheetResponse {
     costMatches: QuoteCostMatchItem[];
     quoteDate: string;
     sheet: QuoteSheetFields;
+  }
+
+  export interface ApplyCostImportRequest {
+    cifAmount?: number;
+    costType: QuoteCostType;
+    fumigationEnabled?: boolean;
+    fumigationPoint?: string;
+    pod?: string;
+    por?: string;
+    quoteDate?: string;
+    snapshot: Recordable<any>;
+  }
+
+  export interface ApplyCostImportResponse {
+    fields: QuoteSheetFields;
   }
 }
 
@@ -226,6 +247,15 @@ export async function matchQuoteCosts(data: QuoteApi.MatchCostsRequest) {
 export async function generateQuoteSheet(data: QuoteApi.GenerateSheetRequest) {
   return requestClient.post<QuoteApi.GenerateSheetResponse>(
     '/quotes/generate-sheet',
+    data,
+  );
+}
+
+export async function applyQuoteCostImport(
+  data: QuoteApi.ApplyCostImportRequest,
+) {
+  return requestClient.post<QuoteApi.ApplyCostImportResponse>(
+    '/quotes/apply-cost-import',
     data,
   );
 }
@@ -312,4 +342,8 @@ export async function updateQuoteFollowUp(
 
 export async function deleteQuoteFollowUp(quoteId: number, followUpId: number) {
   return requestClient.delete(`/quotes/${quoteId}/follow-ups/${followUpId}`);
+}
+
+export async function getFumigationStationList() {
+  return requestClient.get<string[]>('/quotes/fumigation-stations');
 }

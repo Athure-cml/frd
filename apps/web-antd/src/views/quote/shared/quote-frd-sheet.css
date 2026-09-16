@@ -23,23 +23,12 @@
 }
 
 .frd-quote-sheet__logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
+  display: block;
+  width: auto;
+  max-width: 200px;
   height: 48px;
-  font-size: 14px;
-  font-weight: 800;
-  color: #fff;
-  background: linear-gradient(135deg, #1f4e79, #2f75b5);
-  border-radius: 4px;
-}
-
-.frd-quote-sheet__company {
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.35;
-  color: #1f4e79;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .frd-quote-sheet__title {

@@ -51,6 +51,7 @@ import { buildListExportParams } from '../../shared/export-params';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import { createTemplateColumnBgStyleHandlers } from '../shared/column-bg-style';
 import { adaptCostColumnsForViewport } from '../shared/columns';
+import { withCostSearchFormLayout } from '../shared/cost-search-form-layout';
 import { getDefaultTemplate } from '../shared/default-templates';
 import { toCopyDrawerData, toRenewDrawerData } from '../shared/drawer-data';
 import { createHighlightOnlySearchField } from '../shared/highlight-only-search';
@@ -65,6 +66,7 @@ import {
 } from '../shared/use-table-templates';
 import BatchCopyModal from './batch-copy-modal.vue';
 import BatchEditModal from './batch-edit-modal.vue';
+import BatchRenewModal from './batch-renew-modal.vue';
 import HighlightColorModal from './highlight-color-modal.vue';
 import ImportModal from './import-modal.vue';
 
@@ -83,6 +85,8 @@ const props = defineProps<{
   editPermission: string;
   /** 开启后展示批量复制（卡车/海运） */
   enableBatchCopy?: boolean;
+  /** 开启后展示批量续期（卡车） */
+  enableBatchRenew?: boolean;
   exportFilename: string;
   formComponent: Component;
   getRowName: (row: any) => string;
@@ -114,6 +118,7 @@ let appliedLayoutSignature = '';
 const importModalRef = ref<InstanceType<typeof ImportModal>>();
 const batchModalRef = ref<InstanceType<typeof BatchEditModal>>();
 const batchCopyModalRef = ref<InstanceType<typeof BatchCopyModal>>();
+const batchRenewModalRef = ref<InstanceType<typeof BatchRenewModal>>();
 const highlightModalRef = ref<InstanceType<typeof HighlightColorModal>>();
 const selectedCount = ref(0);
 const selectedIds = ref<number[]>([]);
@@ -603,6 +608,15 @@ function onBatchCopy() {
   batchCopyModalRef.value?.open(ids);
 }
 
+function onBatchRenew() {
+  const ids = getSelectedIds();
+  if (ids.length === 0) {
+    message.warning($t('page.costLibrary.hint.selectRows'));
+    return;
+  }
+  batchRenewModalRef.value?.open(ids);
+}
+
 function onMarkHighlight() {
   const ids = getSelectedIds();
   if (ids.length === 0) {
@@ -669,14 +683,9 @@ function onImport() {
 
 const searchFormOptions = useI18nFormOptions(() => {
   void isMobile.value;
-  return {
-    // collapse search by default
-    collapsed: true,
-    collapsedRows: 1,
+  return withCostSearchFormLayout({
     schema: [...props.searchSchema(), createHighlightOnlySearchField()],
-    showCollapseButton: true,
-    submitOnChange: false,
-  };
+  });
 });
 
 const [Grid, gridApi] = useVbenVxeGrid({
@@ -793,6 +802,11 @@ const batchCopyBtnLabel = computed(() =>
     ? $t('page.costLibrary.actions.batchCopyShort')
     : $t('page.costLibrary.actions.batchCopy'),
 );
+const batchRenewBtnLabel = computed(() =>
+  isMobile.value
+    ? $t('page.costLibrary.actions.batchRenewShort')
+    : $t('page.costLibrary.actions.batchRenew'),
+);
 const batchDeleteBtnLabel = computed(() =>
   isMobile.value
     ? $t('page.costLibrary.actions.batchDeleteShort')
@@ -821,6 +835,13 @@ const batchMenuItems = computed(() => {
       label: batchEditBtnLabel.value,
     },
   ];
+  if (props.enableBatchRenew) {
+    items.push({
+      disabled,
+      key: 'renew',
+      label: batchRenewBtnLabel.value,
+    });
+  }
   if (props.enableBatchCopy) {
     items.push({
       disabled,
@@ -852,6 +873,9 @@ function onHighlightMenuClick({ key }: { key: string }) {
 function onBatchMenuClick({ key }: { key: string }) {
   if (key === 'edit') {
     onBatchEdit();
+  }
+  if (key === 'renew') {
+    onBatchRenew();
   }
   if (key === 'copy') {
     onBatchCopy();
@@ -885,6 +909,12 @@ function onRefresh() {
       :schema="batchEditSchema"
       :title="batchEditTitle"
       :wide="mode === 'sea' || mode === 'road'"
+      @success="onBatchSuccess"
+    />
+    <BatchRenewModal
+      v-if="enableBatchRenew"
+      ref="batchRenewModalRef"
+      :template="activeTemplate"
       @success="onBatchSuccess"
     />
     <BatchCopyModal

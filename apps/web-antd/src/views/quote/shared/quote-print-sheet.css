@@ -1,0 +1,193 @@
+.quote-print-sheet {
+  max-width: 980px;
+  margin: 0 auto;
+  font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #000;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  background: #fff;
+  border: 1px solid #b4c6e7;
+}
+
+.quote-print-sheet__header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 18px 10px;
+  border-bottom: 2px solid #2f5597;
+}
+
+.quote-print-sheet__brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.quote-print-sheet__logo {
+  display: block;
+  width: auto;
+  max-width: 220px;
+  height: 52px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.quote-print-sheet__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f4e79;
+  letter-spacing: 0.12em;
+}
+
+.quote-print-sheet__info,
+.quote-print-sheet__fees {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.quote-print-sheet__info th,
+.quote-print-sheet__info td {
+  padding: 6px 10px;
+  font-weight: 700;
+  vertical-align: middle;
+  border: 1px solid #b4c6e7;
+}
+
+.quote-print-sheet__info {
+  table-layout: fixed;
+}
+
+.quote-print-sheet__info-col {
+  width: 16.666%;
+}
+
+.quote-print-sheet__info th {
+  color: #1f4e79;
+  text-align: left;
+  white-space: nowrap;
+  background: #d9e2f3;
+}
+
+.quote-print-sheet__info th.quote-print-sheet__info-label--wrap {
+  line-height: 1.25;
+  vertical-align: middle;
+  white-space: normal;
+}
+
+.quote-print-sheet__info-label-line {
+  display: block;
+}
+
+.quote-print-sheet__info td {
+  min-height: 28px;
+  font-weight: 700;
+  color: #111;
+  background: #fff;
+}
+
+.quote-print-sheet__fees thead th {
+  padding: 8px 10px;
+  font-weight: 700;
+  color: #1f4e79;
+  text-align: center;
+  background: #d9e2f3;
+  border: 1px solid #b4c6e7;
+}
+
+.quote-print-sheet__fees .col-item {
+  width: 34%;
+}
+
+.quote-print-sheet__fees .col-rate {
+  width: 16%;
+}
+
+.quote-print-sheet__fees .col-unit {
+  width: 22%;
+}
+
+.quote-print-sheet__fees .col-ssl {
+  width: 12%;
+}
+
+.quote-print-sheet__fees .col-remark {
+  width: 16%;
+}
+
+.quote-print-sheet__group-row td {
+  padding: 6px 10px;
+  font-weight: 700;
+  color: #1f4e79;
+  text-align: center;
+  background: #fff2cc;
+  border: 1px solid #b4c6e7;
+}
+
+.quote-print-sheet__fee-row td {
+  padding: 5px 8px;
+  vertical-align: middle;
+  border: 1px solid #b4c6e7;
+}
+
+.quote-print-sheet__fee-row .col-item {
+  background: #fff;
+}
+
+.quote-print-sheet__fee-row .col-rate {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  background: #ddebf7;
+}
+
+.quote-print-sheet__fee-row .col-rate-merged {
+  font-size: 12px;
+  text-align: left;
+  background: #fff;
+}
+
+.quote-print-sheet__fee-row .col-unit {
+  font-size: 12px;
+  background: #fff;
+}
+
+.quote-print-sheet__fee-row .col-ssl,
+.quote-print-sheet__fee-row .col-remark {
+  font-size: 12px;
+  background: #fff;
+}
+
+.quote-print-sheet__fee-row .col-unit-merged {
+  font-size: 12px;
+  background: #fff;
+}
+
+.quote-print-sheet__footer {
+  padding: 12px 16px 18px;
+  border-top: 2px solid #2f5597;
+}
+
+.quote-print-sheet__footer-label {
+  margin-bottom: 6px;
+  font-weight: 700;
+  color: #1f4e79;
+}
+
+.quote-print-sheet__remark {
+  min-height: 72px;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  background: #fafafa;
+  border: 1px solid #b4c6e7;
+}
+
+@media print {
+  .quote-print-sheet,
+  .quote-print-sheet * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

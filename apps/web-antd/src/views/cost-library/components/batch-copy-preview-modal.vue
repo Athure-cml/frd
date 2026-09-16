@@ -1,11 +1,14 @@
 <script lang="ts" setup>
 import type { TableColumnsType } from 'ant-design-vue';
 
+import type { RoadRenewPreviewJob } from '../road/road-batch-renew';
+
 import type {
   CostMode,
   CostTableTemplate,
   FreightCostRecord,
   RoadCostRecord,
+  RoadCostSave,
 } from '#/api/cost';
 
 import { computed, h, ref } from 'vue';
@@ -14,12 +17,14 @@ import { useVbenModal } from '@vben/common-ui';
 
 import { Button, message, Pagination, Table, Tag } from 'ant-design-vue';
 
-import { batchCopyRoadCost, seaCostApi } from '#/api/cost';
+import { batchCopyRoadCost, renewRoadCost, seaCostApi } from '#/api/cost';
 import { $t } from '#/locales';
 
 import { buildPreviewAntColumns } from '../shared/build-columns';
 import { formatStatus } from '../shared/formatters';
 import { costStatusTagOptions } from '../shared/tags';
+
+export type BatchPreviewOperation = 'copy' | 'renew';
 
 const props = withDefaults(
   defineProps<{
@@ -34,11 +39,35 @@ const emit = defineEmits<{ back: []; success: [] }>();
 type PreviewItem = FreightCostRecord | RoadCostRecord;
 
 const previewItems = ref<PreviewItem[]>([]);
-const pendingRequest = ref<null | Record<string, unknown>>(null);
+const operation = ref<BatchPreviewOperation>('copy');
+const pendingCopyRequest = ref<null | Record<string, unknown>>(null);
+const pendingRenewJobs = ref<RoadRenewPreviewJob[]>([]);
 const confirming = ref(false);
 const previewPage = ref({ current: 1, pageSize: 20 });
 
 const isSea = computed(() => props.mode === 'sea');
+
+const modalTitle = computed(() =>
+  operation.value === 'renew'
+    ? $t('page.costLibrary.actions.batchRenewPreview')
+    : $t('page.costLibrary.actions.batchCopyPreview'),
+);
+
+const previewHint = computed(() =>
+  operation.value === 'renew'
+    ? $t('page.costLibrary.hint.batchRenewPreviewHint', [
+        previewItems.value.length,
+      ])
+    : $t('page.costLibrary.hint.batchCopyPreviewHint', [
+        previewItems.value.length,
+      ]),
+);
+
+const confirmLabel = computed(() =>
+  operation.value === 'renew'
+    ? $t('page.costLibrary.actions.batchRenewConfirm')
+    : $t('page.costLibrary.actions.batchCopyConfirm'),
+);
 
 const statusColorMap = computed(() => {
   const map = new Map<string, string>();
@@ -77,7 +106,9 @@ const [Modal, modalApi] = useVbenModal({
   onOpenChange(isOpen) {
     if (!isOpen) {
       previewItems.value = [];
-      pendingRequest.value = null;
+      pendingCopyRequest.value = null;
+      pendingRenewJobs.value = [];
+      operation.value = 'copy';
       previewPage.value.current = 1;
     }
   },
@@ -94,10 +125,14 @@ function renderStatusTag(status: string) {
 
 function open(options: {
   items: PreviewItem[];
-  request: Record<string, unknown>;
+  operation?: BatchPreviewOperation;
+  renewJobs?: RoadRenewPreviewJob[];
+  request?: Record<string, unknown>;
 }) {
   previewItems.value = options.items;
-  pendingRequest.value = options.request;
+  operation.value = options.operation ?? 'copy';
+  pendingCopyRequest.value = options.request ?? null;
+  pendingRenewJobs.value = options.renewJobs ?? [];
   previewPage.value.current = 1;
   modalApi.open();
 }
@@ -112,13 +147,13 @@ function onBack() {
 }
 
 async function confirmCopy() {
-  if (!pendingRequest.value) {
+  if (!pendingCopyRequest.value) {
     return;
   }
   confirming.value = true;
   modalApi.lock();
   try {
-    const payload = { ...pendingRequest.value, previewOnly: false };
+    const payload = { ...pendingCopyRequest.value, previewOnly: false };
     const result = isSea.value
       ? await seaCostApi.batchCopy(payload as any)
       : await batchCopyRoadCost(payload as any);
@@ -133,15 +168,44 @@ async function confirmCopy() {
   }
 }
 
+async function confirmRenew() {
+  if (pendingRenewJobs.value.length === 0) {
+    return;
+  }
+  confirming.value = true;
+  modalApi.lock();
+  try {
+    for (const job of pendingRenewJobs.value) {
+      await renewRoadCost(job.sourceId, job.payload as RoadCostSave);
+    }
+    message.success(
+      $t('page.costLibrary.hint.batchRenewSuccess', [
+        pendingRenewJobs.value.length,
+      ]),
+    );
+    emit('success');
+    close();
+  } finally {
+    confirming.value = false;
+    modalApi.unlock();
+  }
+}
+
+async function handleConfirm() {
+  if (operation.value === 'renew') {
+    await confirmRenew();
+    return;
+  }
+  await confirmCopy();
+}
+
 defineExpose({ close, open });
 </script>
 
 <template>
-  <Modal :title="$t('page.costLibrary.actions.batchCopyPreview')">
+  <Modal :title="modalTitle">
     <p class="mb-4 text-sm text-muted-foreground">
-      {{
-        $t('page.costLibrary.hint.batchCopyPreviewHint', [previewItems.length])
-      }}
+      {{ previewHint }}
     </p>
     <Table
       :columns="columns"
@@ -169,8 +233,8 @@ defineExpose({ close, open });
       <Button :disabled="confirming" @click="modalApi.close()">
         {{ $t('common.cancel') }}
       </Button>
-      <Button :loading="confirming" type="primary" @click="confirmCopy">
-        {{ $t('page.costLibrary.actions.batchCopyConfirm') }}
+      <Button :loading="confirming" type="primary" @click="handleConfirm">
+        {{ confirmLabel }}
       </Button>
     </div>
   </Modal>

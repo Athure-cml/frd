@@ -30,6 +30,18 @@ export function displayValue(value?: null | string, emptyText = '—') {
   return text || emptyText;
 }
 
+function resolveUploadOrigin() {
+  const apiURL = import.meta.env.PROD
+    ? window._VBEN_ADMIN_PRO_APP_CONF_?.VITE_GLOB_API_URL
+    : import.meta.env.VITE_GLOB_API_URL;
+
+  if (!apiURL || !/^https?:\/\//i.test(apiURL)) {
+    return '';
+  }
+  return apiURL.replace(/\/api\/?$/, '');
+}
+
+/** 将后端返回的头像路径转为可访问的完整 URL */
 export function resolveAvatarUrl(avatar?: null | string, fallback = '') {
   const value = avatar?.trim();
   if (!value) {
@@ -38,7 +50,15 @@ export function resolveAvatarUrl(avatar?: null | string, fallback = '') {
   if (/^https?:\/\//i.test(value)) {
     return value;
   }
-  return value.startsWith('/') ? value : `/${value}`;
+
+  const path = value.startsWith('/') ? value : `/${value}`;
+  if (path.startsWith('/uploads/')) {
+    const origin = resolveUploadOrigin();
+    if (origin) {
+      return `${origin}${path}`;
+    }
+  }
+  return path;
 }
 
 export function formatRoleLabels(

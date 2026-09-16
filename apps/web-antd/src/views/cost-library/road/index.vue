@@ -17,6 +17,7 @@ const roadBatchSchema = useRoadBatchSchema();
     :create-label="$t('page.costLibrary.actions.createRoad')"
     :description="$t('page.costLibrary.roadDesc')"
     enable-batch-copy
+    enable-batch-renew
     edit-permission="cost:road:edit"
     export-filename="卡车运输成本.xlsx"
     :form-component="Form"

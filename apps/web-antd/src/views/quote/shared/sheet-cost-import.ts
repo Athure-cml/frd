@@ -5,6 +5,8 @@ import type {
 } from '#/api/cost';
 import type { QuoteApi, QuoteCostType } from '#/api/quote';
 
+import { applyQuoteCostImport } from '#/api/quote';
+
 export type CostLibraryRecord =
   | FreightCostRecord
   | FumigationCostRecord
@@ -12,6 +14,7 @@ export type CostLibraryRecord =
 
 export interface QuoteMatchKeys {
   city?: string;
+  fumigationPoint?: string;
   pod?: string;
   pol?: string;
   por?: string;
@@ -28,32 +31,37 @@ export function getInitialSearchValues(
   if (type === 'ROAD') {
     return {
       city: keys.city ?? '',
-      por: keys.por ?? '',
       state: keys.state ?? '',
-      supplier: keys.supplier ?? '',
-      zipCode: keys.zipCode ?? '',
     };
   }
   if (type === 'SEA') {
     return {
-      pod: keys.pod ?? '',
-      pol: keys.pol ?? '',
       por: keys.por ?? '',
-      ssl: keys.ssl ?? '',
+      pol: keys.pol ?? '',
+      pod: keys.pod ?? '',
     };
   }
   return {
-    region: keys.pod ?? '',
+    station: keys.fumigationPoint ?? '',
   };
 }
 
-function formatSeaOfRate(record: FreightCostRecord): string {
-  const price = record.allIn ?? record.freight;
-  if (price === null || price === undefined || Number.isNaN(Number(price))) {
-    return '';
+const ROAD_REMARK_FIELD = 'cf_road_remark';
+
+export function resolveRoadRemark(
+  record: Pick<RoadCostRecord, 'extraFields' | 'remark'>,
+): string {
+  const extra = record.extraFields;
+  if (extra && typeof extra === 'object' && !Array.isArray(extra)) {
+    const custom = (extra as Record<string, unknown>)[ROAD_REMARK_FIELD];
+    if (custom !== null && custom !== undefined && String(custom).trim()) {
+      return String(custom).trim();
+    }
   }
-  return String(price);
+  return record.remark?.trim() ?? '';
 }
+
+export { formatSeaOfRate } from './sheet-ocean-freight';
 
 function recordSnapshot<T extends Record<string, unknown>>(
   record: T,
@@ -234,40 +242,119 @@ export function recordToCostMatchItem(
   };
 }
 
+export interface CostImportContext {
+  cifAmount?: number;
+  fumigationEnabled?: boolean;
+  fumigationPoint?: string;
+  pod?: string;
+  por?: string;
+  quoteDate?: string;
+}
+
+export async function fetchCostImportFields(
+  type: QuoteCostType,
+  record: CostLibraryRecord,
+  context: CostImportContext,
+): Promise<QuoteApi.QuoteSheetFields> {
+  const { fields } = await applyQuoteCostImport({
+    costType: type,
+    snapshot: recordSnapshot(record as unknown as Record<string, unknown>),
+    fumigationEnabled: context.fumigationEnabled,
+    fumigationPoint: context.fumigationPoint,
+    pod: context.pod,
+    por: context.por,
+    cifAmount: context.cifAmount,
+    quoteDate: context.quoteDate,
+  });
+  return fields;
+}
+
+export function mergeRoadCostImport(
+  sheet: QuoteApi.QuoteSheetFields,
+  fields: QuoteApi.QuoteSheetFields,
+  fumigationEnabled: boolean,
+  record: RoadCostRecord,
+) {
+  sheet.por = fields.por ?? record.por ?? sheet.por;
+  sheet.pol = fields.pol ?? record.pol ?? sheet.pol;
+  sheet.zipCode = fields.zipCode ?? record.zipCode ?? sheet.zipCode;
+  sheet.city = fields.city ?? record.city ?? sheet.city;
+  sheet.state = fields.state ?? record.state ?? sheet.state;
+  sheet.pickUpAddress =
+    fields.pickUpAddress ||
+    record.logYardNameAddress ||
+    [sheet.zipCode, sheet.city, sheet.state].filter(Boolean).join(', ') ||
+    sheet.pickUpAddress;
+
+  if (fields.nsLift !== undefined && fields.nsLift !== null) {
+    sheet.nsLift = fields.nsLift;
+  }
+  if (fields.chassis !== undefined && fields.chassis !== null) {
+    sheet.chassis = fields.chassis;
+  }
+  if (fields.waiting !== undefined && fields.waiting !== null) {
+    sheet.waiting = fields.waiting;
+  }
+  if (fields.redeliveryFee !== undefined && fields.redeliveryFee !== null) {
+    sheet.redeliveryFee = fields.redeliveryFee;
+  }
+  sheet.truckRemark =
+    fields.truckRemark ?? resolveRoadRemark(record) ?? sheet.truckRemark;
+
+  if (fumigationEnabled) {
+    sheet.truckingNonOakUsd = fields.truckingNonOakUsd;
+    sheet.truckingOakUsd = fields.truckingOakUsd;
+    sheet.truckingFee = undefined;
+  } else {
+    sheet.truckingFee = fields.truckingFee;
+    sheet.truckingNonOakUsd = undefined;
+    sheet.truckingOakUsd = undefined;
+  }
+}
+
+export function mergeSeaCostImport(
+  sheet: QuoteApi.QuoteSheetFields,
+  fields: QuoteApi.QuoteSheetFields,
+  record: FreightCostRecord,
+) {
+  sheet.ssl = fields.ssl ?? record.ssl ?? sheet.ssl;
+  sheet.pod = fields.pod ?? record.pod ?? sheet.pod;
+  sheet.pol = fields.pol ?? record.pol ?? sheet.pol;
+  sheet.por = fields.por ?? record.por ?? sheet.por;
+}
+
+export function mergeFumigationCostImport(
+  sheet: QuoteApi.QuoteSheetFields,
+  fields: QuoteApi.QuoteSheetFields,
+) {
+  if (fields.fmNonOak !== undefined && fields.fmNonOak !== null) {
+    sheet.fmNonOak = fields.fmNonOak;
+  }
+  if (fields.fmOak !== undefined && fields.fmOak !== null) {
+    sheet.fmOak = fields.fmOak;
+  }
+}
+
+/** @deprecated 请使用 fetchCostImportFields + merge*CostImport */
 export function applyCostToSheet(
   sheet: QuoteApi.QuoteSheetFields,
   type: QuoteCostType,
   record: CostLibraryRecord,
 ) {
   if (type === 'ROAD') {
-    const row = record as RoadCostRecord;
-    sheet.truckingFee = row.allInNoFm;
-    sheet.truckingNonOakUsd = row.allInNoFm;
-    sheet.truckingOakUsd = row.allInFmOneWay;
-    sheet.nsLift = row.nsLift;
-    sheet.chassis = row.chassis;
-    sheet.waiting = row.waitingFee;
-    sheet.redeliveryFee = row.redelivery;
-    sheet.truckRemark = row.remark;
-    sheet.por = row.por ?? sheet.por;
-    sheet.pol = row.pol ?? sheet.pol;
-    sheet.zipCode = row.zipCode ?? sheet.zipCode;
-    sheet.city = row.city ?? sheet.city;
-    sheet.state = row.state ?? sheet.state;
-    sheet.pickUpAddress =
-      row.logYardNameAddress ||
-      [sheet.zipCode, sheet.city, sheet.state].filter(Boolean).join(', ') ||
-      sheet.pickUpAddress;
+    mergeRoadCostImport(
+      sheet,
+      {
+        truckingFee: (record as RoadCostRecord).allInNoFm,
+        truckingNonOakUsd: (record as RoadCostRecord).allInFmOneWay,
+        truckingOakUsd: (record as RoadCostRecord).allInFmRound,
+      },
+      Boolean(sheet.fumigationEnabled),
+      record as RoadCostRecord,
+    );
     return;
   }
-
   if (type === 'SEA') {
-    const row = record as FreightCostRecord;
-    sheet.oceanFreight = formatSeaOfRate(row);
-    sheet.ofUsd = sheet.oceanFreight;
-    sheet.ssl = row.ssl;
-    sheet.pod = row.pod ?? sheet.pod;
-    sheet.pol = row.pol ?? sheet.pol;
-    sheet.por = row.por ?? sheet.por;
+    mergeSeaCostImport(sheet, {}, record as FreightCostRecord);
   }
 }

@@ -19,9 +19,14 @@ export function quoteCostTypeToMode(type: QuoteCostType): CostMode {
 
 export function buildQuoteCostPickerColumns(
   mode: CostMode,
+  options?: { multiSelect?: boolean },
 ): VxeTableGridOptions['columns'] {
   return [
-    { fixed: 'left', type: 'radio', width: 48 },
+    {
+      fixed: 'left',
+      type: options?.multiSelect ? 'checkbox' : 'radio',
+      width: 48,
+    },
     ...buildCostSnapshotColumns(mode),
   ];
 }
@@ -32,13 +37,13 @@ export function buildCostSnapshotColumns(
 ): VxeTableGridOptions['columns'] {
   const template = getDefaultTemplate(mode);
   const nameField =
-    mode === 'road' ? 'supplier' : mode === 'sea' ? 'pol' : 'region';
+    mode === 'road' ? 'supplier' : mode === 'sea' ? 'pol' : 'station';
   const nameTitle =
     mode === 'road'
       ? $t('page.costLibrary.roadFields.supplier')
       : mode === 'sea'
         ? $t('page.costLibrary.seaFields.pol')
-        : $t('page.costLibrary.fumigationFields.region');
+        : $t('page.costLibrary.fumigationFields.station');
 
   return (
     buildColumnsFromTemplate({

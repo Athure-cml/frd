@@ -1,9 +1,16 @@
 <script lang="ts" setup>
 import type { SheetRuleField } from '../shared/quote-rule-hints';
-import type { CostLibraryRecord } from '../shared/sheet-cost-import';
+import type { SslRemarkLookup } from '../shared/quote-sea-ssl-remark';
+import type {
+  CostImportContext,
+  CostLibraryRecord,
+} from '../shared/sheet-cost-import';
+import type { OceanFreightEntry } from '../shared/sheet-ocean-freight';
 
+import type { FreightCostRecord, RoadCostRecord } from '#/api/cost';
 import type { GlobalPortNameOption } from '#/api/master-data/global-port';
 import type { QuoteApi, QuoteCostType, QuoteStatus } from '#/api/quote';
+import type { QuoteRuleApi } from '#/api/quote-rule';
 
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -16,6 +23,7 @@ import { useDebounceFn } from '@vueuse/core';
 import {
   Button,
   Card,
+  DatePicker,
   Dropdown,
   Form,
   Input,
@@ -46,25 +54,34 @@ import {
   wonQuote,
 } from '#/api/quote';
 import { getQuoteRuleList } from '#/api/quote-rule';
+import { getShippingLineList } from '#/api/shipping-line';
 import { $t } from '#/locales';
 
 import { statusTagOptions } from '../list/data';
 import CostLibraryPickerModal from '../shared/cost-library-picker-modal.vue';
 import CostSourceTables from '../shared/cost-source-tables.vue';
+import QuoteCitySelect from '../shared/quote-city-select.vue';
 import {
   stashQuoteCopySource,
   takeQuoteCopySourceId,
 } from '../shared/quote-copy';
+import QuoteFumigationStationSelect from '../shared/quote-fumigation-station-select.vue';
+import { printQuoteSheet } from '../shared/quote-print';
+import QuotePrintSheet from '../shared/quote-print-sheet.vue';
 import {
   buildQuoteRuleHintMap,
+  buildQuoteRuleSelectOptions,
   hintForSheetField,
 } from '../shared/quote-rule-hints';
 import QuoteRuleLabel from '../shared/quote-rule-label.vue';
-import QuoteSheetEditorSkeleton from '../shared/quote-sheet-editor-skeleton.vue';
 import {
-  normalizeUsdFieldValue,
-  todayQuoteDate,
-} from '../shared/quote-sheet-format';
+  buildShippingLineRemarkLookup,
+  resolveSeaRemarkForRecord,
+  resolveSeaSslRemark,
+} from '../shared/quote-sea-ssl-remark';
+import QuoteSheetEditorSkeleton from '../shared/quote-sheet-editor-skeleton.vue';
+import { normalizeUsdFieldValue } from '../shared/quote-sheet-format';
+import QuoteStateSelect from '../shared/quote-state-select.vue';
 import {
   canDraftCostActions,
   canShowQuoteVoid,
@@ -73,10 +90,21 @@ import {
   normalizeQuoteStatus,
 } from '../shared/quote-status';
 import {
-  applyCostToSheet,
+  fetchCostImportFields,
   isActiveCostRecord,
+  mergeFumigationCostImport,
+  mergeRoadCostImport,
+  mergeSeaCostImport,
   recordToCostMatchItem,
 } from '../shared/sheet-cost-import';
+import {
+  buildOceanFreightEntries,
+  entryFromSeaRecord,
+  MAX_OCEAN_FREIGHT_LINES,
+  resolveOceanFreightEntries,
+  syncSeaMatchRemarks,
+  syncSheetFromOceanFreightEntries,
+} from '../shared/sheet-ocean-freight';
 
 import '../shared/quote.css';
 
@@ -115,9 +143,17 @@ const currencyOptions = ref<Array<{ label: string; value: string }>>([]);
 const remark = ref('');
 const costMatches = ref<QuoteApi.QuoteCostMatchItem[]>([]);
 const portOptions = ref<GlobalPortNameOption[]>([]);
-const fumigationEnabled = ref(false);
-const quoteDate = todayQuoteDate();
-const ruleHintMap = ref<Record<string, string>>({});
+const quoteDate = ref(dayjs());
+const quoteRules = ref<QuoteRuleApi.QuoteRule[]>([]);
+const ruleHintMap = computed(() =>
+  buildQuoteRuleHintMap(quoteRules.value, { por: sheet.por }),
+);
+const oceanFreightEntries = ref<OceanFreightEntry[]>([]);
+const sheetPreviewOpen = ref(false);
+const sslRemarkByName = ref<SslRemarkLookup>(new Map());
+
+const cargoInsuranceOptions = ref<Array<{ label: string; value: string }>>([]);
+const cargoAgentFeeOptions = ref<Array<{ label: string; value: string }>>([]);
 
 const sheet = reactive<QuoteApi.QuoteSheetFields>({
   zipCode: '',
@@ -130,6 +166,8 @@ const sheet = reactive<QuoteApi.QuoteSheetFields>({
   oceanFreight: '',
   ssl: '',
   truckingFee: undefined,
+  truckingNonOakUsd: undefined,
+  truckingOakUsd: undefined,
   nsLift: undefined,
   chassis: undefined,
   waiting: undefined,
@@ -137,6 +175,7 @@ const sheet = reactive<QuoteApi.QuoteSheetFields>({
   truckRemark: '',
   fmNonOak: undefined,
   fmOak: undefined,
+  fumigationPoint: '',
   docUsd: '',
   cargoInsurancePremium: '',
   cargoAgentFee: '',
@@ -206,7 +245,20 @@ const matchKeys = computed(() => ({
   pol: sheet.pol,
   pod: sheet.pod,
   ssl: sheet.ssl,
+  fumigationPoint: sheet.fumigationPoint,
 }));
+
+const fumigationEnabled = computed(
+  () =>
+    Boolean(sheet.fumigationPoint?.trim()) || sheet.fumigationEnabled === true,
+);
+
+const previewCustomerName = computed(() => {
+  const customer = customerOptions.value.find(
+    (item) => item.value === customerId.value,
+  );
+  return customer?.label ?? customerName.value;
+});
 
 const portSelectOptions = computed(() =>
   portOptions.value.map((opt) => ({ label: opt.label, value: opt.value })),
@@ -216,11 +268,6 @@ const importMenuItems = computed(() => [
   { key: 'ROAD', label: $t('page.quote.actions.importCostRoad') },
   { key: 'SEA', label: $t('page.quote.actions.importCostSea') },
   { key: 'FUMIGATION', label: $t('page.quote.actions.importCostFumigation') },
-]);
-
-const fumigationEnabledOptions = computed(() => [
-  { label: $t('page.quote.sheet.fumigationYes'), value: true },
-  { label: $t('page.quote.sheet.fumigationNo'), value: false },
 ]);
 
 const loadPortOptions = useDebounceFn(async (keyword?: string) => {
@@ -238,32 +285,175 @@ function ruleHint(field: SheetRuleField) {
 async function loadQuoteRuleHints() {
   try {
     const rules = await getQuoteRuleList({ status: 1 });
-    ruleHintMap.value = buildQuoteRuleHintMap(rules);
+    quoteRules.value = rules;
+    cargoInsuranceOptions.value = buildQuoteRuleSelectOptions(
+      rules,
+      'CARGO_INSURANCE',
+    );
+    cargoAgentFeeOptions.value = buildQuoteRuleSelectOptions(
+      rules,
+      'CARGO_AGENT',
+    );
   } catch {
-    ruleHintMap.value = {};
+    quoteRules.value = [];
+    cargoInsuranceOptions.value = [];
+    cargoAgentFeeOptions.value = [];
   }
 }
 
-function onPorPolChange(value?: string) {
-  sheet.por = value ?? '';
-  sheet.pol = value ?? '';
-}
-
-function onFumigationEnabledChange(value: boolean) {
-  fumigationEnabled.value = value;
-  sheet.fumigationEnabled = value;
-  if (!value) {
+function onFumigationPointChange(value?: string) {
+  sheet.fumigationPoint = value ?? '';
+  sheet.fumigationEnabled = Boolean(value?.trim());
+  if (value?.trim()) {
+    sheet.truckingFee = undefined;
+  } else {
     sheet.fmNonOak = 0;
     sheet.fmOak = 0;
+    sheet.truckingNonOakUsd = undefined;
+    sheet.truckingOakUsd = undefined;
+    costMatches.value = costMatches.value.filter(
+      (item) => item.costType !== 'FUMIGATION',
+    );
   }
 }
 
-function syncFumigationEnabledFromSheet() {
-  if (sheet.fumigationEnabled === true || sheet.fumigationEnabled === false) {
-    fumigationEnabled.value = sheet.fumigationEnabled;
+function syncOceanFreightToSheet() {
+  syncSheetFromOceanFreightEntries(sheet, oceanFreightEntries.value);
+  costMatches.value = syncSeaMatchRemarks(
+    costMatches.value,
+    oceanFreightEntries.value,
+  );
+}
+
+function loadOceanFreightEntriesFromSheet(options?: { syncSheet?: boolean }) {
+  const seaMatches = costMatches.value.filter(
+    (item) => item.costType === 'SEA',
+  );
+  const built = buildOceanFreightEntries(
+    sheet,
+    seaMatches,
+    sslRemarkByName.value,
+  );
+  oceanFreightEntries.value = resolveOceanFreightEntries(
+    sheet,
+    seaMatches,
+    sslRemarkByName.value,
+  );
+  if (options?.syncSheet !== false && built.length > 0) {
+    syncSheetFromOceanFreightEntries(sheet, oceanFreightEntries.value);
+  }
+}
+
+async function loadShippingLineRemarks() {
+  try {
+    const result = await getShippingLineList({
+      page: 1,
+      pageSize: 500,
+      status: 1,
+    });
+    sslRemarkByName.value = buildShippingLineRemarkLookup(result.items);
+  } catch {
+    sslRemarkByName.value = new Map();
+  }
+  if (
+    oceanFreightEntries.value.length > 0 ||
+    sheet.ssl?.trim() ||
+    sheet.oceanFreight?.trim() ||
+    sheet.ofUsd?.trim()
+  ) {
+    loadOceanFreightEntriesFromSheet();
+  }
+}
+
+function oceanFreightLabel(index: number) {
+  if (oceanFreightEntries.value.length <= 1) {
+    return $t('page.quote.sheet.oceanFreight');
+  }
+  return $t('page.quote.sheet.oceanFreightN', [index + 1]);
+}
+
+function updateOceanFreightEntry(
+  index: number,
+  field: keyof OceanFreightEntry,
+  value: string,
+) {
+  if (oceanFreightEntries.value.length === 0) {
+    oceanFreightEntries.value = resolveOceanFreightEntries(
+      sheet,
+      costMatches.value.filter((item) => item.costType === 'SEA'),
+      sslRemarkByName.value,
+    );
+  }
+  const entries = [...oceanFreightEntries.value];
+  const current = entries[index] ?? {
+    rate: '',
+    remark: '',
+    ssl: '',
+  };
+  const nextValue = String(value);
+  entries[index] = {
+    ...current,
+    [field]: nextValue,
+    ...(field === 'ssl'
+      ? {
+          remark: resolveSeaSslRemark(
+            { ssl: nextValue },
+            sslRemarkByName.value,
+          ),
+        }
+      : {}),
+  };
+  oceanFreightEntries.value = entries;
+  syncOceanFreightToSheet();
+}
+
+function buildCostImportContext(): CostImportContext {
+  return {
+    cifAmount: sheet.cifAmount,
+    fumigationEnabled: fumigationEnabled.value,
+    fumigationPoint: sheet.fumigationPoint,
+    pod: sheet.pod,
+    por: sheet.por,
+    quoteDate: quoteDate.value.format('YYYY-MM-DD'),
+  };
+}
+
+async function applySeaFreightRecords(records: FreightCostRecord[]) {
+  const context = buildCostImportContext();
+  const limited = records.slice(0, MAX_OCEAN_FREIGHT_LINES);
+  const entries: OceanFreightEntry[] = [];
+  for (const record of limited) {
+    const fields = await fetchCostImportFields('SEA', record, context);
+    mergeSeaCostImport(sheet, fields, record);
+    entries.push({
+      costRefId: record.id,
+      rate:
+        fields.oceanFreight?.trim() ||
+        entryFromSeaRecord(record, sslRemarkByName.value).rate,
+      remark: resolveSeaRemarkForRecord(record, sslRemarkByName.value),
+      ssl: record.ssl?.trim() ?? '',
+    });
+  }
+  const nonSea = costMatches.value.filter((item) => item.costType !== 'SEA');
+  costMatches.value = [
+    ...nonSea,
+    ...limited.map((record) =>
+      recordToCostMatchItem('SEA', record, matchKeys.value),
+    ),
+  ];
+  oceanFreightEntries.value = entries;
+  syncOceanFreightToSheet();
+}
+
+function syncFumigationFromSheet() {
+  if (sheet.fumigationPoint?.trim()) {
+    sheet.fumigationEnabled = true;
     return;
   }
-  fumigationEnabled.value =
+  if (sheet.fumigationEnabled === true || sheet.fumigationEnabled === false) {
+    return;
+  }
+  sheet.fumigationEnabled =
     Number(sheet.fmNonOak ?? 0) > 0 || Number(sheet.fmOak ?? 0) > 0;
 }
 
@@ -290,6 +480,22 @@ function statusLabel(value: string) {
 }
 
 function mergeCostMatch(item: QuoteApi.QuoteCostMatchItem) {
+  if (item.costType === 'SEA') {
+    const nonSea = costMatches.value.filter(
+      (match) => match.costType !== 'SEA',
+    );
+    const seaItems = costMatches.value.filter(
+      (match) => match.costType === 'SEA',
+    );
+    const withoutDup = seaItems.filter(
+      (match) => match.costRefId !== item.costRefId,
+    );
+    costMatches.value = [
+      ...nonSea,
+      ...[...withoutDup, item].slice(-MAX_OCEAN_FREIGHT_LINES),
+    ];
+    return;
+  }
   costMatches.value = [
     ...costMatches.value.filter((m) => m.costType !== item.costType),
     item,
@@ -310,9 +516,10 @@ async function loadCurrencies() {
 
 async function applyDetailToForm(
   detail: QuoteApi.QuoteDetail,
-  options?: { includeIdentity?: boolean },
+  options?: { hydrateOnly?: boolean; includeIdentity?: boolean },
 ) {
   const includeIdentity = options?.includeIdentity ?? true;
+  const hydrateOnly = options?.hydrateOnly ?? false;
   if (includeIdentity) {
     quoteId.value = detail.id;
     quoteNo.value = detail.quoteNo;
@@ -333,19 +540,19 @@ async function applyDetailToForm(
     sheet.oceanFreight = sheet.ofUsd;
   }
   if (
+    !hydrateOnly &&
     sheet.truckingFee === undefined &&
     sheet.truckingNonOakUsd !== undefined
   ) {
     sheet.truckingFee = sheet.truckingNonOakUsd;
   }
-  if (!sheet.pickUpAddress && (sheet.zipCode || sheet.city || sheet.state)) {
-    sheet.pickUpAddress = [sheet.zipCode, sheet.city, sheet.state]
-      .filter(Boolean)
-      .join(', ');
+  if (!hydrateOnly && !sheet.pickUpAddress && (sheet.city || sheet.state)) {
+    sheet.pickUpAddress = [sheet.city, sheet.state].filter(Boolean).join(', ');
   }
   normalizeSheetUsdFields();
-  syncFumigationEnabledFromSheet();
-  costMatches.value = dedupeLatestPerType(detail.costSnapshots ?? []);
+  syncFumigationFromSheet();
+  costMatches.value = normalizeCostMatches(detail.costSnapshots ?? []);
+  loadOceanFreightEntriesFromSheet({ syncSheet: !hydrateOnly });
 }
 
 async function loadDetail() {
@@ -360,7 +567,7 @@ async function loadDetail() {
   loading.value = true;
   try {
     const detail = await getQuoteDetail(id);
-    await applyDetailToForm(detail);
+    await applyDetailToForm(detail, { hydrateOnly: true });
   } finally {
     loading.value = false;
     actionsReady.value = true;
@@ -378,7 +585,10 @@ async function consumeCopyFromStorage() {
   loading.value = true;
   try {
     const detail = await getQuoteDetail(sourceId);
-    await applyDetailToForm(detail, { includeIdentity: false });
+    await applyDetailToForm(detail, {
+      includeIdentity: false,
+      hydrateOnly: true,
+    });
     message.success($t('page.quote.message.copyPrefilled'));
   } catch {
     message.error($t('page.ai.requestFailed'));
@@ -387,36 +597,98 @@ async function consumeCopyFromStorage() {
   }
 }
 
-function dedupeLatestPerType(items: QuoteApi.QuoteCostMatchItem[]) {
-  const map = new Map<QuoteCostType, QuoteApi.QuoteCostMatchItem>();
+function normalizeCostMatches(items: QuoteApi.QuoteCostMatchItem[]) {
+  const result: QuoteApi.QuoteCostMatchItem[] = [];
+  const seenTypes = new Set<QuoteCostType>();
+  const seaIds = new Set<number>();
   for (const item of items) {
-    if (!map.has(item.costType)) {
-      map.set(item.costType, item);
+    if (item.costType === 'SEA') {
+      if (
+        seaIds.has(item.costRefId) ||
+        seaIds.size >= MAX_OCEAN_FREIGHT_LINES
+      ) {
+        continue;
+      }
+      seaIds.add(item.costRefId);
+      result.push(item);
+      continue;
+    }
+    if (!seenTypes.has(item.costType)) {
+      seenTypes.add(item.costType);
+      result.push(item);
     }
   }
-  return [...map.values()];
+  return result;
+}
+
+function openCostImport(type: QuoteCostType) {
+  if (!canUseCostLibrary.value) {
+    return;
+  }
+  const selectedIds =
+    type === 'SEA'
+      ? costMatches.value
+          .filter((item) => item.costType === 'SEA')
+          .map((item) => item.costRefId)
+      : undefined;
+  costPickerRef.value?.open(type, matchKeys.value, { selectedIds });
 }
 
 function onImportCostType({ key }: { key: string }) {
-  if (!canUseCostLibrary.value) {
-    return;
-  }
-  costPickerRef.value?.open(key as QuoteCostType, matchKeys.value);
+  openCostImport(key as QuoteCostType);
 }
 
-function onCostPicked(type: QuoteCostType, record: CostLibraryRecord) {
-  if (!canUseCostLibrary.value) {
+async function onCostsConfirmed(
+  type: QuoteCostType,
+  records: CostLibraryRecord[],
+) {
+  if (!canUseCostLibrary.value || records.length === 0) {
     return;
   }
-  if (!isActiveCostRecord(type, record as unknown as Record<string, unknown>)) {
-    message.error($t('page.quote.message.costExpired'));
-    return;
+  for (const record of records) {
+    if (
+      !isActiveCostRecord(type, record as unknown as Record<string, unknown>)
+    ) {
+      message.error($t('page.quote.message.costExpired'));
+      return;
+    }
   }
   const label =
     importMenuItems.value.find((item) => item.key === type)?.label ?? type;
-  mergeCostMatch(recordToCostMatchItem(type, record, matchKeys.value));
-  applyCostToSheet(sheet, type, record);
-  message.success($t('page.quote.message.costImportedType', [label]));
+  const context = buildCostImportContext();
+  const hideLoading = message.loading(
+    $t('page.quote.message.costImporting'),
+    0,
+  );
+  try {
+    if (type === 'SEA') {
+      await applySeaFreightRecords(records as FreightCostRecord[]);
+      normalizeSheetUsdFields();
+      message.success($t('page.quote.message.costImportedType', [label]));
+      return;
+    }
+    const record = records[0];
+    if (!record) {
+      return;
+    }
+    mergeCostMatch(recordToCostMatchItem(type, record, matchKeys.value));
+    const fields = await fetchCostImportFields(type, record, context);
+    if (type === 'ROAD') {
+      mergeRoadCostImport(
+        sheet,
+        fields,
+        fumigationEnabled.value,
+        record as RoadCostRecord,
+      );
+    } else {
+      mergeFumigationCostImport(sheet, fields);
+    }
+    message.success($t('page.quote.message.costImportedType', [label]));
+  } catch {
+    message.error($t('page.ai.requestFailed'));
+  } finally {
+    hideLoading();
+  }
 }
 
 async function applyAiCitedCost(payload: AiApplyPayload) {
@@ -426,16 +698,16 @@ async function applyAiCitedCost(payload: AiApplyPayload) {
   try {
     if (payload.type === 'road') {
       const record = await getRoadCost(payload.id);
-      onCostPicked('ROAD', record);
+      await onCostsConfirmed('ROAD', [record]);
       return;
     }
     if (payload.type === 'sea') {
       const record = await seaCostApi.get(payload.id);
-      onCostPicked('SEA', record);
+      await onCostsConfirmed('SEA', [record]);
       return;
     }
     const record = await fumigationCostApi.get(payload.id);
-    onCostPicked('FUMIGATION', record);
+    await onCostsConfirmed('FUMIGATION', [record]);
   } catch {
     message.error($t('page.ai.requestFailed'));
   }
@@ -481,15 +753,19 @@ function buildPayload(): QuoteApi.QuoteSave {
     fumigationEnabled: fumigationEnabled.value,
   };
   if (canUseCostLibrary.value) {
+    syncOceanFreightToSheet();
     payload.costMatches = costMatches.value;
   }
   return payload;
 }
 
 function validateBasicSheetFields(): boolean {
-  const porPol = sheet.por?.trim() || sheet.pol?.trim();
-  if (!porPol) {
-    message.error($t('page.quote.validation.porPolRequired'));
+  if (!sheet.por?.trim()) {
+    message.error($t('page.quote.validation.porRequired'));
+    return false;
+  }
+  if (!sheet.pol?.trim()) {
+    message.error($t('page.quote.validation.polRequired'));
     return false;
   }
   if (!sheet.pod?.trim()) {
@@ -499,7 +775,10 @@ function validateBasicSheetFields(): boolean {
   return true;
 }
 
-async function onGenerateSheet() {
+async function onGenerateSheet(options?: { auto?: boolean }) {
+  if (options?.auto && !isCreate.value) {
+    return;
+  }
   if (!canUseCostLibrary.value) {
     return;
   }
@@ -509,27 +788,45 @@ async function onGenerateSheet() {
 
   generating.value = true;
   try {
+    const keepFumigationPoint = sheet.fumigationPoint;
     const keepFumigationEnabled = fumigationEnabled.value;
     const result = await generateQuoteSheet({
       por: sheet.por,
       pol: sheet.pol,
       pod: sheet.pod,
+      zipCode: sheet.zipCode,
+      city: sheet.city,
+      state: sheet.state,
       pickUpAddress: sheet.pickUpAddress,
       cifAmount: sheet.cifAmount,
+      fumigationPoint: keepFumigationPoint,
       fumigationEnabled: keepFumigationEnabled,
+      quoteDate: quoteDate.value.format('YYYY-MM-DD'),
     });
+    if (result.quoteDate) {
+      quoteDate.value = dayjs(result.quoteDate);
+    }
     Object.assign(sheet, result.sheet);
-    if (!sheet.oceanFreight && sheet.ofUsd) {
-      sheet.oceanFreight = sheet.ofUsd;
+    if (sheet.ofUsd) {
+      sheet.oceanFreight = sheet.oceanFreight || sheet.ofUsd;
     }
     normalizeSheetUsdFields();
-    fumigationEnabled.value = keepFumigationEnabled;
+    sheet.fumigationPoint = keepFumigationPoint ?? sheet.fumigationPoint;
     sheet.fumigationEnabled = keepFumigationEnabled;
-    if (!keepFumigationEnabled) {
+    if (keepFumigationEnabled) {
+      sheet.truckingFee = undefined;
+    } else {
       sheet.fmNonOak = 0;
       sheet.fmOak = 0;
+      sheet.truckingNonOakUsd = undefined;
+      sheet.truckingOakUsd = undefined;
     }
-    costMatches.value = dedupeLatestPerType(result.costMatches ?? []);
+    costMatches.value = normalizeCostMatches(
+      (result.costMatches ?? []).filter(
+        (item) => keepFumigationEnabled || item.costType !== 'FUMIGATION',
+      ),
+    );
+    loadOceanFreightEntriesFromSheet();
     message.success($t('page.quote.message.sheetGenerated'));
   } catch (error: any) {
     message.error(error?.message ?? $t('page.ai.requestFailed'));
@@ -670,19 +967,38 @@ function goBack() {
   router.push({ name: 'QuoteList' });
 }
 
+function openPrintPreview() {
+  syncOceanFreightToSheet();
+  sheetPreviewOpen.value = true;
+}
+
+function onPrint() {
+  printQuoteSheet();
+}
+
 onMounted(async () => {
   window.addEventListener('ai-apply-cost', onAiApplyEvent);
   await Promise.all([
+    loadShippingLineRemarks(),
     loadCustomers(),
     loadCurrencies(),
-    loadDetail(),
     loadPortOptions(),
     loadQuoteRuleHints(),
   ]);
-  consumeAiApplyFromStorage();
-  await consumeCopyFromStorage();
+  await loadDetail();
   if (isCreate.value) {
+    consumeAiApplyFromStorage();
+    await consumeCopyFromStorage();
+    if (oceanFreightEntries.value.length === 0) {
+      oceanFreightEntries.value = resolveOceanFreightEntries(
+        sheet,
+        costMatches.value.filter((item) => item.costType === 'SEA'),
+        sslRemarkByName.value,
+      );
+    }
     actionsReady.value = true;
+  } else {
+    sessionStorage.removeItem('ai-apply-cost');
   }
 });
 
@@ -818,6 +1134,13 @@ onUnmounted(() => {
               {{ $t('common.delete') }}
             </Button>
             <Button
+              class="quote-action-btn quote-action-btn--print"
+              @click="openPrintPreview"
+            >
+              <IconifyIcon class="mr-1 size-4" icon="lucide:printer" />
+              {{ $t('page.quote.actions.print') }}
+            </Button>
+            <Button
               v-if="canSave"
               class="quote-action-btn quote-action-btn--save"
               :loading="saving"
@@ -846,48 +1169,100 @@ onUnmounted(() => {
             <div class="quote-editor-section__body">
               <Form layout="vertical">
                 <div class="quote-sheet-fields">
-                  <Form.Item :label="$t('page.quote.sheet.client')">
-                    <Select
-                      v-model:value="customerId"
-                      :disabled="readOnly"
-                      :options="customerOptions"
-                      :placeholder="$t('page.quote.placeholders.customer')"
-                      allow-clear
-                      class="w-full"
-                      show-search
-                    />
-                  </Form.Item>
-                  <Form.Item :label="$t('page.quote.sheet.porPol')" required>
-                    <Select
-                      :disabled="readOnly"
-                      :filter-option="false"
-                      :options="portSelectOptions"
-                      :show-search="true"
-                      :value="sheet.por || sheet.pol || undefined"
-                      allow-clear
-                      class="w-full"
-                      option-label-prop="value"
-                      :placeholder="$t('page.quote.sheet.selectPort')"
-                      @search="loadPortOptions"
-                      @update:value="
-                        onPorPolChange($event as string | undefined)
-                      "
-                    />
-                  </Form.Item>
-                  <Form.Item :label="$t('page.quote.sheet.pod')" required>
-                    <Select
-                      v-model:value="sheet.pod"
-                      :disabled="readOnly"
-                      :filter-option="false"
-                      :options="portSelectOptions"
-                      :show-search="true"
-                      allow-clear
-                      class="w-full"
-                      option-label-prop="value"
-                      :placeholder="$t('page.quote.sheet.selectPort')"
-                      @search="loadPortOptions"
-                    />
-                  </Form.Item>
+                  <div class="quote-sheet-basic-row quote-sheet-basic-row--2">
+                    <Form.Item :label="$t('page.quote.sheet.client')">
+                      <Select
+                        v-model:value="customerId"
+                        :disabled="readOnly"
+                        :options="customerOptions"
+                        :placeholder="$t('page.quote.placeholders.customer')"
+                        allow-clear
+                        class="w-full"
+                        show-search
+                      />
+                    </Form.Item>
+                    <Form.Item :label="$t('page.quote.sheet.date')">
+                      <DatePicker
+                        v-if="!readOnly"
+                        v-model:value="quoteDate"
+                        class="w-full"
+                        format="YYYY-MM-DD"
+                      />
+                      <Input
+                        v-else
+                        class="w-full"
+                        readonly
+                        :value="quoteDate.format('YYYY-MM-DD')"
+                      />
+                    </Form.Item>
+                  </div>
+                  <div class="quote-sheet-basic-row quote-sheet-basic-row--3">
+                    <Form.Item :label="$t('page.quote.sheet.por')" required>
+                      <Select
+                        v-model:value="sheet.por"
+                        :disabled="readOnly"
+                        :filter-option="false"
+                        :options="portSelectOptions"
+                        :show-search="true"
+                        allow-clear
+                        class="w-full"
+                        option-label-prop="value"
+                        :placeholder="$t('page.quote.sheet.selectPort')"
+                        @search="loadPortOptions"
+                      />
+                    </Form.Item>
+                    <Form.Item :label="$t('page.quote.sheet.pol')" required>
+                      <Select
+                        v-model:value="sheet.pol"
+                        :disabled="readOnly"
+                        :filter-option="false"
+                        :options="portSelectOptions"
+                        :show-search="true"
+                        allow-clear
+                        class="w-full"
+                        option-label-prop="value"
+                        :placeholder="$t('page.quote.sheet.selectPort')"
+                        @search="loadPortOptions"
+                      />
+                    </Form.Item>
+                    <Form.Item :label="$t('page.quote.sheet.pod')" required>
+                      <Select
+                        v-model:value="sheet.pod"
+                        :disabled="readOnly"
+                        :filter-option="false"
+                        :options="portSelectOptions"
+                        :show-search="true"
+                        allow-clear
+                        class="w-full"
+                        option-label-prop="value"
+                        :placeholder="$t('page.quote.sheet.selectPort')"
+                        @search="loadPortOptions"
+                      />
+                    </Form.Item>
+                  </div>
+                  <div class="quote-sheet-location-row">
+                    <Form.Item :label="$t('page.quote.sheet.city')">
+                      <QuoteCitySelect
+                        v-model="sheet.city"
+                        :disabled="readOnly"
+                      />
+                    </Form.Item>
+                    <Form.Item :label="$t('page.quote.sheet.state')">
+                      <QuoteStateSelect
+                        v-model="sheet.state"
+                        :disabled="readOnly"
+                      />
+                    </Form.Item>
+                    <Form.Item :label="$t('page.quote.sheet.fumigationPoint')">
+                      <QuoteFumigationStationSelect
+                        :disabled="readOnly"
+                        :model-value="sheet.fumigationPoint"
+                        @update:model-value="
+                          onFumigationPointChange($event as string | undefined)
+                        "
+                      />
+                    </Form.Item>
+                  </div>
                   <Form.Item
                     class="quote-sheet-field--full"
                     :label="$t('page.quote.sheet.pickUpAddress')"
@@ -897,18 +1272,6 @@ onUnmounted(() => {
                       class="w-full"
                       :disabled="readOnly"
                       :rows="2"
-                    />
-                  </Form.Item>
-                  <Form.Item :label="$t('page.quote.sheet.date')">
-                    <Input class="w-full" readonly :value="quoteDate" />
-                  </Form.Item>
-                  <Form.Item :label="$t('page.quote.sheet.fumigationEnabled')">
-                    <Select
-                      v-model:value="fumigationEnabled"
-                      class="w-full"
-                      :disabled="readOnly"
-                      :options="fumigationEnabledOptions"
-                      @change="onFumigationEnabledChange"
                     />
                   </Form.Item>
                 </div>
@@ -926,20 +1289,50 @@ onUnmounted(() => {
             <div class="quote-editor-section__body">
               <Form layout="vertical">
                 <div class="quote-sheet-fields">
-                  <Form.Item>
-                    <template #label>
-                      <QuoteRuleLabel
-                        :hint="ruleHint('oceanFreight')"
-                        :label="$t('page.quote.sheet.oceanFreight')"
+                  <div
+                    v-for="(entry, index) in oceanFreightEntries"
+                    :key="`ocean-freight-${index}`"
+                    class="quote-sheet-sea-row"
+                  >
+                    <Form.Item>
+                      <template #label>
+                        <QuoteRuleLabel
+                          v-if="index === 0"
+                          :hint="ruleHint('oceanFreight')"
+                          :label="oceanFreightLabel(index)"
+                        />
+                        <span v-else>{{ oceanFreightLabel(index) }}</span>
+                      </template>
+                      <Input
+                        :disabled="readOnly"
+                        class="w-full"
+                        :value="entry.rate"
+                        @update:value="
+                          (value) =>
+                            updateOceanFreightEntry(
+                              index,
+                              'rate',
+                              String(value),
+                            )
+                        "
                       />
-                    </template>
-                    <Input
-                      v-model:value="sheet.oceanFreight"
-                      class="w-full"
-                      :disabled="readOnly"
-                    />
-                  </Form.Item>
-                  <Form.Item>
+                    </Form.Item>
+                    <Form.Item :label="$t('page.quote.sheet.seaSsl')">
+                      <Input
+                        :disabled="readOnly"
+                        class="w-full"
+                        :value="entry.ssl"
+                        @update:value="
+                          (value) =>
+                            updateOceanFreightEntry(index, 'ssl', String(value))
+                        "
+                      />
+                    </Form.Item>
+                    <Form.Item :label="$t('page.quote.sheet.seaRemark')">
+                      <Input class="w-full" readonly :value="entry.remark" />
+                    </Form.Item>
+                  </div>
+                  <Form.Item v-if="!fumigationEnabled">
                     <template #label>
                       <QuoteRuleLabel
                         :hint="ruleHint('truckingFee')"
@@ -951,9 +1344,41 @@ onUnmounted(() => {
                       class="w-full"
                       :disabled="readOnly"
                       :min="0"
-                      :precision="2"
+                      :precision="0"
                     />
                   </Form.Item>
+                  <template v-else>
+                    <Form.Item>
+                      <template #label>
+                        <QuoteRuleLabel
+                          :hint="ruleHint('truckingNonOakUsd')"
+                          :label="$t('page.quote.sheet.truckingFeeFmNonOak')"
+                        />
+                      </template>
+                      <InputNumber
+                        v-model:value="sheet.truckingNonOakUsd"
+                        class="w-full"
+                        :disabled="readOnly"
+                        :min="0"
+                        :precision="0"
+                      />
+                    </Form.Item>
+                    <Form.Item>
+                      <template #label>
+                        <QuoteRuleLabel
+                          :hint="ruleHint('truckingOakUsd')"
+                          :label="$t('page.quote.sheet.truckingFeeFmOak')"
+                        />
+                      </template>
+                      <InputNumber
+                        v-model:value="sheet.truckingOakUsd"
+                        class="w-full"
+                        :disabled="readOnly"
+                        :min="0"
+                        :precision="0"
+                      />
+                    </Form.Item>
+                  </template>
                 </div>
               </Form>
             </div>
@@ -1022,7 +1447,7 @@ onUnmounted(() => {
           </section>
 
           <!-- 4. 熏蒸费 -->
-          <section class="quote-editor-section">
+          <section v-if="fumigationEnabled" class="quote-editor-section">
             <div class="quote-editor-section__head">
               <span class="quote-editor-section__title">{{
                 $t('page.quote.sections.fumigation')
@@ -1096,10 +1521,13 @@ onUnmounted(() => {
                         :label="$t('page.quote.sheet.cargoInsurance')"
                       />
                     </template>
-                    <Input
+                    <Select
                       v-model:value="sheet.cargoInsurancePremium"
+                      allow-clear
                       class="w-full"
                       :disabled="readOnly"
+                      :options="cargoInsuranceOptions"
+                      :placeholder="$t('page.quote.sheet.selectCargoInsurance')"
                     />
                   </Form.Item>
                   <Form.Item>
@@ -1109,10 +1537,13 @@ onUnmounted(() => {
                         :label="$t('page.quote.sheet.cargoAgent')"
                       />
                     </template>
-                    <Input
+                    <Select
                       v-model:value="sheet.cargoAgentFee"
+                      allow-clear
                       class="w-full"
                       :disabled="readOnly"
+                      :options="cargoAgentFeeOptions"
+                      :placeholder="$t('page.quote.sheet.selectCargoAgentFee')"
                     />
                   </Form.Item>
                 </div>
@@ -1153,12 +1584,38 @@ onUnmounted(() => {
               }}</span>
             </div>
             <div class="quote-editor-section__body">
-              <CostSourceTables :matches="costMatches" />
+              <CostSourceTables
+                :can-import="canUseCostLibrary"
+                :matches="costMatches"
+                @import="openCostImport"
+              />
             </div>
           </section>
         </div>
       </Card>
-      <CostLibraryPickerModal ref="costPickerRef" @confirm="onCostPicked" />
+      <CostLibraryPickerModal ref="costPickerRef" @confirm="onCostsConfirmed" />
+      <Modal
+        v-model:open="sheetPreviewOpen"
+        class="quote-print-modal"
+        :title="$t('page.quote.sections.printPreview')"
+        width="1040px"
+      >
+        <QuotePrintSheet
+          :cost-snapshots="costMatches"
+          :customer-name="previewCustomerName"
+          :quote-date="quoteDate.format('YYYY-MM-DD')"
+          :sheet="sheet"
+        />
+        <template #footer>
+          <Button @click="sheetPreviewOpen = false">
+            {{ $t('common.cancel') }}
+          </Button>
+          <Button type="primary" @click="onPrint">
+            <IconifyIcon class="mr-1 size-4" icon="lucide:printer" />
+            {{ $t('page.quote.actions.print') }}
+          </Button>
+        </template>
+      </Modal>
     </div>
   </Page>
 </template>

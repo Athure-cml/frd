@@ -479,6 +479,9 @@ export function useRoadBatchSchema(): VbenFormSchema[] {
     },
     amountField('prepull', 'prepull'),
     amountField('otherFee', 'otherFee'),
+    amountField('allInNoFm', 'allInNoFm'),
+    amountField('allInFmOneWay', 'allInFmOneWay'),
+    amountField('allInFmRound', 'allInFmRound'),
     {
       component: 'Textarea',
       componentProps: { maxlength: 512, rows: 2, showCount: true },
@@ -498,6 +501,104 @@ export function useRoadBatchSchema(): VbenFormSchema[] {
       componentProps: datePickerProps(),
       fieldName: 'validDate',
       label: t('validDate'),
+    },
+  ];
+}
+
+function readonlyAllInHintField(
+  field: 'allInFmOneWay' | 'allInFmRound' | 'allInNoFm',
+): VbenFormSchema {
+  return {
+    component: 'Input',
+    componentProps: {
+      disabled: true,
+      placeholder: $t('page.costLibrary.hint.batchRenewAllInAuto'),
+    },
+    fieldName: field,
+    label: t(field),
+  };
+}
+
+/** 批量续期：与单条续期字段一致（不含路线/供应商；ALL IN 只读提示） */
+export function useRoadBatchRenewSchema(): VbenFormSchema[] {
+  return [
+    {
+      component: 'ApiSelect',
+      componentProps: createPortSelectProps({
+        portTypes: PORT_TYPES,
+      }),
+      fieldName: 'pol',
+      label: t('pol'),
+    },
+    amountField('baseFreight', 'baseFreight'),
+    {
+      component: 'InputNumber',
+      componentProps: {
+        addonAfter: '%',
+        class: 'w-full',
+        min: 0,
+        precision: 2,
+      },
+      fieldName: 'fsc',
+      label: t('fsc'),
+    },
+    amountField('chassis', 'chassis'),
+    amountField('triTandemAxle', 'triTandemAxle'),
+    amountField('split', 'split'),
+    amountField('stopOff', 'stopOff'),
+    readonlyAllInHintField('allInNoFm'),
+    readonlyAllInHintField('allInFmOneWay'),
+    readonlyAllInHintField('allInFmRound'),
+    amountField('waitingFee', 'waitingFee'),
+    amountField('redelivery', 'redelivery'),
+    amountField('prepull', 'prepull'),
+    amountField('nsLift', 'nsLift'),
+    amountField('otherFee', 'otherFee'),
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'cf_road_yard_storage',
+      label: t('yardStorage'),
+    },
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'cf_road_extra_chassis',
+      label: t('extraChassis'),
+    },
+    {
+      component: 'Input',
+      componentProps: { class: 'w-full' },
+      fieldName: 'logYardNameAddress',
+      formItemClass: 'col-span-full',
+      label: t('logYardNameAddress'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'cf_road_eff',
+      label: 'EFFECTIVE TIME',
+      rules: 'required',
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'validDate',
+      label: t('validDate'),
+    },
+    {
+      component: 'Textarea',
+      componentProps: { maxlength: 512, rows: 2, showCount: true },
+      fieldName: 'remark',
+      formItemClass: 'col-span-full',
+      label: t('operationRemark'),
+    },
+    {
+      component: 'Textarea',
+      componentProps: { maxlength: 512, rows: 2, showCount: true },
+      fieldName: ROAD_REMARK_FIELD,
+      formItemClass: 'col-span-full',
+      label: t('remark'),
     },
   ];
 }

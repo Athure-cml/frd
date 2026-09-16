@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { CostMode, CostTableTemplate } from '#/api/cost';
+import type { CostMode, CostTableTemplate, RoadCostRecord } from '#/api/cost';
 
 import { computed, ref } from 'vue';
 
@@ -12,6 +12,7 @@ import { batchCopyRoadCost, seaCostApi } from '#/api/cost';
 import { $t } from '#/locales';
 
 import { useRoadBatchCopySchema } from '../road/form-schema';
+import { enrichRoadBatchCopyPreviewItems } from '../road/road-batch-copy-preview';
 import { ROAD_REMARK_FIELD } from '../shared/field-catalog/road';
 import {
   joinContainerTypes,
@@ -31,6 +32,7 @@ const emit = defineEmits<{ success: [] }>();
 
 const selectedIds = ref<number[]>([]);
 const submitting = ref(false);
+const skipResetOnClose = ref(false);
 const previewModalRef = ref<InstanceType<typeof BatchCopyPreviewModal>>();
 
 const isSea = computed(() => props.mode === 'sea');
@@ -48,10 +50,11 @@ const [Modal, modalApi] = useVbenModal({
   class: isSea.value ? 'w-full sm:w-[720px]' : 'w-full sm:w-[860px]',
   footer: false,
   onOpenChange(isOpen) {
-    if (!isOpen) {
+    if (!isOpen && !skipResetOnClose.value) {
       formApi.resetForm();
       selectedIds.value = [];
     }
+    skipResetOnClose.value = false;
   },
 });
 
@@ -216,8 +219,21 @@ async function submitCopy(applyOverrides: boolean) {
       message.warning($t('page.costLibrary.hint.batchCopySuccess', [0]));
       return;
     }
+    const roadOverrideFields = isSea.value
+      ? undefined
+      : pickRoadCopyFields(values);
+    const previewItems = isSea.value
+      ? result.items
+      : await enrichRoadBatchCopyPreviewItems(
+          result.items as RoadCostRecord[],
+          applyOverrides,
+          roadOverrideFields,
+        );
+    skipResetOnClose.value = true;
+    modalApi.close();
     previewModalRef.value?.open({
-      items: result.items,
+      items: previewItems,
+      operation: 'copy',
       request: { ...request, previewOnly: false },
     });
   } finally {
@@ -228,12 +244,12 @@ async function submitCopy(applyOverrides: boolean) {
 
 function onPreviewSuccess() {
   previewModalRef.value?.close();
-  modalApi.close();
   emit('success');
 }
 
 function onPreviewBack() {
   previewModalRef.value?.close();
+  modalApi.open();
 }
 
 function open(ids: number[]) {
@@ -262,10 +278,10 @@ defineExpose({ open });
         {{ $t('common.cancel') }}
       </Button>
       <Button :loading="submitting" @click="submitCopy(false)">
-        {{ $t('page.costLibrary.actions.batchCopySkip') }}
+        {{ $t('page.costLibrary.actions.batchCopyPreviewPlain') }}
       </Button>
       <Button :loading="submitting" type="primary" @click="submitCopy(true)">
-        {{ $t('page.costLibrary.actions.batchCopyApply') }}
+        {{ $t('page.costLibrary.actions.batchCopyPreviewApply') }}
       </Button>
     </div>
   </Modal>
