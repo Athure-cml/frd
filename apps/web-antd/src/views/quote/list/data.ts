@@ -3,8 +3,10 @@ import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { QuoteApi } from '#/api/quote';
 
 import { getCustomerList } from '#/api/customer';
+import { getFumigationStationList } from '#/api/quote';
 import { $t } from '#/locales';
 
+import { createPortSelectProps } from '../../cost-library/shared/freight-schema';
 import { buildOperationColumn } from '../../system/shared/columns';
 import {
   canShowQuoteVoid,
@@ -13,9 +15,8 @@ import {
   normalizeQuoteStatus,
 } from '../shared/quote-status';
 import {
-  formatQuoteDate,
-  QUOTE_SHEET_COLUMNS,
-  sheetCellValue,
+  formatQuoteListCellValue,
+  QUOTE_LIST_COLUMNS,
 } from '../shared/sheet-columns';
 
 const t = (key: string) => $t(`page.quote.${key}`);
@@ -57,13 +58,19 @@ export const statusTagOptions = () => [
   { color: 'warning', label: t('status.REJECTED'), value: 'LOST' },
 ];
 
+const QUOTE_PORT_TYPES = ['INLAND', 'RAIL', 'SEAPORT'] as const;
+
 export function useQuoteSearchSchema(): VbenFormSchema[] {
   return [
     {
       component: 'Input',
-      componentProps: { autocomplete: 'off' },
+      componentProps: {
+        allowClear: true,
+        autocomplete: 'off',
+        class: 'w-full',
+      },
       fieldName: 'quoteNo',
-      label: t('fields.quoteNo'),
+      label: 'QUOTE NO',
     },
     {
       component: 'ApiSelect',
@@ -79,10 +86,64 @@ export function useQuoteSearchSchema(): VbenFormSchema[] {
         },
         class: 'w-full',
         labelField: 'name',
+        optionFilterProp: 'label',
+        showSearch: true,
         valueField: 'name',
       },
       fieldName: 'customerName',
-      label: t('fields.customerName'),
+      label: 'CLIENT',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: createPortSelectProps({
+        portTypes: [...QUOTE_PORT_TYPES],
+        requireKeyword: true,
+      }),
+      fieldName: 'por',
+      label: 'POR',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: createPortSelectProps({
+        portTypes: [...QUOTE_PORT_TYPES],
+        requireKeyword: true,
+      }),
+      fieldName: 'pol',
+      label: 'POL',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: createPortSelectProps({
+        portTypes: [...QUOTE_PORT_TYPES],
+        requireKeyword: true,
+      }),
+      fieldName: 'pod',
+      label: 'POD',
+    },
+    {
+      component: 'Input',
+      componentProps: {
+        allowClear: true,
+        autocomplete: 'off',
+        class: 'w-full',
+      },
+      fieldName: 'pickUpAddress',
+      label: 'PICK UP ADDRESS',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: {
+        allowClear: true,
+        api: async () => {
+          const stations = await getFumigationStationList();
+          return stations.map((item) => ({ label: item, value: item }));
+        },
+        class: 'w-full',
+        optionFilterProp: 'label',
+        showSearch: true,
+      },
+      fieldName: 'fumigationPoint',
+      label: 'STATION',
     },
     {
       component: 'Select',
@@ -93,46 +154,6 @@ export function useQuoteSearchSchema(): VbenFormSchema[] {
       },
       fieldName: 'status',
       label: t('fields.status'),
-    },
-    {
-      component: 'Input',
-      fieldName: 'zipCode',
-      label: 'Zip code',
-    },
-    {
-      component: 'Input',
-      fieldName: 'city',
-      label: 'City',
-    },
-    {
-      component: 'Input',
-      fieldName: 'state',
-      label: 'State',
-    },
-    {
-      component: 'Input',
-      fieldName: 'por',
-      label: 'POR',
-    },
-    {
-      component: 'Input',
-      fieldName: 'pol',
-      label: 'POL',
-    },
-    {
-      component: 'Input',
-      fieldName: 'pod',
-      label: 'POD',
-    },
-    {
-      component: 'Input',
-      fieldName: 'ssl',
-      label: 'SSL',
-    },
-    {
-      component: 'Input',
-      fieldName: 'followUpByName',
-      label: t('fields.followUpBy'),
     },
   ];
 }
@@ -210,10 +231,10 @@ export function useQuoteColumns(
     },
   );
 
-  const sheetCols = QUOTE_SHEET_COLUMNS.map((col) => ({
-    field: `sheet.${col.field}`,
+  const sheetCols = QUOTE_LIST_COLUMNS.map((col) => ({
+    field: col.listSource === 'row' ? col.field : `sheet.${String(col.field)}`,
     formatter: ({ row }: { row: QuoteApi.QuoteListItem }) =>
-      sheetCellValue(row.sheet, col.field),
+      formatQuoteListCellValue(row, col),
     minWidth: col.width ?? 100,
     showOverflow: true,
     title: col.title,
@@ -232,16 +253,9 @@ export function useQuoteColumns(
       field: 'customerName',
       fixed: 'left',
       minWidth: 120,
-      title: 'CLINET',
+      title: 'CLIENT',
     },
     ...sheetCols,
-    {
-      field: 'createdAt',
-      formatter: ({ cellValue }: { cellValue?: string }) =>
-        formatQuoteDate(cellValue),
-      minWidth: 120,
-      title: 'QUOTE DATA',
-    },
     {
       align: 'center',
       cellRender: {

@@ -6,6 +6,7 @@ import type { SupplierApi } from '#/api/supplier';
 import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
+import { useAccess } from '@vben/access';
 import { useVbenModal } from '@vben/common-ui';
 
 import { message } from 'ant-design-vue';
@@ -17,7 +18,6 @@ import {
   updateSupplier,
 } from '#/api/supplier';
 import { $t } from '#/locales';
-import { useInternalCodeVisibility } from '#/utils/internal-code-access';
 
 import {
   supportsTypes,
@@ -28,7 +28,7 @@ import {
 const emit = defineEmits<{ success: [] }>();
 
 const route = useRoute();
-const { canViewInternalCodes } = useInternalCodeVisibility();
+const { hasAccessByCodes } = useAccess();
 
 const category = computed<SupplierCategory>(() => {
   const raw = String(route.meta.supplierCategory ?? 'TRUCK').toUpperCase();
@@ -42,6 +42,11 @@ const category = computed<SupplierCategory>(() => {
   }
   return 'TRUCK';
 });
+
+const permPrefix = computed(() => `supplier:${category.value.toLowerCase()}`);
+const canViewPartyCode = computed(() =>
+  hasAccessByCodes([`${permPrefix.value}:edit`]),
+);
 
 const supplierId = ref<number>();
 const typeOptions = ref<Array<{ label: string; value: string }>>([]);
@@ -69,7 +74,7 @@ const [Form, formApi] = useVbenForm({
   schema: useSupplierFormSchema(
     category.value,
     false,
-    canViewInternalCodes.value,
+    canViewPartyCode.value,
     [],
   ),
   showDefaultActions: false,
@@ -106,7 +111,7 @@ const [Modal, modalApi] = useVbenModal({
       schema: useSupplierFormSchema(
         category.value,
         !!data?.id,
-        canViewInternalCodes.value,
+        canViewPartyCode.value,
         typeOptions.value,
       ),
     });

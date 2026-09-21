@@ -269,6 +269,35 @@ export async function fetchCostImportFields(
   return fields;
 }
 
+const ROAD_SHEET_PRESERVE_KEYS = [
+  'zipCode',
+  'city',
+  'state',
+  'pickUpAddress',
+  'truckingFee',
+  'truckingNonOakUsd',
+  'truckingOakUsd',
+  'nsLift',
+  'chassis',
+  'waiting',
+  'redeliveryFee',
+  'truckRemark',
+] as const satisfies ReadonlyArray<keyof QuoteApi.QuoteSheetFields>;
+
+/** 匹配报价时已引入卡车成本：保留这些 sheet 字段不被覆盖 */
+export function pickRoadSheetFields(
+  sheet: QuoteApi.QuoteSheetFields,
+): Partial<QuoteApi.QuoteSheetFields> {
+  const picked: Partial<QuoteApi.QuoteSheetFields> = {};
+  for (const key of ROAD_SHEET_PRESERVE_KEYS) {
+    const value = sheet[key];
+    if (value !== undefined && value !== null && value !== '') {
+      picked[key] = value;
+    }
+  }
+  return picked;
+}
+
 export function mergeRoadCostImport(
   sheet: QuoteApi.QuoteSheetFields,
   fields: QuoteApi.QuoteSheetFields,

@@ -47,8 +47,10 @@ import {
 } from '#/components/ai-assistant/ai-prefill-cost';
 import { $t } from '#/locales';
 
+import { stashRoadQuoteIntroduce } from '../../quote/shared/road-quote-introduce';
 import { buildListExportParams } from '../../shared/export-params';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
+import { normalizeRoadCitySearchParam } from '../road/data';
 import { createTemplateColumnBgStyleHandlers } from '../shared/column-bg-style';
 import { adaptCostColumnsForViewport } from '../shared/columns';
 import { withCostSearchFormLayout } from '../shared/cost-search-form-layout';
@@ -87,6 +89,8 @@ const props = defineProps<{
   enableBatchCopy?: boolean;
   /** 开启后展示批量续期（卡车） */
   enableBatchRenew?: boolean;
+  /** 开启后展示「引入报价单」（卡车，须单选） */
+  enableIntroduceQuote?: boolean;
   exportFilename: string;
   formComponent: Component;
   getRowName: (row: any) => string;
@@ -102,7 +106,14 @@ const router = useRouter();
 const { hasAccessByCodes } = useAccess();
 const { isMobile } = usePreferences();
 const canEdit = hasAccessByCodes([props.editPermission]);
+const canIntroduceQuote = hasAccessByCodes(['quote:create']);
 const canViewTemplates = hasAccessByCodes([`cost:${props.mode}:template:view`]);
+const introduceQuoteEnabled = computed(
+  () =>
+    props.enableIntroduceQuote === true &&
+    canIntroduceQuote &&
+    selectedCount.value === 1,
+);
 const toolbarSize = computed(() => (isMobile.value ? 'small' : 'middle'));
 const pageDescription = computed(() =>
   isMobile.value ? undefined : props.description,
@@ -648,6 +659,14 @@ function normalizeListParams(formValues?: Record<string, unknown>) {
   if (params.highlightOnly !== true) {
     delete params.highlightOnly;
   }
+  if (props.mode === 'road') {
+    const normalizedCity = normalizeRoadCitySearchParam(params.city);
+    if (normalizedCity) {
+      params.city = normalizedCity;
+    } else {
+      delete params.city;
+    }
+  }
   return params;
 }
 
@@ -661,7 +680,7 @@ async function onExport() {
   try {
     const formValues = await gridApi.formApi?.getLatestSubmissionValues?.();
     const blob = await api.export(
-      buildListExportParams(formValues, getSelectedIds(), {
+      buildListExportParams(normalizeListParams(formValues), getSelectedIds(), {
         templateId: activeTemplateId.value,
       }),
     );
@@ -888,6 +907,19 @@ function onBatchMenuClick({ key }: { key: string }) {
 function onRefresh() {
   gridApi.query();
 }
+
+function onIntroduceQuote() {
+  const ids = getSelectedIds();
+  if (ids.length !== 1) {
+    return;
+  }
+  const [roadCostId] = ids;
+  if (roadCostId === undefined) {
+    return;
+  }
+  stashRoadQuoteIntroduce(roadCostId);
+  void router.push({ name: 'QuoteCreate' });
+}
 </script>
 
 <template>
@@ -960,6 +992,16 @@ function onRefresh() {
             <Button :loading="exporting" :size="toolbarSize" @click="onExport">
               <Download class="size-3.5" />
               {{ $t('page.costLibrary.actions.export') }}
+            </Button>
+            <Button
+              v-if="enableIntroduceQuote && canIntroduceQuote"
+              :disabled="!introduceQuoteEnabled"
+              :size="toolbarSize"
+              type="primary"
+              ghost
+              @click="onIntroduceQuote"
+            >
+              {{ $t('page.costLibrary.actions.introduceQuote') }}
             </Button>
           </div>
           <div class="cost-toolbar__group cost-toolbar__group--batch">

@@ -39,6 +39,7 @@ const emit = defineEmits<{ back: []; success: [] }>();
 type PreviewItem = FreightCostRecord | RoadCostRecord;
 
 const previewItems = ref<PreviewItem[]>([]);
+const previewTotal = ref(0);
 const operation = ref<BatchPreviewOperation>('copy');
 const pendingCopyRequest = ref<null | Record<string, unknown>>(null);
 const pendingRenewJobs = ref<RoadRenewPreviewJob[]>([]);
@@ -53,15 +54,24 @@ const modalTitle = computed(() =>
     : $t('page.costLibrary.actions.batchCopyPreview'),
 );
 
-const previewHint = computed(() =>
-  operation.value === 'renew'
-    ? $t('page.costLibrary.hint.batchRenewPreviewHint', [
-        previewItems.value.length,
-      ])
-    : $t('page.costLibrary.hint.batchCopyPreviewHint', [
-        previewItems.value.length,
-      ]),
-);
+const previewHint = computed(() => {
+  if (operation.value === 'renew') {
+    return $t('page.costLibrary.hint.batchRenewPreviewHint', [
+      previewItems.value.length,
+    ]);
+  }
+  const total =
+    previewTotal.value ||
+    (previewItems.value.length > 0 ? previewItems.value.length : 0);
+  const shown = previewItems.value.length;
+  if (total > shown) {
+    return $t('page.costLibrary.hint.batchCopyPreviewPartialHint', [
+      total,
+      shown,
+    ]);
+  }
+  return $t('page.costLibrary.hint.batchCopyPreviewHint', [total]);
+});
 
 const confirmLabel = computed(() =>
   operation.value === 'renew'
@@ -100,17 +110,21 @@ const pagedItems = computed(() => {
   return previewItems.value.slice(start, start + previewPage.value.pageSize);
 });
 
+function resetPreviewState() {
+  previewItems.value = [];
+  previewTotal.value = 0;
+  pendingCopyRequest.value = null;
+  pendingRenewJobs.value = [];
+  operation.value = 'copy';
+  previewPage.value.current = 1;
+  confirming.value = false;
+}
+
 const [Modal, modalApi] = useVbenModal({
   class: 'w-full sm:w-[min(96vw,1280px)]',
   footer: false,
-  onOpenChange(isOpen) {
-    if (!isOpen) {
-      previewItems.value = [];
-      pendingCopyRequest.value = null;
-      pendingRenewJobs.value = [];
-      operation.value = 'copy';
-      previewPage.value.current = 1;
-    }
+  onClosed() {
+    resetPreviewState();
   },
 });
 
@@ -128,8 +142,10 @@ function open(options: {
   operation?: BatchPreviewOperation;
   renewJobs?: RoadRenewPreviewJob[];
   request?: Record<string, unknown>;
+  total?: number;
 }) {
   previewItems.value = options.items;
+  previewTotal.value = options.total ?? options.items.length;
   operation.value = options.operation ?? 'copy';
   pendingCopyRequest.value = options.request ?? null;
   pendingRenewJobs.value = options.renewJobs ?? [];
@@ -147,33 +163,35 @@ function onBack() {
 }
 
 async function confirmCopy() {
-  if (!pendingCopyRequest.value) {
+  if (!pendingCopyRequest.value || confirming.value) {
     return;
   }
   confirming.value = true;
-  modalApi.lock();
   try {
     const payload = { ...pendingCopyRequest.value, previewOnly: false };
     const result = isSea.value
       ? await seaCostApi.batchCopy(payload as any)
       : await batchCopyRoadCost(payload as any);
-    message.success(
-      $t('page.costLibrary.hint.batchCopySuccess', [result.created]),
-    );
-    emit('success');
+    const copied = result.created || result.total || previewTotal.value;
+    if (copied === 0) {
+      message.warning($t('page.costLibrary.hint.batchCopySuccess', [0]));
+      return;
+    }
+    message.success($t('page.costLibrary.hint.batchCopySuccess', [copied]));
     close();
+    emit('success');
+  } catch {
+    message.error($t('page.ai.requestFailed'));
   } finally {
     confirming.value = false;
-    modalApi.unlock();
   }
 }
 
 async function confirmRenew() {
-  if (pendingRenewJobs.value.length === 0) {
+  if (pendingRenewJobs.value.length === 0 || confirming.value) {
     return;
   }
   confirming.value = true;
-  modalApi.lock();
   try {
     for (const job of pendingRenewJobs.value) {
       await renewRoadCost(job.sourceId, job.payload as RoadCostSave);
@@ -183,11 +201,12 @@ async function confirmRenew() {
         pendingRenewJobs.value.length,
       ]),
     );
-    emit('success');
     close();
+    emit('success');
+  } catch {
+    message.error($t('page.ai.requestFailed'));
   } finally {
     confirming.value = false;
-    modalApi.unlock();
   }
 }
 
@@ -210,6 +229,7 @@ defineExpose({ close, open });
     <Table
       :columns="columns"
       :data-source="pagedItems"
+      :loading="confirming"
       :pagination="false"
       :row-key="(_row, index) => String(index)"
       :scroll="{ x: scrollX, y: 420 }"

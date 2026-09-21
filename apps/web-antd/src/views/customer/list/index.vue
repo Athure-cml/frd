@@ -26,7 +26,7 @@ import {
   unpinCustomer,
 } from '#/api/customer';
 import { $t } from '#/locales';
-import { useInternalCodeVisibility } from '#/utils/internal-code-access';
+import { usePartyCodeVisibility } from '#/utils/party-code-access';
 
 import ImportModal from '../../cost-library/components/import-modal.vue';
 import {
@@ -44,7 +44,7 @@ import Form from './modules/form.vue';
 import '../shared/customer.css';
 
 const { hasAccessByCodes } = useAccess();
-const { canViewInternalCodes } = useInternalCodeVisibility();
+const { canViewPartyCode } = usePartyCodeVisibility('customer:edit');
 const canCreate = hasAccessByCodes(['customer:create']);
 const canEdit = hasAccessByCodes(['customer:edit']);
 const canDelete = hasAccessByCodes(['customer:delete']);
@@ -203,13 +203,13 @@ function buildColumns() {
     onActionClick,
     canEdit,
     canDelete,
-    canViewInternalCodes.value,
+    canViewPartyCode.value,
   );
 }
 
 const searchFormOptions = useI18nFormOptions(() => ({
   collapsed: true,
-  schema: buildCustomerSearchSchema(canViewInternalCodes.value),
+  schema: buildCustomerSearchSchema(canViewPartyCode.value),
   showCollapseButton: true,
   submitOnChange: false,
 }));
@@ -252,7 +252,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
   } as VxeTableGridOptions<CustomerApi.Customer>,
 });
 
-watch(canViewInternalCodes, () => {
+watch(canViewPartyCode, () => {
   gridApi.setGridOptions({ columns: buildColumns() });
 });
 
@@ -297,7 +297,7 @@ function onRefresh() {
           {{ $t('page.customer.actions.batchDelete') }}
         </Button>
       </template>
-      <template v-if="canViewInternalCodes" #code="{ row }">
+      <template v-if="canViewPartyCode" #code="{ row }">
         <span class="customer-code">{{ row.code }}</span>
       </template>
       <template #name="{ row }">

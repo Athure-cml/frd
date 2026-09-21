@@ -46,12 +46,103 @@ export function resolveLayoutFieldOrder(
   mode: CostMode,
   layout: CostTableTemplateLayout,
 ) {
-  const ensured = mode === 'road' ? ensureRoadFeeUnitFields(layout) : layout;
+  const ensured =
+    mode === 'road'
+      ? ensureRoadTemplateLayout(layout)
+      : mode === 'fumigation'
+        ? ensureFumigationRemarkField(layout)
+        : layout;
   const order = resolveLayoutFieldOrderRaw(ensured);
   if (order.length > 0) {
     return order;
   }
   return getFieldCatalog(mode).map((entry) => entry.field);
+}
+
+/** 为已有模板补齐 REGION（POR 与 SUPPLIER 之间，非必填） */
+export function ensureRoadRegionField(
+  layout: CostTableTemplateLayout,
+): CostTableTemplateLayout {
+  const order = resolveLayoutFieldOrderRaw(layout);
+  if (order.length === 0) {
+    return layout;
+  }
+  const fieldOverrides = { ...layout.fieldOverrides };
+  let changed = false;
+
+  if (!order.includes('region')) {
+    const porIndex = order.indexOf('por');
+    const supplierIndex = order.indexOf('supplier');
+    if (porIndex !== -1) {
+      order.splice(porIndex + 1, 0, 'region');
+      changed = true;
+    } else if (supplierIndex !== -1) {
+      order.splice(supplierIndex, 0, 'region');
+      changed = true;
+    }
+  }
+  if (!fieldOverrides.region?.title) {
+    fieldOverrides.region = {
+      ...fieldOverrides.region,
+      title: 'REGION',
+    };
+    changed = true;
+  }
+
+  if (!changed) {
+    return layout;
+  }
+  return {
+    ...layout,
+    fieldOrder: order,
+    fieldOverrides,
+    fields: order,
+  };
+}
+
+/** 为已有熏蒸模板补齐备注（位于 ADDRESS 之后，非必填） */
+export function ensureFumigationRemarkField(
+  layout: CostTableTemplateLayout,
+): CostTableTemplateLayout {
+  const order = resolveLayoutFieldOrderRaw(layout);
+  if (order.length === 0) {
+    return layout;
+  }
+  const fieldOverrides = { ...layout.fieldOverrides };
+  let changed = false;
+
+  if (!order.includes('remark')) {
+    const addressIndex = order.indexOf('address');
+    if (addressIndex === -1) {
+      order.push('remark');
+    } else {
+      order.splice(addressIndex + 1, 0, 'remark');
+    }
+    changed = true;
+  }
+  if (!fieldOverrides.remark?.title) {
+    fieldOverrides.remark = {
+      ...fieldOverrides.remark,
+      title: '备注',
+    };
+    changed = true;
+  }
+
+  if (!changed) {
+    return layout;
+  }
+  return {
+    ...layout,
+    fieldOrder: order,
+    fieldOverrides,
+    fields: order,
+  };
+}
+
+export function ensureRoadTemplateLayout(
+  layout: CostTableTemplateLayout,
+): CostTableTemplateLayout {
+  return ensureRoadFeeUnitFields(ensureRoadRegionField(layout));
 }
 
 /** 为金额列补齐单位 companion；按 key 配对，插在金额后，不依赖相邻识别 */
@@ -183,7 +274,12 @@ export function buildLayoutFieldItems(
   mode: CostMode,
   layout: CostTableTemplateLayout,
 ): TemplateLayoutFieldItem[] {
-  const ensured = mode === 'road' ? ensureRoadFeeUnitFields(layout) : layout;
+  const ensured =
+    mode === 'road'
+      ? ensureRoadTemplateLayout(layout)
+      : mode === 'fumigation'
+        ? ensureFumigationRemarkField(layout)
+        : layout;
   const order = resolveLayoutFieldOrder(mode, ensured);
 
   return order.map((field) => {

@@ -1,10 +1,8 @@
 <script lang="ts" setup>
-import type { CostMode } from '#/api/cost';
+import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { QuoteApi, QuoteCostType } from '#/api/quote';
 
 import { computed, nextTick, watch } from 'vue';
-
-import { Empty } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { $t } from '#/locales';
@@ -23,16 +21,42 @@ const props = defineProps<{
   matches?: QuoteApi.QuoteCostMatchItem[];
   type: QuoteCostType;
 }>();
-/** 卡车快照为单行表头；海运/熏蒸为分组双行表头 */
-const SNAPSHOT_HEADER_HEIGHT: Record<CostMode, number> = {
-  road: 44,
-  sea: 88,
-  fumigation: 88,
-};
+
+const SNAPSHOT_HEADER_ROW_HEIGHT = 44;
 const SNAPSHOT_ROW_HEIGHT = 40;
 const SNAPSHOT_SCROLLBAR_HEIGHT = 16;
+/** 无数据时表格主体最小高度 */
+const SNAPSHOT_MIN_BODY_HEIGHT = 120;
+
+function resolveHeaderRowCount(
+  columns?: VxeTableGridOptions['columns'],
+): number {
+  if (!columns?.length) {
+    return 1;
+  }
+  const walk = (
+    cols: NonNullable<VxeTableGridOptions['columns']>,
+    depth: number,
+  ): number => {
+    let maxDepth = depth;
+    for (const col of cols) {
+      const childCols = col.children as
+        | NonNullable<VxeTableGridOptions['columns']>
+        | undefined;
+      if (childCols?.length) {
+        maxDepth = Math.max(maxDepth, walk(childCols, depth + 1));
+      }
+    }
+    return maxDepth;
+  };
+  return walk(columns, 1);
+}
 
 const mode = computed(() => quoteCostTypeToMode(props.type));
+const snapshotColumns = computed(() => buildCostSnapshotColumns(mode.value));
+const headerRowCount = computed(() =>
+  resolveHeaderRowCount(snapshotColumns.value),
+);
 
 const sourceMatches = computed(() => {
   if (props.matches?.length) {
@@ -49,19 +73,20 @@ const tableData = computed(() =>
 
 const isEmpty = computed(() => tableData.value.length === 0);
 
-const headerHeight = computed(() => SNAPSHOT_HEADER_HEIGHT[mode.value]);
+const headerHeight = computed(
+  () => headerRowCount.value * SNAPSHOT_HEADER_ROW_HEIGHT,
+);
 
-const gridHeight = computed(() => {
+const bodyHeight = computed(() => {
   if (isEmpty.value) {
-    return headerHeight.value;
+    return SNAPSHOT_MIN_BODY_HEIGHT;
   }
   return (
-    headerHeight.value +
-    tableData.value.length * SNAPSHOT_ROW_HEIGHT +
-    SNAPSHOT_SCROLLBAR_HEIGHT +
-    2
+    tableData.value.length * SNAPSHOT_ROW_HEIGHT + SNAPSHOT_SCROLLBAR_HEIGHT + 2
   );
 });
+
+const gridHeight = computed(() => headerHeight.value + bodyHeight.value);
 
 const gridClass = computed(() => {
   const base = 'cost-library-grid quote-cost-snapshot-grid';
@@ -83,8 +108,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
     columnConfig: {
       resizable: true,
     },
-    columns: buildCostSnapshotColumns(mode.value),
+    columns: snapshotColumns.value,
     data: tableData.value,
+    emptyText: emptyText.value,
     height: gridHeight.value,
     pagerConfig: {
       enabled: false,
@@ -112,21 +138,21 @@ const [Grid, gridApi] = useVbenVxeGrid({
 });
 
 watch(
-  [mode, tableData, gridHeight],
+  [mode, tableData, gridHeight, snapshotColumns, emptyText],
   async () => {
-    const columns = buildCostSnapshotColumns(mode.value);
     gridApi.setGridOptions({
-      columns,
+      columns: snapshotColumns.value,
       data: tableData.value,
+      emptyText: emptyText.value,
       height: gridHeight.value,
     });
     gridApi.setState({ gridClass: gridClass.value });
     await nextTick();
     gridApi.grid?.recalculate?.();
     const $grid = gridApi.grid as {
-      loadColumn?: (cols: typeof columns) => void;
+      loadColumn?: (cols: typeof snapshotColumns.value) => void;
     };
-    $grid?.loadColumn?.(columns);
+    $grid?.loadColumn?.(snapshotColumns.value);
   },
   { deep: true },
 );
@@ -137,13 +163,9 @@ watch(
     <div class="quote-cost-snapshot-stack">
       <div
         class="quote-cost-snapshot"
-        :class="{ 'quote-cost-snapshot--header-only': isEmpty }"
-        :style="{ height: `${gridHeight}px` }"
+        :style="{ height: `${gridHeight}px`, minHeight: `${gridHeight}px` }"
       >
         <Grid />
-      </div>
-      <div v-if="isEmpty" class="quote-cost-snapshot__empty-body">
-        <Empty :description="emptyText" />
       </div>
     </div>
   </div>
@@ -168,35 +190,31 @@ watch(
 .quote-cost-snapshot
   :deep(.vxe-grid.cost-library-grid.quote-cost-snapshot-grid) {
   height: 100% !important;
-  min-height: 0 !important;
+  min-height: 100% !important;
 }
 
-.quote-cost-snapshot--header-only :deep(.vxe-table--body-wrapper),
-.quote-cost-snapshot--header-only :deep(.vxe-table--empty-block) {
-  display: none !important;
+.quote-cost-snapshot :deep(.vxe-table--header .vxe-header--row) {
+  height: 44px;
 }
 
-.quote-cost-snapshot__empty-body {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-width: 100%;
-  min-height: 128px;
+.quote-cost-snapshot :deep(.vxe-table--header .vxe-header--column .vxe-cell) {
+  min-height: 44px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.quote-cost-snapshot :deep(.vxe-table--empty-block) {
+  min-height: 120px;
+}
+
+.quote-cost-snapshot :deep(.vxe-table--empty-placeholder) {
   padding: 24px 16px;
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-  border-top: none;
-}
-
-.quote-cost-snapshot__empty-body :deep(.ant-empty-image) {
-  height: 56px;
-  margin-bottom: 8px;
-}
-
-.quote-cost-snapshot__empty-body :deep(.ant-empty-description) {
   font-size: 13px;
   color: hsl(var(--muted-foreground));
+}
+
+.quote-cost-snapshot :deep(.vxe-table--empty-block img),
+.quote-cost-snapshot :deep(.vxe-table--empty-placeholder img) {
+  display: none;
 }
 </style>

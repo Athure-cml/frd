@@ -32,6 +32,8 @@ export interface CostBatchUpdatePayload {
 export interface CostBatchCopyResult<T> {
   created: number;
   items: T[];
+  /** 选中/将处理的总条数（预览 items 可能被截断） */
+  total?: number;
 }
 
 export interface FreightCostRecord {

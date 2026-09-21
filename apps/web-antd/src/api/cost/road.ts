@@ -9,7 +9,10 @@ import type {
   RoadCostSave,
 } from './types';
 
-import { IMPORT_REQUEST_TIMEOUT_MS } from '#/api/import-request';
+import {
+  BATCH_REQUEST_TIMEOUT_MS,
+  IMPORT_REQUEST_TIMEOUT_MS,
+} from '#/api/import-request';
 import { requestClient } from '#/api/request';
 
 const BASE = '/cost-library/road';
@@ -51,18 +54,22 @@ export async function batchDeleteRoadCost(ids: number[]) {
 }
 
 export async function batchUpdateRoadCost(data: CostBatchUpdatePayload) {
-  return requestClient.patch<{ updated: number }>(`${BASE}/batch`, data);
+  return requestClient.patch<{ updated: number }>(`${BASE}/batch`, data, {
+    timeout: BATCH_REQUEST_TIMEOUT_MS,
+  });
 }
 
 export async function batchCopyRoadCost(data: {
   applyOverrides?: boolean;
   fields?: Record<string, unknown>;
   ids: number[];
+  previewLimit?: number;
   previewOnly?: boolean;
 }) {
   return requestClient.post<CostBatchCopyResult<RoadCostRecord>>(
     `${BASE}/batch-copy`,
     data,
+    { timeout: BATCH_REQUEST_TIMEOUT_MS },
   );
 }
 

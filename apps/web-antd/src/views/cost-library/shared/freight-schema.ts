@@ -464,9 +464,95 @@ export function useFreightFormSchema(): VbenFormSchema[] {
   ];
 }
 
-/** 海运批量修改字段与批量复制弹窗一致 */
+/** 海运批量修改（不含 EBS/GRI，批量复制仍保留） */
 export function useFreightBatchSchema(): VbenFormSchema[] {
-  return useSeaBatchCopySchema();
+  return useSeaBatchEditSchema();
+}
+
+export function useSeaBatchEditSchema(): VbenFormSchema[] {
+  return [
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'freight',
+      label: f('freight'),
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: containerTypeSelectProps(),
+      fieldName: 'containerType',
+      label: f('containerType'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'freightEffDate',
+      label: f('effectiveDate'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'freightValidDate',
+      label: f('freightValidDate'),
+    },
+    {
+      component: 'Divider',
+      fieldName: 'bunkerDivider',
+      formItemClass: 'col-span-full !my-1',
+      hideLabel: true,
+    },
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'buc',
+      formItemClass: 'col-span-full',
+      label: f('buc'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'bucEffDate',
+      label: f('effectiveDate'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'bucValidDate',
+      label: f('bucValidDate'),
+    },
+    {
+      component: 'Divider',
+      fieldName: 'othersDivider',
+      formItemClass: 'col-span-full !my-1',
+      hideLabel: true,
+    },
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'others',
+      formItemClass: 'col-span-full',
+      label: f('othersSurcharge'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'othersEffDate',
+      label: f('effectiveDate'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'othersValidDate',
+      label: f('othersValidDate'),
+    },
+    {
+      component: 'Textarea',
+      componentProps: { maxlength: 255, rows: 2, showCount: true },
+      fieldName: 'remark',
+      formItemClass: 'col-span-full',
+      label: f('remark'),
+    },
+  ];
 }
 
 /** 海运批量复制/批量修改可覆盖字段（运费区 / 附加费分区换行） */

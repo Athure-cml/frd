@@ -34,6 +34,36 @@ export const QUOTE_SHEET_COLUMNS: Array<{
   { field: 'sheetRemark', title: 'REMARK', width: 200 },
 ];
 
+/** 报价单列表页表头（精简列） */
+export const QUOTE_LIST_COLUMNS: Array<{
+  field: 'allIn' | 'porPol' | 'quoteDate' | keyof QuoteApi.QuoteSheetFields;
+  listSource?: 'row' | 'sheet';
+  title: string;
+  type?: 'date' | 'money' | 'text';
+  width?: number;
+}> = [
+  { field: 'por', title: 'POR', width: 96 },
+  { field: 'pol', title: 'POL', width: 96 },
+  { field: 'pod', title: 'POD', width: 96 },
+  { field: 'pickUpAddress', title: 'PICK UP ADDRESS', width: 180 },
+  { field: 'fumigationPoint', title: 'STATION', width: 120 },
+  {
+    field: 'allIn',
+    listSource: 'row',
+    title: 'ALL IN',
+    type: 'money',
+    width: 160,
+  },
+  {
+    field: 'quoteDate',
+    listSource: 'row',
+    title: 'DATE',
+    type: 'date',
+    width: 112,
+  },
+  { field: 'sheetRemark', title: 'REMARK', width: 200 },
+];
+
 export const QUOTE_ROUTE_KEY_FIELDS: Array<{
   field: keyof QuoteApi.QuoteSheetFields;
   title: string;
@@ -75,6 +105,24 @@ export function sheetCellValue(
     return formatMoney(Number(value));
   }
   return String(value);
+}
+
+export function formatQuoteListCellValue(
+  row: QuoteApi.QuoteListItem,
+  col: (typeof QUOTE_LIST_COLUMNS)[number],
+) {
+  if (col.listSource === 'row') {
+    if (col.field === 'allIn') {
+      return formatMoney(row.allIn);
+    }
+    if (col.field === 'quoteDate') {
+      return formatQuoteDate(row.quoteDate ?? row.createdAt);
+    }
+  }
+  return sheetCellValue(
+    row.sheet,
+    col.field as 'porPol' | keyof QuoteApi.QuoteSheetFields,
+  );
 }
 
 export function formatQuoteDate(value?: string) {

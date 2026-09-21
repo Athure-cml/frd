@@ -30,7 +30,6 @@ import {
   unpinSupplier,
 } from '#/api/supplier';
 import { $t } from '#/locales';
-import { useInternalCodeVisibility } from '#/utils/internal-code-access';
 
 import ImportModal from '../../cost-library/components/import-modal.vue';
 import {
@@ -57,8 +56,6 @@ import '../../customer/shared/customer.css';
 
 const route = useRoute();
 const { hasAccessByCodes } = useAccess();
-const { canViewInternalCodes } = useInternalCodeVisibility();
-
 const category = computed<SupplierCategory>(() => {
   const raw = String(route.meta.supplierCategory ?? 'TRUCK').toUpperCase();
   if (
@@ -77,6 +74,7 @@ const canCreate = computed(() =>
   hasAccessByCodes([`${permPrefix.value}:create`]),
 );
 const canEdit = computed(() => hasAccessByCodes([`${permPrefix.value}:edit`]));
+const canViewPartyCode = canEdit;
 const canDelete = computed(() =>
   hasAccessByCodes([`${permPrefix.value}:delete`]),
 );
@@ -274,7 +272,7 @@ function buildColumns() {
     onActionClick,
     canEdit.value,
     canDelete.value,
-    canViewInternalCodes.value,
+    canViewPartyCode.value,
     typeNameMap.value,
   );
 }
@@ -283,7 +281,7 @@ const searchFormOptions = useI18nFormOptions(() => ({
   collapsed: true,
   schema: buildSupplierSearchSchema(
     category.value,
-    canViewInternalCodes.value,
+    canViewPartyCode.value,
     typeOptions.value,
   ),
   showCollapseButton: true,
@@ -338,7 +336,7 @@ async function refreshSchemaAndColumns() {
     collapsed: true,
     schema: buildSupplierSearchSchema(
       category.value,
-      canViewInternalCodes.value,
+      canViewPartyCode.value,
       typeOptions.value,
     ),
     showCollapseButton: true,
@@ -346,7 +344,7 @@ async function refreshSchemaAndColumns() {
   };
 }
 
-watch([canViewInternalCodes, category], () => {
+watch([canViewPartyCode, category], () => {
   void refreshSchemaAndColumns();
 });
 
@@ -406,7 +404,7 @@ async function importFn(file: File, options?: { dryRun?: boolean }) {
           {{ $t('page.supplier.actions.batchDelete') }}
         </Button>
       </template>
-      <template v-if="canViewInternalCodes" #code="{ row }">
+      <template v-if="canViewPartyCode" #code="{ row }">
         <span class="customer-code">{{ row.code }}</span>
       </template>
       <template #name="{ row }">

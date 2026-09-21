@@ -14,6 +14,7 @@ import {
   Button,
   message,
   Pagination,
+  Progress,
   Table,
 } from 'ant-design-vue';
 import * as XLSX from 'xlsx';
@@ -27,6 +28,7 @@ import {
   extractPreviewDataMatrix,
   rowHasContent,
 } from '../shared/excel-import-preview';
+import { enrichRoadPreviewAllIn } from '../shared/road-import-allin-enrich';
 import { enrichRoadPreviewUnits } from '../shared/road-import-unit-enrich';
 import { enrichRoadPreviewZipCodes } from '../shared/road-import-zip-enrich';
 
@@ -86,6 +88,8 @@ const zipEnrichIssues = ref<string[]>([]);
 const zipEnrichPendingNotes = ref<string[]>([]);
 /** 仅 notFound 等阻断性问题标红 */
 const zipEnrichFailedIndexes = ref<number[]>([]);
+const allInEnrichIssues = ref<string[]>([]);
+const allInEnrichFailedIndexes = ref<number[]>([]);
 const dedupeHint = ref('');
 const dedupeIssues = ref<string[]>([]);
 /** 导入失败的数据行号（1-based，与预览行对应） */
@@ -100,6 +104,17 @@ const tableScrollY = ref(260);
 let tableResizeObserver: null | ResizeObserver = null;
 /** 防止预览校验被旧文件结果覆盖 */
 let validateToken = 0;
+const importProgressPercent = ref(0);
+const importProgressLabel = ref('');
+let importProgressTimer: null | ReturnType<typeof setInterval> = null;
+
+const showImportProgress = computed(
+  () =>
+    parsing.value ||
+    validating.value ||
+    uploading.value ||
+    importProgressPercent.value > 0,
+);
 
 const previewRowCount = computed(() => previewRows.value.length);
 
@@ -178,6 +193,14 @@ const rowErrorMessages = computed(() => {
     pushMessage(
       index,
       issue || $t('page.costLibrary.hint.importErrorFallback'),
+    );
+  });
+
+  allInEnrichFailedIndexes.value.forEach((index, issueIndex) => {
+    const issue = allInEnrichIssues.value[issueIndex];
+    pushMessage(
+      index,
+      issue || $t('page.costLibrary.hint.importAllInFormulaFailed'),
     );
   });
 
@@ -279,13 +302,50 @@ watch(
 onBeforeUnmount(() => {
   tableResizeObserver?.disconnect();
   tableResizeObserver = null;
+  stopImportProgressTimer();
 });
+
+function stopImportProgressTimer() {
+  if (importProgressTimer) {
+    clearInterval(importProgressTimer);
+    importProgressTimer = null;
+  }
+}
+
+function setImportProgress(percent: number, labelKey: string) {
+  importProgressPercent.value = Math.min(100, Math.max(0, Math.round(percent)));
+  importProgressLabel.value = $t(`page.costLibrary.hint.${labelKey}`);
+}
+
+/** 展示进度；可选缓慢递增至 maxPercent（用于等待后端校验/导入） */
+function beginImportProgress(
+  percent: number,
+  labelKey: string,
+  maxPercent?: number,
+) {
+  stopImportProgressTimer();
+  setImportProgress(percent, labelKey);
+  if (maxPercent !== undefined && maxPercent > percent) {
+    importProgressTimer = setInterval(() => {
+      if (importProgressPercent.value < maxPercent) {
+        importProgressPercent.value += 1;
+      }
+    }, 450);
+  }
+}
+
+function resetImportProgress() {
+  stopImportProgressTimer();
+  importProgressPercent.value = 0;
+  importProgressLabel.value = '';
+}
 
 function resetState() {
   fileList.value = [];
   importErrors.value = [];
   validationOkHint.value = '';
   validateToken += 1;
+  resetImportProgress();
   clearPreview();
 }
 
@@ -298,6 +358,8 @@ function clearPreview() {
   zipEnrichIssues.value = [];
   zipEnrichPendingNotes.value = [];
   zipEnrichFailedIndexes.value = [];
+  allInEnrichIssues.value = [];
+  allInEnrichFailedIndexes.value = [];
   dedupeHint.value = '';
   dedupeIssues.value = [];
   importFailedRowNumbers.value = [];
@@ -346,11 +408,14 @@ async function handleConfirm() {
   importErrors.value = [];
   importFailedRowNumbers.value = [];
   validationOkHint.value = '';
+  beginImportProgress(88, 'importProgressImporting', 97);
   modalApi.lock();
   try {
     const uploadFile = resolveUploadFile(file);
     const result = await props.importFn(uploadFile);
+    stopImportProgressTimer();
     if (result.failed > 0) {
+      setImportProgress(100, 'importProgressImportFailed');
       importErrors.value = result.errors ?? [];
       importFailedRowNumbers.value = resolveFailedRowNumbers(result);
       message.warning(
@@ -358,6 +423,7 @@ async function handleConfirm() {
       );
       return;
     }
+    setImportProgress(100, 'importProgressDone');
     message.success(
       $t('page.costLibrary.hint.importSuccess', [result.imported]),
     );
@@ -367,6 +433,11 @@ async function handleConfirm() {
   } finally {
     uploading.value = false;
     modalApi.unlock();
+    window.setTimeout(() => {
+      if (!parsing.value && !validating.value && !uploading.value) {
+        resetImportProgress();
+      }
+    }, 800);
   }
 }
 
@@ -383,6 +454,7 @@ async function runPreValidate() {
   importErrors.value = [];
   importFailedRowNumbers.value = [];
   validationOkHint.value = '';
+  beginImportProgress(72, 'importProgressValidating', 92);
   try {
     const result = await props.importFn(resolveUploadFile(file), {
       dryRun: true,
@@ -390,12 +462,15 @@ async function runPreValidate() {
     if (token !== validateToken) {
       return;
     }
+    stopImportProgressTimer();
     if (result.failed > 0) {
+      setImportProgress(100, 'importProgressValidateFailed');
       importErrors.value = result.errors ?? [];
       importFailedRowNumbers.value = resolveFailedRowNumbers(result);
       validationOkHint.value = '';
       return;
     }
+    setImportProgress(100, 'importProgressValidateOk');
     validationOkHint.value = $t('page.costLibrary.hint.importValidateOk', [
       result.imported,
     ]);
@@ -404,10 +479,16 @@ async function runPreValidate() {
       return;
     }
     console.error(error);
+    setImportProgress(100, 'importProgressValidateError');
     importErrors.value = [$t('page.costLibrary.hint.importValidateFailed')];
   } finally {
     if (token === validateToken) {
       validating.value = false;
+      window.setTimeout(() => {
+        if (!parsing.value && !validating.value && !uploading.value) {
+          resetImportProgress();
+        }
+      }, 600);
     }
   }
 }
@@ -600,6 +681,7 @@ async function onUploadChange(info: UploadChangeParam) {
 async function parsePreview(file: File) {
   parsing.value = true;
   previewError.value = '';
+  beginImportProgress(8, 'importProgressReading');
   try {
     const lower = file.name.toLowerCase();
     if (lower.endsWith('.txt')) {
@@ -613,6 +695,13 @@ async function parsePreview(file: File) {
     previewError.value = $t('page.costLibrary.hint.importPreviewFailed');
   } finally {
     parsing.value = false;
+    if (!validating.value && !uploading.value) {
+      window.setTimeout(() => {
+        if (!parsing.value && !validating.value && !uploading.value) {
+          resetImportProgress();
+        }
+      }, 600);
+    }
   }
 }
 
@@ -649,6 +738,7 @@ async function parseTextPreview(file: File) {
 
 async function parseExcelPreview(file: File) {
   const buffer = await file.arrayBuffer();
+  setImportProgress(22, 'importProgressParsing');
   const workbook = XLSX.read(buffer, { type: 'array' });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) {
@@ -711,12 +801,17 @@ async function parseExcelPreview(file: File) {
     return record;
   });
 
+  setImportProgress(38, 'importProgressProcessing');
+
   if (props.dedupeKeyHeaders?.length) {
     await applyPreviewDedupe(headers);
   }
 
   if (props.enrichRoadZip) {
+    setImportProgress(52, 'importProgressEnriching');
     await applyRoadZipEnrichment(headers);
+    setImportProgress(64, 'importProgressEnriching');
+    await applyRoadAllInEnrichment(headers);
   }
 
   await runPreValidate();
@@ -856,6 +951,8 @@ async function applyRoadZipEnrichment(headers: string[]) {
   zipEnrichIssues.value = [];
   zipEnrichPendingNotes.value = [];
   zipEnrichFailedIndexes.value = [];
+  allInEnrichIssues.value = [];
+  allInEnrichFailedIndexes.value = [];
   try {
     const result = await enrichRoadPreviewZipCodes(headers, previewRows.value);
     previewRows.value = result.rows;
@@ -925,6 +1022,60 @@ async function applyRoadZipEnrichment(headers: string[]) {
   } catch (error) {
     console.error(error);
     zipEnrichHint.value = $t('page.costLibrary.hint.importZipEnrichFailed');
+  }
+}
+
+async function applyRoadAllInEnrichment(headers: string[]) {
+  allInEnrichIssues.value = [];
+  allInEnrichFailedIndexes.value = [];
+  try {
+    const result = await enrichRoadPreviewAllIn(headers, previewRows.value);
+    previewRows.value = result.rows;
+    if (
+      result.recalculated > 0 ||
+      result.supplierNormalized > 0 ||
+      result.issues.length > 0
+    ) {
+      previewTransformed.value = true;
+    }
+    allInEnrichIssues.value = result.issues.map((item) =>
+      $t('page.costLibrary.hint.importAllInFormulaRowIssue', [
+        item.rowIndex + previewHeaderRowCount.value + 1,
+        item.message,
+      ]),
+    );
+    allInEnrichFailedIndexes.value = result.issues.map((item) => item.rowIndex);
+
+    const hints: string[] = [];
+    if (result.recalculated > 0) {
+      hints.push(
+        $t('page.costLibrary.hint.importAllInRecalculated', [
+          result.recalculated,
+        ]),
+      );
+    }
+    if (result.supplierNormalized > 0) {
+      hints.push(
+        $t('page.costLibrary.hint.importSupplierNormalized', [
+          result.supplierNormalized,
+        ]),
+      );
+    }
+    if (result.issues.length > 0) {
+      hints.push(
+        $t('page.costLibrary.hint.importAllInFormulaIssues', [
+          result.issues.length,
+        ]),
+      );
+    }
+    if (hints.length > 0) {
+      const joined = hints.join('；');
+      zipEnrichHint.value = zipEnrichHint.value
+        ? `${zipEnrichHint.value}；${joined}`
+        : joined;
+    }
+  } catch (error) {
+    console.error(error);
   }
 }
 
@@ -1054,6 +1205,26 @@ defineExpose({ open });
           </Button>
         </div>
 
+        <div v-if="showImportProgress" class="import-progress shrink-0">
+          <div
+            class="mb-1 flex items-center justify-between gap-2 text-xs text-muted-foreground"
+          >
+            <span class="min-w-0 truncate">{{ importProgressLabel }}</span>
+            <span class="shrink-0 tabular-nums">{{ importProgressPercent }}%</span>
+          </div>
+          <Progress
+            :percent="importProgressPercent"
+            :show-info="false"
+            :status="importProgressPercent >= 100 ? 'success' : 'active'"
+            :stroke-color="
+              importProgressPercent >= 100
+                ? undefined
+                : { from: '#108ee9', to: '#87d068' }
+            "
+            :stroke-width="8"
+          />
+        </div>
+
         <template v-if="hasPreview">
           <div ref="tableHostRef" class="import-preview-table-host">
             <Table
@@ -1102,12 +1273,18 @@ defineExpose({ open });
             v-if="zipEnrichHint"
             class="import-preview-alert shrink-0"
             show-icon
-            :type="zipEnrichIssues.length > 0 ? 'warning' : 'info'"
+            :type="
+              zipEnrichIssues.length > 0 || allInEnrichIssues.length > 0
+                ? 'warning'
+                : 'info'
+            "
             :message="zipEnrichHint"
           >
             <template
               v-if="
-                zipEnrichPendingNotes.length > 0 || zipEnrichIssues.length > 0
+                zipEnrichPendingNotes.length > 0 ||
+                zipEnrichIssues.length > 0 ||
+                allInEnrichIssues.length > 0
               "
               #description
             >
@@ -1128,6 +1305,19 @@ defineExpose({ open });
                 :class="{ 'mt-2': zipEnrichPendingNotes.length > 0 }"
               >
                 <li v-for="(err, idx) in zipEnrichIssues" :key="`e-${idx}`">
+                  {{ err }}
+                </li>
+              </ul>
+              <ul
+                v-if="allInEnrichIssues.length > 0"
+                class="mb-0 max-h-28 list-disc overflow-auto pl-4 text-xs"
+                :class="{
+                  'mt-2':
+                    zipEnrichPendingNotes.length > 0 ||
+                    zipEnrichIssues.length > 0,
+                }"
+              >
+                <li v-for="(err, idx) in allInEnrichIssues" :key="`a-${idx}`">
                   {{ err }}
                 </li>
               </ul>
@@ -1227,6 +1417,10 @@ defineExpose({ open });
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+}
+
+.import-progress {
+  margin-bottom: 8px;
 }
 
 .import-preview-filebar {

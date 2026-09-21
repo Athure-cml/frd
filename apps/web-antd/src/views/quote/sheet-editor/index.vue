@@ -12,7 +12,15 @@ import type { GlobalPortNameOption } from '#/api/master-data/global-port';
 import type { QuoteApi, QuoteCostType, QuoteStatus } from '#/api/quote';
 import type { QuoteRuleApi } from '#/api/quote-rule';
 
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import {
+  computed,
+  onActivated,
+  onMounted,
+  onUnmounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
@@ -89,12 +97,14 @@ import {
   isQuoteEditable,
   normalizeQuoteStatus,
 } from '../shared/quote-status';
+import { takeRoadQuoteIntroduceId } from '../shared/road-quote-introduce';
 import {
   fetchCostImportFields,
   isActiveCostRecord,
   mergeFumigationCostImport,
   mergeRoadCostImport,
   mergeSeaCostImport,
+  pickRoadSheetFields,
   recordToCostMatchItem,
 } from '../shared/sheet-cost-import';
 import {
@@ -597,6 +607,22 @@ async function consumeCopyFromStorage() {
   }
 }
 
+async function consumeRoadIntroduceFromStorage() {
+  if (!isCreate.value) {
+    return;
+  }
+  const roadId = takeRoadQuoteIntroduceId();
+  if (!roadId) {
+    return;
+  }
+  try {
+    const record = await getRoadCost(roadId);
+    await applyImportedRoadCost(record);
+  } catch {
+    message.error($t('page.ai.requestFailed'));
+  }
+}
+
 function normalizeCostMatches(items: QuoteApi.QuoteCostMatchItem[]) {
   const result: QuoteApi.QuoteCostMatchItem[] = [];
   const seenTypes = new Set<QuoteCostType>();
@@ -638,6 +664,32 @@ function onImportCostType({ key }: { key: string }) {
   openCostImport(key as QuoteCostType);
 }
 
+async function applyImportedRoadCost(record: RoadCostRecord) {
+  if (
+    !isActiveCostRecord('ROAD', record as unknown as Record<string, unknown>)
+  ) {
+    message.error($t('page.quote.message.costExpired'));
+    return;
+  }
+  const label =
+    importMenuItems.value.find((item) => item.key === 'ROAD')?.label ?? 'ROAD';
+  const context = buildCostImportContext();
+  const hideLoading = message.loading(
+    $t('page.quote.message.costImporting'),
+    0,
+  );
+  try {
+    mergeCostMatch(recordToCostMatchItem('ROAD', record, matchKeys.value));
+    const fields = await fetchCostImportFields('ROAD', record, context);
+    mergeRoadCostImport(sheet, fields, fumigationEnabled.value, record);
+    message.success($t('page.quote.message.costImportedType', [label]));
+  } catch {
+    message.error($t('page.ai.requestFailed'));
+  } finally {
+    hideLoading();
+  }
+}
+
 async function onCostsConfirmed(
   type: QuoteCostType,
   records: CostLibraryRecord[],
@@ -653,9 +705,15 @@ async function onCostsConfirmed(
       return;
     }
   }
+  if (type === 'ROAD') {
+    const record = records[0];
+    if (record) {
+      await applyImportedRoadCost(record as RoadCostRecord);
+    }
+    return;
+  }
   const label =
     importMenuItems.value.find((item) => item.key === type)?.label ?? type;
-  const context = buildCostImportContext();
   const hideLoading = message.loading(
     $t('page.quote.message.costImporting'),
     0,
@@ -672,17 +730,12 @@ async function onCostsConfirmed(
       return;
     }
     mergeCostMatch(recordToCostMatchItem(type, record, matchKeys.value));
-    const fields = await fetchCostImportFields(type, record, context);
-    if (type === 'ROAD') {
-      mergeRoadCostImport(
-        sheet,
-        fields,
-        fumigationEnabled.value,
-        record as RoadCostRecord,
-      );
-    } else {
-      mergeFumigationCostImport(sheet, fields);
-    }
+    const fields = await fetchCostImportFields(
+      type,
+      record,
+      buildCostImportContext(),
+    );
+    mergeFumigationCostImport(sheet, fields);
     message.success($t('page.quote.message.costImportedType', [label]));
   } catch {
     message.error($t('page.ai.requestFailed'));
@@ -692,13 +745,15 @@ async function onCostsConfirmed(
 }
 
 async function applyAiCitedCost(payload: AiApplyPayload) {
-  if (!canUseCostLibrary.value) {
-    return;
-  }
   try {
     if (payload.type === 'road') {
       const record = await getRoadCost(payload.id);
-      await onCostsConfirmed('ROAD', [record]);
+      await (canUseCostLibrary.value
+        ? onCostsConfirmed('ROAD', [record])
+        : applyImportedRoadCost(record));
+      return;
+    }
+    if (!canUseCostLibrary.value) {
       return;
     }
     if (payload.type === 'sea') {
@@ -790,6 +845,12 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
   try {
     const keepFumigationPoint = sheet.fumigationPoint;
     const keepFumigationEnabled = fumigationEnabled.value;
+    const existingRoadMatch = costMatches.value.find(
+      (item) => item.costType === 'ROAD',
+    );
+    const preservedRoadSheet = existingRoadMatch
+      ? pickRoadSheetFields(sheet)
+      : null;
     const result = await generateQuoteSheet({
       por: sheet.por,
       pol: sheet.pol,
@@ -802,6 +863,7 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
       fumigationPoint: keepFumigationPoint,
       fumigationEnabled: keepFumigationEnabled,
       quoteDate: quoteDate.value.format('YYYY-MM-DD'),
+      skipRoadMatch: Boolean(existingRoadMatch),
     });
     if (result.quoteDate) {
       quoteDate.value = dayjs(result.quoteDate);
@@ -821,11 +883,17 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
       sheet.truckingNonOakUsd = undefined;
       sheet.truckingOakUsd = undefined;
     }
-    costMatches.value = normalizeCostMatches(
-      (result.costMatches ?? []).filter(
-        (item) => keepFumigationEnabled || item.costType !== 'FUMIGATION',
-      ),
+    if (preservedRoadSheet) {
+      Object.assign(sheet, preservedRoadSheet);
+    }
+    let nextMatches = (result.costMatches ?? []).filter(
+      (item) => keepFumigationEnabled || item.costType !== 'FUMIGATION',
     );
+    if (existingRoadMatch) {
+      nextMatches = nextMatches.filter((item) => item.costType !== 'ROAD');
+      nextMatches.push(existingRoadMatch);
+    }
+    costMatches.value = normalizeCostMatches(nextMatches);
     loadOceanFreightEntriesFromSheet();
     message.success($t('page.quote.message.sheetGenerated'));
   } catch (error: any) {
@@ -987,8 +1055,10 @@ onMounted(async () => {
   ]);
   await loadDetail();
   if (isCreate.value) {
+    actionsReady.value = true;
     consumeAiApplyFromStorage();
     await consumeCopyFromStorage();
+    await consumeRoadIntroduceFromStorage();
     if (oceanFreightEntries.value.length === 0) {
       oceanFreightEntries.value = resolveOceanFreightEntries(
         sheet,
@@ -996,9 +1066,14 @@ onMounted(async () => {
         sslRemarkByName.value,
       );
     }
-    actionsReady.value = true;
   } else {
     sessionStorage.removeItem('ai-apply-cost');
+  }
+});
+
+onActivated(async () => {
+  if (isCreate.value) {
+    await consumeRoadIntroduceFromStorage();
   }
 });
 
@@ -1006,9 +1081,9 @@ watch(
   () => route.name,
   async (name) => {
     if (name === 'QuoteCreate') {
-      actionsReady.value = false;
-      await consumeCopyFromStorage();
       actionsReady.value = true;
+      await consumeCopyFromStorage();
+      await consumeRoadIntroduceFromStorage();
       return;
     }
     if (name === 'QuoteEdit') {

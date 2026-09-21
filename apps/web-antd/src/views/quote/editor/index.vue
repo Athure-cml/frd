@@ -117,7 +117,12 @@ const lineCount = computed(
 const transportModeOptions = computed(() => getTransportModeOptions());
 const usedCostRefIds = computed(() =>
   lines.value
-    .filter((line) => isCostLine(line) && line.costRefId != null)
+    .filter(
+      (line) =>
+        isCostLine(line) &&
+        line.costRefId !== null &&
+        line.costRefId !== undefined,
+    )
     .map((line) => line.costRefId as number),
 );
 const hasCostLines = computed(() => lines.value.some(isCostLine));
@@ -269,7 +274,10 @@ function openCostPicker() {
 function onCostPickerConfirm(newLines: LineDraft[]) {
   const usedSet = new Set(usedCostRefIds.value);
   const deduped = newLines.filter(
-    (line) => line.costRefId == null || !usedSet.has(line.costRefId),
+    (line) =>
+      line.costRefId === null ||
+      line.costRefId === undefined ||
+      !usedSet.has(line.costRefId),
   );
   if (deduped.length === 0) {
     return;
@@ -448,15 +456,10 @@ async function loadDetail(id: number) {
 }
 
 async function handleSave() {
-  if (!customerId.value) {
-    message.warning($t('page.quote.validation.customerRequired'));
-    return;
-  }
-
   const payload: QuoteApi.QuoteSave = {
     currency: currency.value,
     customerId: customerId.value,
-    customerName: customerName.value.trim(),
+    customerName: customerName.value.trim() || undefined,
     lines: lines.value
       .filter((line) => line.itemName.trim())
       .map((line, index) => lineDraftToSave(line, index)),

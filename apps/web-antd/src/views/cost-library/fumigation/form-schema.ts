@@ -158,6 +158,13 @@ export function useFumigationFormSchema(): VbenFormSchema[] {
       formItemClass: 'col-span-full',
       label: f('address'),
     },
+    {
+      component: 'Textarea',
+      componentProps: { rows: 2 },
+      fieldName: 'remark',
+      formItemClass: 'col-span-full',
+      label: f('remark'),
+    },
   ];
 }
 
@@ -182,6 +189,7 @@ export function toFumigationSavePayload(
     outdoorOak: values.outdoorOak ?? null,
     outdoorValidity: normalizeFumigationValidity(values.outdoorValidity) ?? '',
     region: values.region,
+    remark: values.remark || undefined,
     station: values.station,
     status: 'active',
   };

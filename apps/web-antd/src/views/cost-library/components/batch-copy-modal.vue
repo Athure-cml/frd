@@ -9,6 +9,7 @@ import { Button, message } from 'ant-design-vue';
 
 import { useVbenForm } from '#/adapter/form';
 import { batchCopyRoadCost, seaCostApi } from '#/api/cost';
+import { BATCH_COPY_PREVIEW_LIMIT } from '#/api/import-request';
 import { $t } from '#/locales';
 
 import { useRoadBatchCopySchema } from '../road/form-schema';
@@ -153,9 +154,17 @@ function hasSeaOverrides(values: Record<string, unknown>) {
   );
 }
 
+function resolveApplyOverrides(values: Record<string, unknown>) {
+  if (isSea.value) {
+    return hasSeaOverrides(values);
+  }
+  return Object.keys(pickRoadCopyFields(values)).length > 0;
+}
+
 function buildRequest(
   applyOverrides: boolean,
   values: Record<string, unknown>,
+  previewOnly: boolean,
 ) {
   if (isSea.value) {
     return {
@@ -177,7 +186,8 @@ function buildRequest(
       others: optionalNumber(values.others),
       othersEffDate: optionalDate(values.othersEffDate),
       othersValidDate: optionalDate(values.othersValidDate),
-      previewOnly: true,
+      previewLimit: previewOnly ? BATCH_COPY_PREVIEW_LIMIT : undefined,
+      previewOnly,
       remark: optionalText(values.remark),
     };
   }
@@ -185,33 +195,22 @@ function buildRequest(
     applyOverrides,
     fields: pickRoadCopyFields(values),
     ids: selectedIds.value,
-    previewOnly: true,
+    previewLimit: previewOnly ? BATCH_COPY_PREVIEW_LIMIT : undefined,
+    previewOnly,
   };
 }
 
-async function submitCopy(applyOverrides: boolean) {
+async function onConfirm() {
   if (selectedIds.value.length === 0) {
     return;
   }
   const values = await formApi.getValues();
-
-  if (isSea.value) {
-    if (applyOverrides && !hasSeaOverrides(values)) {
-      message.warning($t('page.costLibrary.hint.batchCopyNeedFieldsSea'));
-      return;
-    }
-  } else if (applyOverrides) {
-    const fields = pickRoadCopyFields(values);
-    if (Object.keys(fields).length === 0) {
-      message.warning($t('page.costLibrary.hint.batchCopyNeedFields'));
-      return;
-    }
-  }
+  const applyOverrides = resolveApplyOverrides(values);
 
   submitting.value = true;
   modalApi.lock();
   try {
-    const request = buildRequest(applyOverrides, values);
+    const request = buildRequest(applyOverrides, values, true);
     const result = isSea.value
       ? await seaCostApi.batchCopy(request)
       : await batchCopyRoadCost(request);
@@ -234,7 +233,8 @@ async function submitCopy(applyOverrides: boolean) {
     previewModalRef.value?.open({
       items: previewItems,
       operation: 'copy',
-      request: { ...request, previewOnly: false },
+      request: buildRequest(applyOverrides, values, false),
+      total: result.total ?? result.created,
     });
   } finally {
     submitting.value = false;
@@ -243,7 +243,6 @@ async function submitCopy(applyOverrides: boolean) {
 }
 
 function onPreviewSuccess() {
-  previewModalRef.value?.close();
   emit('success');
 }
 
@@ -277,11 +276,8 @@ defineExpose({ open });
       <Button :disabled="submitting" @click="modalApi.close()">
         {{ $t('common.cancel') }}
       </Button>
-      <Button :loading="submitting" @click="submitCopy(false)">
-        {{ $t('page.costLibrary.actions.batchCopyPreviewPlain') }}
-      </Button>
-      <Button :loading="submitting" type="primary" @click="submitCopy(true)">
-        {{ $t('page.costLibrary.actions.batchCopyPreviewApply') }}
+      <Button :loading="submitting" type="primary" @click="onConfirm">
+        {{ $t('common.confirm') }}
       </Button>
     </div>
   </Modal>

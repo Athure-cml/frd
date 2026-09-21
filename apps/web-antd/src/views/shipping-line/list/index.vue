@@ -26,7 +26,7 @@ import {
   unpinShippingLine,
 } from '#/api/shipping-line';
 import { $t } from '#/locales';
-import { useInternalCodeVisibility } from '#/utils/internal-code-access';
+import { usePartyCodeVisibility } from '#/utils/party-code-access';
 
 import ImportModal from '../../cost-library/components/import-modal.vue';
 import {
@@ -44,7 +44,7 @@ import Form from './modules/form.vue';
 import '../../customer/shared/customer.css';
 
 const { hasAccessByCodes } = useAccess();
-const { canViewInternalCodes } = useInternalCodeVisibility();
+const { canViewPartyCode } = usePartyCodeVisibility('shipping_line:edit');
 const canCreate = hasAccessByCodes(['shipping_line:create']);
 const canEdit = hasAccessByCodes(['shipping_line:edit']);
 const canDelete = hasAccessByCodes(['shipping_line:delete']);
@@ -203,13 +203,13 @@ function buildColumns() {
     onActionClick,
     canEdit,
     canDelete,
-    canViewInternalCodes.value,
+    canViewPartyCode.value,
   );
 }
 
 const searchFormOptions = useI18nFormOptions(() => ({
   collapsed: true,
-  schema: buildShippingLineSearchSchema(canViewInternalCodes.value),
+  schema: buildShippingLineSearchSchema(canViewPartyCode.value),
   showCollapseButton: true,
   submitOnChange: false,
 }));
@@ -250,7 +250,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
   } as VxeTableGridOptions<ShippingLineApi.ShippingLine>,
 });
 
-watch(canViewInternalCodes, () => {
+watch(canViewPartyCode, () => {
   gridApi.setGridOptions({ columns: buildColumns() });
 });
 
@@ -295,7 +295,7 @@ function onRefresh() {
           {{ $t('page.shippingLine.actions.batchDelete') }}
         </Button>
       </template>
-      <template v-if="canViewInternalCodes" #code="{ row }">
+      <template v-if="canViewPartyCode" #code="{ row }">
         <span class="customer-code">{{ row.code }}</span>
       </template>
       <template #name="{ row }">

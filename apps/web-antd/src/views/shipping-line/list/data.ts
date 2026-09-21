@@ -32,16 +32,16 @@ export function useShippingLineFormSchema(
   schema.push(
     {
       component: 'Input',
+      componentProps: { maxlength: 64 },
+      fieldName: 'shortName',
+      label: t('fields.shortName'),
+    },
+    {
+      component: 'Input',
       componentProps: { maxlength: 128 },
       fieldName: 'name',
       label: t('fields.name'),
       rules: 'required',
-    },
-    {
-      component: 'Input',
-      componentProps: { maxlength: 64 },
-      fieldName: 'shortName',
-      label: t('fields.shortName'),
     },
     {
       component: 'Input',
@@ -190,19 +190,19 @@ export function useShippingLineColumns(
   }
   columns.push(
     {
+      field: 'shortName',
+      fixed: showInternalCode ? undefined : 'left',
+      minWidth: 120,
+      title: t('fields.shortName'),
+    },
+    {
       className: 'party-name-col',
       field: 'name',
-      fixed: showInternalCode ? undefined : 'left',
       headerClassName: 'party-name-col',
       minWidth: 160,
       showOverflow: 'ellipsis',
       slots: { default: 'name' },
       title: t('fields.name'),
-    },
-    {
-      field: 'shortName',
-      minWidth: 120,
-      title: t('fields.shortName'),
     },
     {
       field: 'contactName',

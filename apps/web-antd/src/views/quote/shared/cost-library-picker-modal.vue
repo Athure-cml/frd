@@ -13,6 +13,7 @@ import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { getCostApi } from '#/api/cost';
 import { $t } from '#/locales';
 
+import { normalizeRoadCitySearchParam } from '../../cost-library/road/data';
 import { createTemplateColumnBgStyleHandlers } from '../../cost-library/shared/column-bg-style';
 import { adaptCostColumnsForViewport } from '../../cost-library/shared/columns';
 import { withCostSearchFormLayout } from '../../cost-library/shared/cost-search-form-layout';
@@ -203,12 +204,21 @@ const [Grid, gridApi] = useVbenVxeGrid({
       ajax: {
         query: async ({ page, sort }, formValues) => {
           const api = getCostApi(pickerMode.value);
+          const params = { ...formValues } as Record<string, unknown>;
+          if (pickerMode.value === 'road') {
+            const normalizedCity = normalizeRoadCitySearchParam(params.city);
+            if (normalizedCity) {
+              params.city = normalizedCity;
+            } else {
+              delete params.city;
+            }
+          }
           const result = await api.list({
             page: page.currentPage,
             pageSize: page.pageSize,
             sortField: sort.field,
             sortOrder: sort.order,
-            ...formValues,
+            ...params,
           });
           queueMicrotask(() => {
             void applyPreselectedRows();

@@ -71,6 +71,7 @@ export namespace QuoteApi {
   }
 
   export interface QuoteListItem {
+    allIn?: number;
     createdAt: string;
     createdBy: number;
     createdByName: string;
@@ -80,6 +81,7 @@ export namespace QuoteApi {
     expired: boolean;
     followUpByName?: string;
     id: number;
+    quoteDate?: string;
     quoteNo: string;
     routeSummary?: string;
     sheet: QuoteSheetFields;
@@ -178,6 +180,8 @@ export namespace QuoteApi {
     pol?: string;
     por?: string;
     quoteDate?: string;
+    /** 已手动引入卡车成本时跳过最低运价匹配 */
+    skipRoadMatch?: boolean;
     state?: string;
     zipCode?: string;
   }

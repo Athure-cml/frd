@@ -10,13 +10,13 @@ import { message } from 'ant-design-vue';
 import { useVbenForm } from '#/adapter/form';
 import { createCustomer, updateCustomer } from '#/api/customer';
 import { $t } from '#/locales';
-import { useInternalCodeVisibility } from '#/utils/internal-code-access';
+import { usePartyCodeVisibility } from '#/utils/party-code-access';
 
 import { toCustomerSavePayload, useCustomerFormSchema } from '../data';
 
 const emit = defineEmits<{ success: [] }>();
 
-const { canViewInternalCodes } = useInternalCodeVisibility();
+const { canViewPartyCode } = usePartyCodeVisibility('customer:edit');
 
 const customerId = ref<number>();
 const isEdit = computed(() => !!customerId.value);
@@ -28,7 +28,7 @@ const getTitle = computed(() =>
 
 const [Form, formApi] = useVbenForm({
   layout: 'vertical',
-  schema: useCustomerFormSchema(false, canViewInternalCodes.value),
+  schema: useCustomerFormSchema(false, canViewPartyCode.value),
   showDefaultActions: false,
   wrapperClass: 'grid-cols-1 md:grid-cols-2',
 });
@@ -43,11 +43,9 @@ const [Modal, modalApi] = useVbenModal({
     try {
       const values = await formApi.getValues();
       const payload = toCustomerSavePayload(values);
-      if (customerId.value) {
-        await updateCustomer(customerId.value, payload);
-      } else {
-        await createCustomer(payload);
-      }
+      await (customerId.value
+        ? updateCustomer(customerId.value, payload)
+        : createCustomer(payload));
       message.success($t('ui.actionMessage.operationSuccess'));
       emit('success');
       modalApi.close();
@@ -61,7 +59,7 @@ const [Modal, modalApi] = useVbenModal({
     }
     const data = modalApi.getData<CustomerApi.Customer>();
     formApi.setState({
-      schema: useCustomerFormSchema(!!data?.id, canViewInternalCodes.value),
+      schema: useCustomerFormSchema(!!data?.id, canViewPartyCode.value),
     });
     formApi.resetForm();
     customerId.value = data?.id;

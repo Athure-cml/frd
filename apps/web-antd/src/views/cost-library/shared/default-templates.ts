@@ -59,6 +59,7 @@ const ROAD_DEFAULT_LAYOUT: CostTableTemplateLayout = {
     'city',
     'state',
     'por',
+    'region',
     'supplier',
     'baseFreight',
     'fsc',
@@ -103,6 +104,7 @@ const ROAD_DEFAULT_LAYOUT: CostTableTemplateLayout = {
     nsLift: { title: 'LIFT' },
     otherFee: { title: 'OTHERS' },
     por: { required: true, title: 'POR' },
+    region: { title: 'REGION' },
     prepull: { title: 'PREPULL' },
     redelivery: { title: 'REDELIVERY' },
     remark: { title: '操作备注' },
@@ -235,9 +237,11 @@ const FUMIGATION_DEFAULT_LAYOUT: CostTableTemplateLayout = {
     FUM_INDOOR_EFF,
     'indoorValidity',
     'address',
+    'remark',
   ],
   fieldOverrides: {
     address: { required: true },
+    remark: { title: '备注' },
     [FUM_INDOOR_EFF]: { required: true },
     [FUM_OUTDOOR_EFF]: { required: true },
     indoorNonOak: { required: true },
@@ -261,6 +265,7 @@ const FUMIGATION_DEFAULT_LAYOUT: CostTableTemplateLayout = {
     FUM_INDOOR_EFF,
     'indoorValidity',
     'address',
+    'remark',
   ],
   groups: [
     {

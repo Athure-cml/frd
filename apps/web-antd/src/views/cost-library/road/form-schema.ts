@@ -389,6 +389,14 @@ export function useRoadFormSchema(): VbenFormSchema[] {
       componentProps: createPortSelectProps({
         portTypes: PORT_TYPES,
       }),
+      fieldName: 'region',
+      label: t('region'),
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: createPortSelectProps({
+        portTypes: PORT_TYPES,
+      }),
       fieldName: 'pol',
       label: t('pol'),
     },
@@ -694,6 +702,7 @@ export function toRoadSavePayload(values: Record<string, any>): RoadCostSave {
     otherFee: values.otherFee,
     pol: values.pol,
     por: values.por,
+    region: values.region?.trim() || undefined,
     prepull: values.prepull,
     redelivery: values.redelivery,
     remark: values.remark,

@@ -8,7 +8,10 @@ import type {
   PageResult,
 } from './types';
 
-import { IMPORT_REQUEST_TIMEOUT_MS } from '#/api/import-request';
+import {
+  BATCH_REQUEST_TIMEOUT_MS,
+  IMPORT_REQUEST_TIMEOUT_MS,
+} from '#/api/import-request';
 import { requestClient } from '#/api/request';
 
 const base = '/cost-library/fumigation';
@@ -18,7 +21,9 @@ export const fumigationCostApi = {
     return requestClient.post(`${base}/batch-delete`, { ids });
   },
   batchUpdate(data: CostBatchUpdatePayload) {
-    return requestClient.patch<{ updated: number }>(`${base}/batch`, data);
+    return requestClient.patch<{ updated: number }>(`${base}/batch`, data, {
+      timeout: BATCH_REQUEST_TIMEOUT_MS,
+    });
   },
   create(data: FumigationCostSave) {
     return requestClient.post<FumigationCostRecord>(base, data);

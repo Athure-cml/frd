@@ -37,7 +37,7 @@ import { formatDateMd, formatDateMmDd, formatPrice } from './formatters';
 import { costStatusTagOptions } from './tags';
 import {
   customFieldColumnPath,
-  ensureRoadFeeUnitFields,
+  ensureRoadTemplateLayout,
   isCustomFieldKey,
   isFieldRequiredInLayout,
   isFieldVisibleInLayout,
@@ -499,13 +499,13 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
   const catalogMap = buildCatalogMap(
     mode,
     mode === 'road'
-      ? ensureRoadFeeUnitFields(template.layout)
+      ? ensureRoadTemplateLayout(template.layout)
       : template.layout,
   );
   const dataColumns = buildLayoutColumns(
     mode,
     mode === 'road'
-      ? ensureRoadFeeUnitFields(template.layout)
+      ? ensureRoadTemplateLayout(template.layout)
       : template.layout,
     catalogMap,
     {
@@ -618,7 +618,7 @@ export function buildPreviewAntColumns(
   const resolvedTemplate = template ?? getDefaultTemplate(mode);
   const layout =
     mode === 'road'
-      ? ensureRoadFeeUnitFields(resolvedTemplate.layout)
+      ? ensureRoadTemplateLayout(resolvedTemplate.layout)
       : resolvedTemplate.layout;
   const catalogMap = buildCatalogMap(mode, layout);
   const fieldOrder = resolveLayoutFieldOrder(mode, layout).filter(

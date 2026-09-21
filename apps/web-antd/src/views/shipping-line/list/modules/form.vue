@@ -10,13 +10,13 @@ import { message } from 'ant-design-vue';
 import { useVbenForm } from '#/adapter/form';
 import { createShippingLine, updateShippingLine } from '#/api/shipping-line';
 import { $t } from '#/locales';
-import { useInternalCodeVisibility } from '#/utils/internal-code-access';
+import { usePartyCodeVisibility } from '#/utils/party-code-access';
 
 import { toShippingLineSavePayload, useShippingLineFormSchema } from '../data';
 
 const emit = defineEmits<{ success: [] }>();
 
-const { canViewInternalCodes } = useInternalCodeVisibility();
+const { canViewPartyCode } = usePartyCodeVisibility('shipping_line:edit');
 
 const shippingLineId = ref<number>();
 const isEdit = computed(() => !!shippingLineId.value);
@@ -28,7 +28,7 @@ const getTitle = computed(() =>
 
 const [Form, formApi] = useVbenForm({
   layout: 'vertical',
-  schema: useShippingLineFormSchema(false, canViewInternalCodes.value),
+  schema: useShippingLineFormSchema(false, canViewPartyCode.value),
   showDefaultActions: false,
   wrapperClass: 'grid-cols-1 md:grid-cols-2',
 });
@@ -59,7 +59,7 @@ const [Modal, modalApi] = useVbenModal({
     }
     const data = modalApi.getData<ShippingLineApi.ShippingLine>();
     formApi.setState({
-      schema: useShippingLineFormSchema(!!data?.id, canViewInternalCodes.value),
+      schema: useShippingLineFormSchema(!!data?.id, canViewPartyCode.value),
     });
     formApi.resetForm();
     shippingLineId.value = data?.id;

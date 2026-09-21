@@ -10,13 +10,13 @@ import { message } from 'ant-design-vue';
 import { useVbenForm } from '#/adapter/form';
 import { createAgent, updateAgent } from '#/api/agent';
 import { $t } from '#/locales';
-import { useInternalCodeVisibility } from '#/utils/internal-code-access';
+import { usePartyCodeVisibility } from '#/utils/party-code-access';
 
 import { toAgentSavePayload, useAgentFormSchema } from '../data';
 
 const emit = defineEmits<{ success: [] }>();
 
-const { canViewInternalCodes } = useInternalCodeVisibility();
+const { canViewPartyCode } = usePartyCodeVisibility('agent:edit');
 
 const agentId = ref<number>();
 const isEdit = computed(() => !!agentId.value);
@@ -28,7 +28,7 @@ const getTitle = computed(() =>
 
 const [Form, formApi] = useVbenForm({
   layout: 'vertical',
-  schema: useAgentFormSchema(false, canViewInternalCodes.value),
+  schema: useAgentFormSchema(false, canViewPartyCode.value),
   showDefaultActions: false,
   wrapperClass: 'grid-cols-1 md:grid-cols-2',
 });
@@ -59,7 +59,7 @@ const [Modal, modalApi] = useVbenModal({
     }
     const data = modalApi.getData<AgentApi.Agent>();
     formApi.setState({
-      schema: useAgentFormSchema(!!data?.id, canViewInternalCodes.value),
+      schema: useAgentFormSchema(!!data?.id, canViewPartyCode.value),
     });
     formApi.resetForm();
     agentId.value = data?.id;

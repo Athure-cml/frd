@@ -371,8 +371,8 @@ export function buildAnnouncementSavePayload(
     content: String(values.content ?? '').trim(),
     saveAction,
     scheduledAt:
-      saveAction === 'PUBLISH_SCHEDULED'
-        ? (values.scheduledAt as string | undefined)
+      saveAction === 'PUBLISH_SCHEDULED' && values.scheduledAt
+        ? dayjs(values.scheduledAt).format('YYYY-MM-DDTHH:mm:ss')
         : undefined,
     title: String(values.title ?? '').trim(),
     validDays: values.validDays ?? undefined,

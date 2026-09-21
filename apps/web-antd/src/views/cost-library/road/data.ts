@@ -91,14 +91,28 @@ function createCitySearchProps() {
         limit: 50,
       });
     },
-    class: 'w-full',
+    class: 'w-full cost-select-multiple-wrap',
     filterOption: false,
     immediate: false,
+    mode: 'multiple' as const,
     optionFilterProp: 'label',
     params,
     showSearch: true,
     onSearch: setKeyword,
   };
+}
+
+function stateFilterOption(
+  input: string,
+  option?: { label?: string; value?: string },
+) {
+  const keyword = input.trim().toLowerCase();
+  if (!keyword) {
+    return true;
+  }
+  const label = String(option?.label ?? '').toLowerCase();
+  const value = String(option?.value ?? '').toLowerCase();
+  return label.includes(keyword) || value.includes(keyword);
 }
 
 function createStateSearchProps() {
@@ -112,7 +126,7 @@ function createStateSearchProps() {
       }));
     },
     class: 'w-full',
-    immediate: false,
+    filterOption: stateFilterOption,
     optionFilterProp: 'label',
     showSearch: true,
   };
@@ -195,6 +209,23 @@ export function useRoadColumns(
     onActionClick,
     template,
   });
+}
+
+/** 搜索栏 CITY 多选 → 后端逗号分隔 */
+export function normalizeRoadCitySearchParam(
+  city: unknown,
+): string | undefined {
+  if (Array.isArray(city)) {
+    const cities = city
+      .map(String)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return cities.length > 0 ? cities.join(',') : undefined;
+  }
+  if (typeof city === 'string' && city.trim()) {
+    return city.trim();
+  }
+  return undefined;
 }
 
 export function getRoadRowName(row: RoadCostRecord) {

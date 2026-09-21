@@ -114,7 +114,6 @@ async function handlePreview() {
 }
 
 function onPreviewSuccess() {
-  previewModalRef.value?.close();
   emit('success');
 }
 

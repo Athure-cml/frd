@@ -37,9 +37,14 @@ export const FUMIGATION_FIELD_CATALOG: FieldCatalogEntry[] = [
   },
   { field: 'indoorValidity', format: 'dateMd', labelKey: f('indoorValidity') },
   {
-    className: 'col-remark',
     field: 'address',
     labelKey: f('address'),
+    showOverflow: true,
+  },
+  {
+    className: 'col-remark',
+    field: 'remark',
+    labelKey: f('remark'),
     showOverflow: true,
   },
 ];
