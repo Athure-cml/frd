@@ -6,7 +6,7 @@ import { seaCostApi } from './freight';
 import { fumigationCostApi } from './fumigation';
 import * as roadApi from './road';
 
-export { seaCostApi } from './freight';
+export { renewSeaCost, seaCostApi } from './freight';
 export { fumigationCostApi } from './fumigation';
 export * from './highlight';
 export * from './road';

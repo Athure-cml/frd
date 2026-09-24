@@ -8,6 +8,7 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { $t } from '#/locales';
 
 import { createPortSelectProps } from '../shared/freight-schema';
+import { createFumigationStationSelectProps } from './fumigation-supplier-cache';
 
 dayjs.extend(customParseFormat);
 
@@ -92,10 +93,11 @@ export function useFumigationFormSchema(): VbenFormSchema[] {
       label: f('region'),
     },
     {
-      component: 'Input',
-      componentProps: { autocomplete: 'off' },
+      component: 'ApiSelect',
+      componentProps: createFumigationStationSelectProps(),
       fieldName: 'station',
       label: f('station'),
+      rules: 'required',
     },
     {
       component: 'Divider',

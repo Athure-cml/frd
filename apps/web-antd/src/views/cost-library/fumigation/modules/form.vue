@@ -28,6 +28,7 @@ const emit = defineEmits<{ success: [] }>();
 
 const recordId = ref<number>();
 const isCopy = ref(false);
+const copyFromId = ref<number>();
 const activeTemplate = ref<CostTableTemplate>(getDefaultTemplate('fumigation'));
 
 const [Form, formApi] = useVbenForm({
@@ -75,6 +76,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
       const payload = {
         ...toFumigationSavePayload(values),
         extraFields: extractExtraFields(values),
+        ...(isCopy.value && copyFromId.value
+          ? { copyHighlightFromId: copyFromId.value }
+          : {}),
       };
       await (recordId.value
         ? fumigationCostApi.update(recordId.value, payload)
@@ -94,11 +98,13 @@ const [Drawer, drawerApi] = useVbenDrawer({
       FumigationCostRecord & {
         aiPrefill?: boolean;
         copyFrom?: boolean;
+        copyFromId?: number;
         template?: CostTableTemplate;
       }
     >();
     recordId.value = data?.aiPrefill ? undefined : data?.id;
     isCopy.value = isCostCopyPayload(data);
+    copyFromId.value = data?.copyFromId;
     applyTemplateSchema(data?.template);
     formApi.resetForm();
     if (data?.aiPrefill) {

@@ -35,6 +35,7 @@ const ROAD_EFF_FIELD = 'cf_road_eff';
 const recordId = ref<number>();
 const isCopy = ref(false);
 const isRenew = ref(false);
+const copyFromId = ref<number>();
 const renewFromId = ref<number>();
 const activeTemplate = ref<CostTableTemplate>(getDefaultTemplate('road'));
 
@@ -123,6 +124,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
       const payload = {
         ...toRoadSavePayload(values),
         extraFields: extractExtraFields(values),
+        ...(isCopy.value && copyFromId.value
+          ? { copyHighlightFromId: copyFromId.value }
+          : {}),
       };
       if (recordId.value) {
         await updateRoadCost(recordId.value, payload);
@@ -150,6 +154,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
       RoadCostRecord & {
         aiPrefill?: boolean;
         copyFrom?: boolean;
+        copyFromId?: number;
         renewFrom?: boolean;
         renewFromId?: number;
         template?: CostTableTemplate;
@@ -158,6 +163,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
     recordId.value = data?.aiPrefill ? undefined : data?.id;
     isCopy.value = isCostCopyPayload(data);
     isRenew.value = isCostRenewPayload(data);
+    copyFromId.value = data?.copyFromId;
     renewFromId.value = data?.renewFromId;
     applyTemplateSchema(data?.template);
     formApi.resetForm();

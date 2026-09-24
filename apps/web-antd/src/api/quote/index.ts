@@ -42,6 +42,8 @@ export namespace QuoteApi {
     sheetRemark?: string;
     ssl?: string;
     state?: string;
+    /** 卡车供应商（引入卡车成本时写入） */
+    supplier?: string;
     truckRemark?: string;
     truckingFee?: number;
     truckingNonOakUsd?: number;

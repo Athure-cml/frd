@@ -20,6 +20,36 @@
   ) !important;
 }
 
+/* 已过期行：浅灰底 + 黑色字（含模板列底色时叠灰） */
+.cost-library-grid .vxe-body--row.cost-row-expired .vxe-body--column .vxe-cell {
+  color: hsl(var(--foreground)) !important;
+  background-color: #ededed !important;
+}
+
+.cost-library-grid
+  .vxe-body--row.cost-row-expired
+  .vxe-body--column.col-tmpl-bg
+  .vxe-cell {
+  background-color: color-mix(in srgb, var(--col-tmpl-bg, #ededed) 55%, #e4e4e4) !important;
+}
+
+.dark .cost-library-grid .vxe-body--row.cost-row-expired .vxe-body--column .vxe-cell {
+  color: hsl(var(--foreground)) !important;
+  background-color: color-mix(in srgb, hsl(var(--muted)) 72%, hsl(var(--card))) !important;
+}
+
+.dark
+  .cost-library-grid
+  .vxe-body--row.cost-row-expired
+  .vxe-body--column.col-tmpl-bg
+  .vxe-cell {
+  background-color: color-mix(
+    in srgb,
+    var(--col-tmpl-bg, hsl(var(--muted))) 38%,
+    hsl(var(--muted))
+  ) !important;
+}
+
 /* 部门常用行背景（rowStyle 注入 --cost-row-highlight-*） */
 .cost-library-grid .vxe-body--row.cost-row-highlight .vxe-body--column .vxe-cell {
   color: var(--cost-row-highlight-fg, inherit);

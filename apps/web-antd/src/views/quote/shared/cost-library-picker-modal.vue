@@ -21,6 +21,7 @@ import {
   getCostGridClass,
   getCostSearchSchema,
 } from '../../cost-library/shared/cost-search-schema';
+import { createCostRowHighlightStyleHandlers } from '../../cost-library/shared/row-highlight-style';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import {
   buildQuoteCostPickerColumns,
@@ -252,6 +253,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       search: true,
     },
     ...createTemplateColumnBgStyleHandlers(),
+    ...createCostRowHighlightStyleHandlers(),
   },
 });
 

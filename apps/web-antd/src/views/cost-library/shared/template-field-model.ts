@@ -59,8 +59,8 @@ export function resolveLayoutFieldOrder(
   return getFieldCatalog(mode).map((entry) => entry.field);
 }
 
-/** 为已有模板补齐 REGION（POR 与 SUPPLIER 之间，非必填） */
-export function ensureRoadRegionField(
+/** 为已有模板补齐 STATION（POR 与 SUPPLIER 之间，非必填） */
+export function ensureRoadStationField(
   layout: CostTableTemplateLayout,
 ): CostTableTemplateLayout {
   const order = resolveLayoutFieldOrderRaw(layout);
@@ -70,21 +70,35 @@ export function ensureRoadRegionField(
   const fieldOverrides = { ...layout.fieldOverrides };
   let changed = false;
 
-  if (!order.includes('region')) {
+  const legacyRegionIndex = order.indexOf('region');
+  if (legacyRegionIndex !== -1) {
+    order.splice(legacyRegionIndex, 1, 'station');
+    changed = true;
+  }
+  if (fieldOverrides.region) {
+    fieldOverrides.station = {
+      ...fieldOverrides.station,
+      ...fieldOverrides.region,
+    };
+    delete fieldOverrides.region;
+    changed = true;
+  }
+  if (!order.includes('station')) {
     const porIndex = order.indexOf('por');
     const supplierIndex = order.indexOf('supplier');
     if (porIndex !== -1) {
-      order.splice(porIndex + 1, 0, 'region');
+      order.splice(porIndex + 1, 0, 'station');
       changed = true;
     } else if (supplierIndex !== -1) {
-      order.splice(supplierIndex, 0, 'region');
+      order.splice(supplierIndex, 0, 'station');
       changed = true;
     }
   }
-  if (!fieldOverrides.region?.title) {
-    fieldOverrides.region = {
-      ...fieldOverrides.region,
-      title: 'REGION',
+  const stationTitle = fieldOverrides.station?.title?.trim();
+  if (!stationTitle || stationTitle === 'REGION') {
+    fieldOverrides.station = {
+      ...fieldOverrides.station,
+      title: 'STATION',
     };
     changed = true;
   }
@@ -142,7 +156,7 @@ export function ensureFumigationRemarkField(
 export function ensureRoadTemplateLayout(
   layout: CostTableTemplateLayout,
 ): CostTableTemplateLayout {
-  return ensureRoadFeeUnitFields(ensureRoadRegionField(layout));
+  return ensureRoadFeeUnitFields(ensureRoadStationField(layout));
 }
 
 /** 为金额列补齐单位 companion；按 key 配对，插在金额后，不依赖相邻识别 */

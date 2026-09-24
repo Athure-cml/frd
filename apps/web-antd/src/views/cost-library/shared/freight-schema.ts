@@ -469,6 +469,109 @@ export function useFreightBatchSchema(): VbenFormSchema[] {
   return useSeaBatchEditSchema();
 }
 
+function readonlySeaAllInHintField(): VbenFormSchema {
+  return {
+    component: 'InputNumber',
+    componentProps: {
+      class: 'w-full',
+      disabled: true,
+      placeholder: $t('page.costLibrary.hint.batchRenewAllInAuto'),
+    },
+    fieldName: 'allIn',
+    formItemClass: 'col-span-full',
+    label: f('allIn'),
+  };
+}
+
+/** 海运批量续期：与单条续期字段一致（不含航线/船公司/代理；ALL IN 只读提示） */
+export function useSeaBatchRenewSchema(): VbenFormSchema[] {
+  return [
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'freight',
+      label: f('freight'),
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: containerTypeSelectProps(),
+      fieldName: 'containerType',
+      label: f('containerType'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'freightEffDate',
+      label: f('effectiveDate'),
+      rules: 'required',
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'freightValidDate',
+      label: f('freightValidDate'),
+    },
+    {
+      component: 'Divider',
+      fieldName: 'bunkerDivider',
+      formItemClass: 'col-span-full !my-1',
+      hideLabel: true,
+    },
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'buc',
+      formItemClass: 'col-span-full',
+      label: f('buc'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'bucEffDate',
+      label: f('effectiveDate'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'bucValidDate',
+      label: f('bucValidDate'),
+    },
+    {
+      component: 'Divider',
+      fieldName: 'othersDivider',
+      formItemClass: 'col-span-full !my-1',
+      hideLabel: true,
+    },
+    {
+      component: 'InputNumber',
+      componentProps: { class: 'w-full', min: 0, precision: 2 },
+      fieldName: 'others',
+      formItemClass: 'col-span-full',
+      label: f('othersSurcharge'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'othersEffDate',
+      label: f('effectiveDate'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: datePickerProps(),
+      fieldName: 'othersValidDate',
+      label: f('othersValidDate'),
+    },
+    readonlySeaAllInHintField(),
+    {
+      component: 'Textarea',
+      componentProps: { maxlength: 255, rows: 2, showCount: true },
+      fieldName: 'remark',
+      formItemClass: 'col-span-full',
+      label: f('remark'),
+    },
+  ];
+}
+
 export function useSeaBatchEditSchema(): VbenFormSchema[] {
   return [
     {

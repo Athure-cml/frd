@@ -273,6 +273,7 @@ const ROAD_SHEET_PRESERVE_KEYS = [
   'zipCode',
   'city',
   'state',
+  'supplier',
   'pickUpAddress',
   'truckingFee',
   'truckingNonOakUsd',
@@ -309,6 +310,7 @@ export function mergeRoadCostImport(
   sheet.zipCode = fields.zipCode ?? record.zipCode ?? sheet.zipCode;
   sheet.city = fields.city ?? record.city ?? sheet.city;
   sheet.state = fields.state ?? record.state ?? sheet.state;
+  sheet.supplier = fields.supplier ?? record.supplier ?? sheet.supplier;
   sheet.pickUpAddress =
     fields.pickUpAddress ||
     record.logYardNameAddress ||

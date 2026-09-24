@@ -18,6 +18,7 @@ import { lookupQuoteZip } from '#/api/quote';
 import { getSupplierList } from '#/api/supplier';
 import { $t } from '#/locales';
 
+import { createFumigationStationSelectProps } from '../fumigation/fumigation-supplier-cache';
 import { ROAD_REMARK_FIELD } from '../shared/field-catalog/road';
 import {
   feeValuesFromForm,
@@ -386,11 +387,9 @@ export function useRoadFormSchema(): VbenFormSchema[] {
     },
     {
       component: 'ApiSelect',
-      componentProps: createPortSelectProps({
-        portTypes: PORT_TYPES,
-      }),
-      fieldName: 'region',
-      label: t('region'),
+      componentProps: createFumigationStationSelectProps(),
+      fieldName: 'station',
+      label: t('station'),
     },
     {
       component: 'ApiSelect',
@@ -702,7 +701,7 @@ export function toRoadSavePayload(values: Record<string, any>): RoadCostSave {
     otherFee: values.otherFee,
     pol: values.pol,
     por: values.por,
-    region: values.region?.trim() || undefined,
+    station: values.station?.trim() || undefined,
     prepull: values.prepull,
     redelivery: values.redelivery,
     remark: values.remark,

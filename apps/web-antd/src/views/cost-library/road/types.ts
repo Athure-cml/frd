@@ -12,7 +12,7 @@ export interface RoadCostRecord {
   otherFee?: number;
   pol: string;
   por: string;
-  region?: string;
+  station?: string;
   prepull?: number;
   redelivery?: number;
   remark?: string;

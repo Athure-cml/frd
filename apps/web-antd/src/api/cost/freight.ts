@@ -84,7 +84,18 @@ function createFreightApi(base: string) {
     update(id: number, data: FreightCostSave) {
       return requestClient.put<FreightCostRecord>(`${base}/${id}`, data);
     },
+    renew(sourceId: number, data: FreightCostSave) {
+      return requestClient.post<FreightCostRecord>(`${base}/renew`, {
+        record: data,
+        sourceId,
+      });
+    },
   };
+}
+
+/** 海运成本续期：新建新价，并将源行对应有效期写为新生效期 − 1 天 */
+export async function renewSeaCost(sourceId: number, data: FreightCostSave) {
+  return seaCostApi.renew(sourceId, data);
 }
 
 export const seaCostApi = createFreightApi('/cost-library/sea');

@@ -87,7 +87,7 @@ const props = defineProps<{
   editPermission: string;
   /** 开启后展示批量复制（卡车/海运） */
   enableBatchCopy?: boolean;
-  /** 开启后展示批量续期（卡车） */
+  /** 开启后展示批量续期（卡车/海运） */
   enableBatchRenew?: boolean;
   /** 开启后展示「引入报价单」（卡车，须单选） */
   enableIntroduceQuote?: boolean;
@@ -310,7 +310,9 @@ function onCopy(row: any) {
 }
 
 function onRenew(row: any) {
-  formDrawerApi.setData(toRenewDrawerData(row, activeTemplate.value)).open();
+  formDrawerApi
+    .setData(toRenewDrawerData(row, activeTemplate.value, props.mode))
+    .open();
 }
 
 function onDelete(row: any) {
@@ -946,6 +948,7 @@ function onIntroduceQuote() {
     <BatchRenewModal
       v-if="enableBatchRenew"
       ref="batchRenewModalRef"
+      :mode="mode === 'sea' ? 'sea' : 'road'"
       :template="activeTemplate"
       @success="onBatchSuccess"
     />

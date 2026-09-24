@@ -8,7 +8,7 @@ import { useVbenDrawer } from '@vben/common-ui';
 import { message } from 'ant-design-vue';
 
 import { useVbenForm } from '#/adapter/form';
-import { seaCostApi } from '#/api/cost';
+import { renewSeaCost, seaCostApi } from '#/api/cost';
 import { $t } from '#/locales';
 
 import {
@@ -26,7 +26,7 @@ import {
   useFreightFormSchema,
 } from '../shared/freight-schema';
 import { getDefaultTemplate } from './default-templates';
-import { isCostCopyPayload } from './drawer-data';
+import { isCostCopyPayload, isCostRenewPayload } from './drawer-data';
 
 const props = defineProps<{
   mode: 'sea';
@@ -34,8 +34,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{ success: [] }>();
 
+const SEA_FREIGHT_EFF_FIELDS = [
+  'cf_sea_freight_eff',
+  'cf_seaFreightEff',
+] as const;
+
 const recordId = ref<number>();
 const isCopy = ref(false);
+const isRenew = ref(false);
+const copyFromId = ref<number>();
+const renewFromId = ref<number>();
 const hydrating = ref(false);
 const api = seaCostApi;
 const activeTemplate = ref<CostTableTemplate>(getDefaultTemplate(props.mode));
@@ -76,6 +84,11 @@ const getTitle = computed(() => {
   if (recordId.value) {
     return $t('page.costLibrary.actions.editRecord');
   }
+  if (isRenew.value) {
+    return $t('page.costLibrary.actions.renewRecord', [
+      $t('page.costLibrary.seaRecord'),
+    ]);
+  }
   if (isCopy.value) {
     return $t('page.costLibrary.actions.copyRecord', [
       $t('page.costLibrary.seaRecord'),
@@ -95,6 +108,87 @@ function applyTemplateSchema(template?: CostTableTemplate) {
       useFreightFormSchema(),
     ),
   });
+}
+
+function readFreightEffectiveDate(values: Record<string, unknown>) {
+  for (const field of SEA_FREIGHT_EFF_FIELDS) {
+    const flat = values[`extraFields.${field}`];
+    if (flat !== null && flat !== undefined && String(flat).trim() !== '') {
+      return String(flat).trim();
+    }
+    const nested = (
+      values.extraFields as Record<string, unknown> | undefined
+    )?.[field];
+    if (
+      nested !== null &&
+      nested !== undefined &&
+      String(nested).trim() !== ''
+    ) {
+      return String(nested).trim();
+    }
+  }
+  return '';
+}
+
+function readOptionalValidDate(value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+  return String(value).trim();
+}
+
+function validateSeaRenewDates(values: Record<string, unknown>) {
+  const freightEff = readFreightEffectiveDate(values);
+  if (!freightEff) {
+    message.warning($t('page.costLibrary.hint.renewSeaFreightEffRequired'));
+    return false;
+  }
+  if (!renewFromId.value) {
+    message.error($t('page.costLibrary.hint.renewSourceMissing'));
+    return false;
+  }
+  const pairs: Array<[unknown, string]> = [
+    [values.freightValidDate, freightEff],
+    [
+      values.bucValidDate,
+      readExtraEff(values, 'cf_sea_bunker_eff', 'cf_seaBunkerEff'),
+    ],
+    [
+      values.othersValidDate,
+      readExtraEff(values, 'cf_sea_others_eff', 'cf_seaOthersEff'),
+    ],
+  ];
+  for (const [validRaw, eff] of pairs) {
+    if (!eff) {
+      continue;
+    }
+    const valid = readOptionalValidDate(validRaw);
+    if (valid && valid < eff) {
+      message.warning($t('page.costLibrary.hint.renewValidBeforeEff'));
+      return false;
+    }
+  }
+  return true;
+}
+
+function readExtraEff(values: Record<string, unknown>, ...fields: string[]) {
+  for (const field of fields) {
+    const flat = values[`extraFields.${field}`];
+    if (flat !== null && flat !== undefined && String(flat).trim() !== '') {
+      return String(flat).trim();
+    }
+    const nested = (
+      values.extraFields as Record<string, unknown> | undefined
+    )?.[field];
+    if (
+      nested !== null &&
+      nested !== undefined &&
+      String(nested).trim() !== ''
+    ) {
+      return String(nested).trim();
+    }
+  }
+  return '';
 }
 
 async function hydrateFormValues(
@@ -124,17 +218,31 @@ const [Drawer, drawerApi] = useVbenDrawer({
     if (!valid) {
       return;
     }
+    const values = await formApi.getValues();
+    if (isRenew.value && !validateSeaRenewDates(values)) {
+      return;
+    }
     drawerApi.lock();
     try {
-      const values = await formApi.getValues();
       const payload = {
         ...toFreightSavePayload(values),
         extraFields: extractExtraFields(values),
+        ...(isCopy.value && copyFromId.value
+          ? { copyHighlightFromId: copyFromId.value }
+          : {}),
       };
-      await (recordId.value
-        ? api.update(recordId.value, payload)
-        : api.create(payload));
-      message.success($t('ui.actionMessage.operationSuccess'));
+      if (recordId.value) {
+        await api.update(recordId.value, payload);
+      } else if (isRenew.value && renewFromId.value) {
+        await renewSeaCost(renewFromId.value, payload);
+      } else {
+        await api.create(payload);
+      }
+      message.success(
+        isRenew.value
+          ? $t('page.costLibrary.hint.renewSuccess')
+          : $t('ui.actionMessage.operationSuccess'),
+      );
       emit('success');
       drawerApi.close();
     } finally {
@@ -150,11 +258,17 @@ const [Drawer, drawerApi] = useVbenDrawer({
         FreightCostRecord & {
           aiPrefill?: boolean;
           copyFrom?: boolean;
+          copyFromId?: number;
+          renewFrom?: boolean;
+          renewFromId?: number;
           template?: CostTableTemplate;
         }
       >();
       recordId.value = data?.aiPrefill ? undefined : data?.id;
       isCopy.value = isCostCopyPayload(data);
+      isRenew.value = isCostRenewPayload(data);
+      copyFromId.value = data?.copyFromId;
+      renewFromId.value = data?.renewFromId;
       applyTemplateSchema(data?.template);
       formApi.resetForm();
       if (data?.aiPrefill) {
@@ -172,7 +286,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
         await hydrateFormValues(data);
         return;
       }
-      if (isCopy.value && data) {
+      if ((isCopy.value || isRenew.value) && data) {
         await hydrateFormValues(data as FreightCostRecord);
         return;
       }
@@ -190,6 +304,12 @@ const [Drawer, drawerApi] = useVbenDrawer({
 
 <template>
   <Drawer :title="getTitle">
+    <p
+      v-if="isRenew"
+      class="text-muted-foreground mb-3 text-sm leading-relaxed"
+    >
+      {{ $t('page.costLibrary.hint.renewSeaDesc') }}
+    </p>
     <Form class="cost-drawer-form px-1" />
   </Drawer>
 </template>

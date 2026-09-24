@@ -1,12 +1,19 @@
 <script lang="ts" setup>
+import { onMounted } from 'vue';
+
 import { $t } from '#/locales';
 
 import CostLibraryPage from '../components/cost-library-page.vue';
+import { loadFumigationSupplierCache } from '../fumigation/fumigation-supplier-cache';
 import { getRoadRowName, useRoadColumns, useRoadSearchSchema } from './data';
 import { useRoadBatchSchema } from './form-schema';
 import Form from './modules/form.vue';
 
 const roadBatchSchema = useRoadBatchSchema();
+
+onMounted(() => {
+  void loadFumigationSupplierCache();
+});
 </script>
 
 <template>
@@ -18,7 +25,6 @@ const roadBatchSchema = useRoadBatchSchema();
     :description="$t('page.costLibrary.roadDesc')"
     enable-batch-copy
     enable-batch-renew
-    enable-introduce-quote
     edit-permission="cost:road:edit"
     export-filename="卡车运输成本.xlsx"
     :form-component="Form"

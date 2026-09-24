@@ -14,6 +14,7 @@ import { h } from 'vue';
 
 import { $t } from '#/locales';
 
+import { formatFumigationStationShort } from '../fumigation/fumigation-supplier-cache';
 import { formatAmount, formatPercent } from '../road/formatters';
 import { buildFumigationColumnsFromLayout } from './build-fumigation-columns';
 import { applyColumnBgParams, resolveColumnBgColor } from './column-bg-style';
@@ -54,6 +55,8 @@ export interface BuildColumnsOptions<T extends { id: number }> {
   nameField: string;
   nameTitle: string;
   onActionClick: OnActionClickFn<T>;
+  /** 仅卡车成本库列表：STATION 列显示熏蒸供应商简称 */
+  stationDisplayShort?: boolean;
   seqWidth?: number;
   template?: CostTableTemplate;
 }
@@ -234,6 +237,7 @@ function buildLeafColumn(
     mode: CostMode;
     override?: CostTableFieldOverride;
     required?: boolean;
+    stationDisplayShort?: boolean;
     title: string;
   },
 ) {
@@ -340,6 +344,15 @@ function buildLeafColumn(
     }
   }
 
+  if (
+    options.mode === 'road' &&
+    entry.field === 'station' &&
+    options.stationDisplayShort
+  ) {
+    column.formatter = ({ cellValue }: { cellValue: null | string }) =>
+      formatFumigationStationShort(cellValue);
+  }
+
   if (entry.format === 'tag') {
     column.cellRender = {
       name: 'CellTag',
@@ -361,6 +374,7 @@ function resolveFieldColumns(
   mode: CostMode,
   layout: CostTableTemplateLayout,
   catalogMap: Map<string, FieldCatalogEntry>,
+  stationDisplayShort?: boolean,
 ) {
   return (
     resolveLayoutFieldOrder(mode, layout)
@@ -373,6 +387,7 @@ function resolveFieldColumns(
         return buildLeafColumn(entry, {
           mode,
           override: layout.fieldOverrides?.[field],
+          stationDisplayShort,
           required: isFieldRequiredInLayout(layout, field),
           title: resolveFieldTitle(mode, field, layout),
         });
@@ -385,13 +400,18 @@ function buildLayoutColumns(
   mode: CostMode,
   layout: CostTableTemplateLayout,
   catalogMap: Map<string, FieldCatalogEntry>,
-  options?: { flattenGroups?: boolean },
+  options?: { flattenGroups?: boolean; stationDisplayShort?: boolean },
 ) {
   const order = resolveLayoutFieldOrder(mode, layout);
   const groups = layout.groups ?? [];
 
   if (options?.flattenGroups || groups.length === 0 || order.length === 0) {
-    return resolveFieldColumns(mode, layout, catalogMap);
+    return resolveFieldColumns(
+      mode,
+      layout,
+      catalogMap,
+      options?.stationDisplayShort,
+    );
   }
 
   // fieldOrder + groups：按顺序输出叶子列，连续同组字段合并为二级表头
@@ -420,6 +440,7 @@ function buildLayoutColumns(
           buildLeafColumn(entry, {
             mode,
             override: layout.fieldOverrides?.[field],
+            stationDisplayShort: options?.stationDisplayShort,
             required: isFieldRequiredInLayout(layout, field),
             title: resolveFieldTitle(mode, field, layout),
           }) as Record<string, unknown>,
@@ -449,6 +470,7 @@ function buildLayoutColumns(
           buildLeafColumn(entry, {
             mode,
             override: layout.fieldOverrides?.[groupedField],
+            stationDisplayShort: options?.stationDisplayShort,
             required: isFieldRequiredInLayout(layout, groupedField),
             title: resolveFieldTitle(mode, groupedField, layout),
           }) as Record<string, unknown>,
@@ -480,6 +502,7 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
     nameField,
     nameTitle,
     onActionClick,
+    stationDisplayShort = false,
     seqWidth = 52,
     template = getDefaultTemplate(mode),
   } = options;
@@ -510,6 +533,7 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
     catalogMap,
     {
       flattenGroups: mode === 'road',
+      stationDisplayShort,
     },
   );
 
@@ -536,7 +560,7 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
     onActionClick,
     nameField,
     nameTitle,
-    { enableRenew: enableRenew || mode === 'road' },
+    { enableRenew: enableRenew || mode === 'road' || mode === 'sea' },
   );
 }
 

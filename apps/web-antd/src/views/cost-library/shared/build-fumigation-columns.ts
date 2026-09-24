@@ -10,6 +10,7 @@ import { h } from 'vue';
 
 import { $t } from '#/locales';
 
+import { formatFumigationStationShort } from '../fumigation/fumigation-supplier-cache';
 import { formatAmount } from '../road/formatters';
 import { applyColumnBgParams, resolveColumnBgColor } from './column-bg-style';
 import { buildColumnSortBy } from './column-sort';
@@ -153,6 +154,7 @@ function buildLeafColumn(
   options: {
     override?: CostTableFieldOverride;
     required?: boolean;
+    stationDisplayShort?: boolean;
     title: string;
   },
 ) {
@@ -201,6 +203,9 @@ function buildLeafColumn(
       }
       return String(value);
     };
+  } else if (field === 'station' && options.stationDisplayShort) {
+    column.formatter = ({ cellValue }: { cellValue: null | string }) =>
+      formatFumigationStationShort(cellValue);
   } else if (entry.format === 'amount') {
     column.formatter = ({ cellValue }: { cellValue: number }) =>
       formatAmount(cellValue);
@@ -237,6 +242,7 @@ function buildFieldColumn(
   field: string,
   catalogMap: Map<string, FieldCatalogEntry>,
   layout: CostTableTemplateLayout,
+  stationDisplayShort?: boolean,
 ) {
   if (!isFieldVisibleInLayout(layout, field)) {
     return null;
@@ -248,6 +254,7 @@ function buildFieldColumn(
   return buildLeafColumn(field, entry, {
     override: layout.fieldOverrides?.[field],
     required: isFieldRequiredInLayout(layout, field),
+    stationDisplayShort,
     title: resolveFieldTitle('fumigation', field, layout),
   });
 }
@@ -262,6 +269,8 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
     nameTitle?: string;
     onActionClick?: OnActionClickFn<T>;
     seqWidth?: number;
+    /** 仅熏蒸成本库列表：STATION 列显示供应商简称 */
+    stationDisplayShort?: boolean;
   } = {},
 ): VxeTableGridOptions<T>['columns'] {
   const {
@@ -272,6 +281,7 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
     nameTitle = $t('page.costLibrary.fumigationFields.region'),
     onActionClick = () => {},
     seqWidth = 56,
+    stationDisplayShort = false,
   } = options;
 
   const catalogMap = toFieldCatalogMap(getFieldCatalog('fumigation'));
@@ -295,12 +305,19 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
   const dataColumns = resolveFumigationColumnSegments(layout)
     .map((segment) => {
       if (segment.type === 'leaf') {
-        return buildFieldColumn(segment.field, catalogMap, layout);
+        return buildFieldColumn(
+          segment.field,
+          catalogMap,
+          layout,
+          stationDisplayShort,
+        );
       }
 
       const groupDef = FUMIGATION_GROUP_DEFS[segment.groupKey];
       const children = segment.fields
-        .map((field) => buildFieldColumn(field, catalogMap, layout))
+        .map((field) =>
+          buildFieldColumn(field, catalogMap, layout, stationDisplayShort),
+        )
         .filter(Boolean);
       if (children.length === 0) {
         return null;

@@ -2,11 +2,13 @@
 import type { TableColumnsType } from 'ant-design-vue';
 
 import type { RoadRenewPreviewJob } from '../road/road-batch-renew';
+import type { SeaRenewPreviewJob } from '../sea/sea-batch-renew';
 
 import type {
   CostMode,
   CostTableTemplate,
   FreightCostRecord,
+  FreightCostSave,
   RoadCostRecord,
   RoadCostSave,
 } from '#/api/cost';
@@ -17,7 +19,12 @@ import { useVbenModal } from '@vben/common-ui';
 
 import { Button, message, Pagination, Table, Tag } from 'ant-design-vue';
 
-import { batchCopyRoadCost, renewRoadCost, seaCostApi } from '#/api/cost';
+import {
+  batchCopyRoadCost,
+  renewRoadCost,
+  renewSeaCost,
+  seaCostApi,
+} from '#/api/cost';
 import { $t } from '#/locales';
 
 import { buildPreviewAntColumns } from '../shared/build-columns';
@@ -42,7 +49,9 @@ const previewItems = ref<PreviewItem[]>([]);
 const previewTotal = ref(0);
 const operation = ref<BatchPreviewOperation>('copy');
 const pendingCopyRequest = ref<null | Record<string, unknown>>(null);
-const pendingRenewJobs = ref<RoadRenewPreviewJob[]>([]);
+const pendingRenewJobs = ref<Array<RoadRenewPreviewJob | SeaRenewPreviewJob>>(
+  [],
+);
 const confirming = ref(false);
 const previewPage = ref({ current: 1, pageSize: 20 });
 
@@ -140,7 +149,7 @@ function renderStatusTag(status: string) {
 function open(options: {
   items: PreviewItem[];
   operation?: BatchPreviewOperation;
-  renewJobs?: RoadRenewPreviewJob[];
+  renewJobs?: Array<RoadRenewPreviewJob | SeaRenewPreviewJob>;
   request?: Record<string, unknown>;
   total?: number;
 }) {
@@ -194,7 +203,9 @@ async function confirmRenew() {
   confirming.value = true;
   try {
     for (const job of pendingRenewJobs.value) {
-      await renewRoadCost(job.sourceId, job.payload as RoadCostSave);
+      await (isSea.value
+        ? renewSeaCost(job.sourceId, job.payload as FreightCostSave)
+        : renewRoadCost(job.sourceId, job.payload as RoadCostSave));
     }
     message.success(
       $t('page.costLibrary.hint.batchRenewSuccess', [

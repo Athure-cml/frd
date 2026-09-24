@@ -17,6 +17,7 @@ const freightBatchSchema = useFreightBatchSchema();
     :create-label="$t('page.costLibrary.actions.createSea')"
     :description="$t('page.costLibrary.seaDesc')"
     enable-batch-copy
+    enable-batch-renew
     edit-permission="cost:sea:edit"
     export-filename="海运成本.xlsx"
     :form-component="Form"

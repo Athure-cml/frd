@@ -207,6 +207,7 @@ export function useRoadColumns(
     nameField: 'supplier',
     nameTitle: t('supplier'),
     onActionClick,
+    stationDisplayShort: true,
     template,
   });
 }

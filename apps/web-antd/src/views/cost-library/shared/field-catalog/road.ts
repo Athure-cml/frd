@@ -23,7 +23,7 @@ export const ROAD_FIELD_CATALOG: FieldCatalogEntry[] = [
   { field: 'city', group: 'route', labelKey: road('city') },
   { field: 'state', group: 'route', labelKey: road('state') },
   { field: 'por', group: 'route', labelKey: road('por') },
-  { field: 'region', group: 'route', labelKey: road('region') },
+  { field: 'station', group: 'route', labelKey: road('station') },
   { field: 'pol', group: 'route', labelKey: road('pol') },
   {
     field: 'supplier',

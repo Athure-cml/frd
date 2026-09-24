@@ -8,6 +8,7 @@ import { buildFumigationColumnsFromLayout } from '../shared/build-fumigation-col
 import { getDefaultTemplate } from '../shared/default-templates';
 import { createCostStatusSearchField } from '../shared/status-search';
 import { createRegionPortSearchProps } from './form-schema';
+import { createFumigationStationSelectProps } from './fumigation-supplier-cache';
 
 const f = (key: string) => $t(`page.costLibrary.fumigationFields.${key}`);
 
@@ -30,8 +31,8 @@ export function useFumigationSearchSchema(): VbenFormSchema[] {
       label: f('region'),
     },
     {
-      component: 'Input',
-      componentProps: { autocomplete: 'off' },
+      component: 'ApiSelect',
+      componentProps: createFumigationStationSelectProps(),
       fieldName: 'station',
       label: f('station'),
     },
@@ -61,6 +62,7 @@ export function useFumigationColumns(
     canEdit,
     onActionClick,
     seqWidth: 56,
+    stationDisplayShort: true,
   });
 }
 

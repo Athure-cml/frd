@@ -87,6 +87,8 @@ export interface FreightCostSave {
   remark?: string;
   ssl: string;
   status?: CostStatus;
+  /** 单条复制录入：从源行复制常用标记 */
+  copyHighlightFromId?: number;
 }
 
 export interface RoadCostRecord {
@@ -104,6 +106,7 @@ export interface RoadCostRecord {
   otherFee?: number;
   pol: string;
   por: string;
+  station?: string;
   prepull?: number;
   redelivery?: number;
   remark?: string;
@@ -120,7 +123,9 @@ export interface RoadCostRecord {
   zipCode: string;
 }
 
-export type RoadCostSave = Omit<RoadCostRecord, 'id' | 'updatedAt'>;
+export type RoadCostSave = Omit<RoadCostRecord, 'id' | 'updatedAt'> & {
+  copyHighlightFromId?: number;
+};
 
 export interface FumigationCostRecord {
   address?: string;
@@ -140,7 +145,12 @@ export interface FumigationCostRecord {
   updatedAt?: string;
 }
 
-export type FumigationCostSave = Omit<FumigationCostRecord, 'id' | 'updatedAt'>;
+export type FumigationCostSave = Omit<
+  FumigationCostRecord,
+  'id' | 'updatedAt'
+> & {
+  copyHighlightFromId?: number;
+};
 
 export interface CostTableFieldOverride {
   align?: 'center' | 'left' | 'right';

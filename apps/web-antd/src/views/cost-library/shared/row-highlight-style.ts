@@ -1,4 +1,4 @@
-import type { CostHighlightView } from '#/api/cost';
+import type { CostHighlightView, CostStatus } from '#/api/cost';
 
 import {
   contrastTextColorForBg,
@@ -7,22 +7,35 @@ import {
 
 type RowWithHighlight = {
   highlight?: CostHighlightView | null;
+  status?: CostStatus | null;
 };
+
+export function isCostRowExpired(row: RowWithHighlight) {
+  return row.status === 'expired';
+}
 
 export function createCostRowHighlightStyleHandlers() {
   return {
     rowClassName: ({ row }: { row: RowWithHighlight }) => {
+      const classes: string[] = [];
+      if (isCostRowExpired(row)) {
+        classes.push('cost-row-expired');
+        return classes.join(' ');
+      }
       const color = normalizeColumnBgColor(row?.highlight?.color);
       if (!color) {
         return '';
       }
-      const classes = ['cost-row-highlight'];
+      classes.push('cost-row-highlight');
       if ((row.highlight?.deptCount ?? 0) > 1) {
         classes.push('cost-row-multi-dept');
       }
       return classes.join(' ');
     },
     rowStyle: ({ row }: { row: RowWithHighlight }) => {
+      if (isCostRowExpired(row)) {
+        return null;
+      }
       const color = normalizeColumnBgColor(row?.highlight?.color);
       if (!color) {
         return null;
@@ -39,7 +52,7 @@ export function createCostRowHighlightStyleHandlers() {
 
 export function formatHighlightRowTitle(row: RowWithHighlight) {
   const h = row.highlight;
-  if (!h?.color) {
+  if (!h?.color || isCostRowExpired(row)) {
     return undefined;
   }
   const parts: string[] = [];

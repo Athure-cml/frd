@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { onMounted } from 'vue';
+
 import { $t } from '#/locales';
 
 import CostLibraryPage from '../components/cost-library-page.vue';
@@ -8,7 +10,12 @@ import {
   useFumigationColumns,
   useFumigationSearchSchema,
 } from './data';
+import { loadFumigationSupplierCache } from './fumigation-supplier-cache';
 import Form from './modules/form.vue';
+
+onMounted(() => {
+  void loadFumigationSupplierCache();
+});
 </script>
 
 <template>
