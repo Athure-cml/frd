@@ -6,6 +6,7 @@ import type { QuoteApi } from '#/api/quote';
 import { computed, onMounted, ref } from 'vue';
 
 import { getShippingLineList } from '#/api/shipping-line';
+import { FRD_QUOTE_LOGO_SRC } from '#/constants/brand';
 import { $t } from '#/locales';
 
 import {
@@ -71,7 +72,7 @@ onMounted(async () => {
         <img
           alt="FRD GLOBAL (SH) CO., LTD."
           class="quote-print-sheet__logo"
-          src="/static/frd-quote-logo.jpg"
+          :src="FRD_QUOTE_LOGO_SRC"
         />
       </div>
       <h1 class="quote-print-sheet__title">

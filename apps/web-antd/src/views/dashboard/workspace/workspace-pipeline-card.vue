@@ -8,6 +8,7 @@ import { Progress } from 'ant-design-vue';
 import { $t } from '#/locales';
 
 import WorkspaceCard from './workspace-card.vue';
+import WorkspaceEmpty from './workspace-empty.vue';
 
 defineProps<{
   items: WorkspacePipelineView[];
@@ -26,7 +27,7 @@ const emit = defineEmits<{
     :title="$t('page.workspace.pipeline.title')"
     @action="emit('viewAll')"
   >
-    <ul class="workspace-pipeline-list">
+    <ul v-if="items.length > 0" class="workspace-pipeline-list">
       <li
         v-for="item in items"
         :key="item.id"
@@ -74,5 +75,10 @@ const emit = defineEmits<{
         </div>
       </li>
     </ul>
+    <WorkspaceEmpty
+      v-else
+      illustration="emptyPipeline"
+      :description="$t('page.workspace.pipeline.empty')"
+    />
   </WorkspaceCard>
 </template>

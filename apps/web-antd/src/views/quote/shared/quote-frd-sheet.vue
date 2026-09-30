@@ -12,6 +12,7 @@ import { Checkbox, Input, InputNumber, Select } from 'ant-design-vue';
 
 import { getCustomerList } from '#/api/customer';
 import { searchGlobalPortNameOptions } from '#/api/master-data/global-port';
+import { FRD_QUOTE_LOGO_SRC } from '#/constants/brand';
 import { $t } from '#/locales';
 
 import {
@@ -189,7 +190,7 @@ defineExpose({ fmSelection, quoteDate });
         <img
           alt="FRD GLOBAL (SH) CO., LTD."
           class="frd-quote-sheet__logo"
-          src="/static/frd-quote-logo.jpg"
+          :src="FRD_QUOTE_LOGO_SRC"
         />
       </div>
       <h1 class="frd-quote-sheet__title">{{ $t('page.quote.sheet.title') }}</h1>

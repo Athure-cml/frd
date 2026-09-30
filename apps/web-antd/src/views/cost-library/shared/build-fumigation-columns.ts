@@ -18,6 +18,7 @@ import { resolveCompactColumnSize } from './column-width';
 import {
   appendCostOperationColumn,
   appendCostStatusColumn,
+  appendQuoteLibraryOperationColumn,
   buildCostCheckboxColumn,
 } from './columns';
 import { getFieldCatalog, toFieldCatalogMap } from './field-catalog';
@@ -152,6 +153,7 @@ function buildLeafColumn(
   field: string,
   entry: FieldCatalogEntry,
   options: {
+    formatDateValue?: (value: null | number | string | undefined) => string;
     override?: CostTableFieldOverride;
     required?: boolean;
     stationDisplayShort?: boolean;
@@ -164,6 +166,7 @@ function buildLeafColumn(
   const minWidth =
     options.override?.minWidth ?? entry.minWidth ?? size.minWidth;
   const width = options.override?.width ?? entry.width;
+  const formatDate = options.formatDateValue ?? formatDateMd;
   const column: Record<string, unknown> = {
     align: entry.align,
     className: entry.className,
@@ -195,7 +198,7 @@ function buildLeafColumn(
         return formatAmount(value);
       }
       if (isFumigationDateField(field, options.title)) {
-        return formatDateMd(
+        return formatDate(
           typeof value === 'string' || typeof value === 'number'
             ? value
             : String(value),
@@ -211,7 +214,7 @@ function buildLeafColumn(
       formatAmount(cellValue);
   } else if (isFumigationDateField(field, options.title)) {
     column.formatter = ({ cellValue }: { cellValue: null | number | string }) =>
-      formatDateMd(cellValue);
+      formatDate(cellValue);
   }
 
   if (options.required) {
@@ -242,7 +245,11 @@ function buildFieldColumn(
   field: string,
   catalogMap: Map<string, FieldCatalogEntry>,
   layout: CostTableTemplateLayout,
-  stationDisplayShort?: boolean,
+  options: {
+    formatDateValue?: (value: null | number | string | undefined) => string;
+    showRequiredMark?: boolean;
+    stationDisplayShort?: boolean;
+  } = {},
 ) {
   if (!isFieldVisibleInLayout(layout, field)) {
     return null;
@@ -251,10 +258,14 @@ function buildFieldColumn(
   if (!entry) {
     return null;
   }
+  const required =
+    options.showRequiredMark !== false &&
+    isFieldRequiredInLayout(layout, field);
   return buildLeafColumn(field, entry, {
+    formatDateValue: options.formatDateValue,
     override: layout.fieldOverrides?.[field],
-    required: isFieldRequiredInLayout(layout, field),
-    stationDisplayShort,
+    required,
+    stationDisplayShort: options.stationDisplayShort,
     title: resolveFieldTitle('fumigation', field, layout),
   });
 }
@@ -263,26 +274,41 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
   layout: CostTableTemplateLayout,
   options: {
     canEdit?: boolean;
+    /** 日期展示格式化；默认 yyyy/MM/dd。报价库传 formatDateYmd */
+    formatDateValue?: (value: null | number | string | undefined) => string;
     includeCheckbox?: boolean;
     includeOperation?: boolean;
     nameField?: string;
     nameTitle?: string;
     onActionClick?: OnActionClickFn<T>;
+    /** 报价库列表：操作列禁用已引用行，删除走页面 Modal */
+    quoteLibraryOperation?: boolean;
     seqWidth?: number;
+    /** 表头是否显示必填 * 标记，默认 true */
+    showRequiredMark?: boolean;
     /** 仅熏蒸成本库列表：STATION 列显示供应商简称 */
     stationDisplayShort?: boolean;
   } = {},
 ): VxeTableGridOptions<T>['columns'] {
   const {
     canEdit = false,
+    formatDateValue,
     includeCheckbox = true,
     includeOperation = true,
     nameField = 'region',
     nameTitle = $t('page.costLibrary.fumigationFields.region'),
     onActionClick = () => {},
+    quoteLibraryOperation = false,
     seqWidth = 56,
+    showRequiredMark = true,
     stationDisplayShort = false,
   } = options;
+
+  const fieldColumnOptions = {
+    formatDateValue,
+    showRequiredMark,
+    stationDisplayShort,
+  };
 
   const catalogMap = toFieldCatalogMap(getFieldCatalog('fumigation'));
   layout.customFields?.forEach((def) => {
@@ -309,14 +335,14 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
           segment.field,
           catalogMap,
           layout,
-          stationDisplayShort,
+          fieldColumnOptions,
         );
       }
 
       const groupDef = FUMIGATION_GROUP_DEFS[segment.groupKey];
       const children = segment.fields
         .map((field) =>
-          buildFieldColumn(field, catalogMap, layout, stationDisplayShort),
+          buildFieldColumn(field, catalogMap, layout, fieldColumnOptions),
         )
         .filter(Boolean);
       if (children.length === 0) {
@@ -344,6 +370,10 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
 
   if (!includeOperation) {
     return columns;
+  }
+
+  if (quoteLibraryOperation) {
+    return appendQuoteLibraryOperationColumn(columns, canEdit, onActionClick);
   }
 
   return appendCostOperationColumn(

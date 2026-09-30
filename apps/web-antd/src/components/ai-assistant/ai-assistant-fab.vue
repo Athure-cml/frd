@@ -499,8 +499,6 @@ async function openSystemPage(page: AiApi.OpenPage) {
 
 /** 与后端 open_page 权限码对齐，前端再拦一层 */
 const OPEN_PAGE_PERMISSIONS: Record<string, string> = {
-  analytics: 'dashboard:view',
-  Analytics: 'dashboard:view',
   cost_fumigation: 'cost:fumigation:view',
   CostLibraryFumigation: 'cost:fumigation:view',
   cost_road: 'cost:road:view',
@@ -513,6 +511,12 @@ const OPEN_PAGE_PERMISSIONS: Record<string, string> = {
   QuoteCreate: 'quote:create',
   quote_list: 'quote:view',
   QuoteList: 'quote:view',
+  quote_library_road: 'quote:library:road:view',
+  QuoteLibraryRoad: 'quote:library:road:view',
+  quote_library_sea: 'quote:library:sea:view',
+  QuoteLibrarySea: 'quote:library:sea:view',
+  quote_library_fumigation: 'quote:library:fumigation:view',
+  QuoteLibraryFumigation: 'quote:library:fumigation:view',
   supplier_list: 'supplier:truck:view',
   SupplierList: 'supplier:truck:view',
   SupplierTruckList: 'supplier:truck:view',

@@ -36,7 +36,13 @@ export const QUOTE_SHEET_COLUMNS: Array<{
 
 /** 报价单列表页表头（精简列） */
 export const QUOTE_LIST_COLUMNS: Array<{
-  field: 'allIn' | 'porPol' | 'quoteDate' | keyof QuoteApi.QuoteSheetFields;
+  field:
+    | 'allIn'
+    | 'oakType'
+    | 'porPol'
+    | 'quoteDate'
+    | 'validUntil'
+    | keyof QuoteApi.QuoteSheetFields;
   listSource?: 'row' | 'sheet';
   title: string;
   type?: 'date' | 'money' | 'text';
@@ -47,6 +53,12 @@ export const QUOTE_LIST_COLUMNS: Array<{
   { field: 'pod', title: 'POD', width: 96 },
   { field: 'pickUpAddress', title: 'PICK UP ADDRESS', width: 180 },
   { field: 'fumigationPoint', title: 'STATION', width: 120 },
+  {
+    field: 'oakType',
+    listSource: 'row',
+    title: 'OAK / NON-OAK',
+    width: 128,
+  },
   {
     field: 'allIn',
     listSource: 'row',
@@ -60,6 +72,13 @@ export const QUOTE_LIST_COLUMNS: Array<{
     title: 'DATE',
     type: 'date',
     width: 112,
+  },
+  {
+    field: 'validUntil',
+    listSource: 'row',
+    title: 'VALID UNTIL',
+    type: 'date',
+    width: 120,
   },
   { field: 'sheetRemark', title: 'REMARK', width: 200 },
 ];
@@ -115,8 +134,20 @@ export function formatQuoteListCellValue(
     if (col.field === 'allIn') {
       return formatMoney(row.allIn);
     }
+    if (col.field === 'oakType') {
+      if (row.oakType === 'OAK') {
+        return 'OAK';
+      }
+      if (row.oakType === 'NON_OAK') {
+        return 'NON-OAK';
+      }
+      return '—';
+    }
     if (col.field === 'quoteDate') {
       return formatQuoteDate(row.quoteDate ?? row.createdAt);
+    }
+    if (col.field === 'validUntil') {
+      return formatQuoteDate(row.validUntil);
     }
   }
   return sheetCellValue(

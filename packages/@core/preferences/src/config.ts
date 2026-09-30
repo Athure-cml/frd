@@ -134,6 +134,7 @@ const defaultPreferences: Preferences = {
     progress: true,
   },
   widget: {
+    activityTicker: true,
     fullscreen: true,
     globalSearch: true,
     languageToggle: true,

@@ -2,6 +2,8 @@ import type { DashboardApi } from '#/api/dashboard';
 
 import { $t } from '#/locales';
 
+import { formatQuoteCostRiskHint } from '../../quote/shared/format-cost-risk-hint';
+
 export interface WorkspaceMetricView {
   icon: string;
   iconTone: 'accent' | 'destructive' | 'primary' | 'success' | 'warning';
@@ -11,13 +13,16 @@ export interface WorkspaceMetricView {
 }
 
 export interface WorkspaceTodoView {
+  actionLabel: string;
   customer: string;
   done: boolean;
+  href: string;
   id: string;
   priority: 'high' | 'medium' | 'urgent';
   quoteNo: string;
   time: string;
   title: string;
+  todoType: string;
 }
 
 export interface WorkspacePipelineView {
@@ -103,18 +108,71 @@ export function mapWorkspaceMetrics(
     .filter(Boolean) as WorkspaceMetricView[];
 }
 
+const TODO_TITLE_KEYS: Record<string, string> = {
+  archiveLost: 'page.workspace.todos.archiveLost',
+  approveQuote: 'page.workspace.todos.approveQuote',
+  completeDraft: 'page.workspace.todos.completeDraft',
+  confirmWon: 'page.workspace.todos.confirmWon',
+  followSent: 'page.workspace.todos.followSent',
+  reviewCostRisk: 'page.workspace.todos.reviewCostRisk',
+};
+
+const TODO_ACTION_KEYS: Record<string, string> = {
+  archiveLost: 'page.workspace.todos.actions.handle',
+  approveQuote: 'page.workspace.todos.actions.approve',
+  completeDraft: 'page.workspace.todos.actions.complete',
+  confirmWon: 'page.workspace.todos.actions.archive',
+  followSent: 'page.workspace.todos.actions.follow',
+  reviewCostRisk: 'page.workspace.todos.actions.review',
+};
+
+function resolveTodoTitle(todoType: string) {
+  const key = TODO_TITLE_KEYS[todoType];
+  return key ? $t(key) : todoType;
+}
+
+function resolveTodoActionLabel(todoType: string) {
+  const key = TODO_ACTION_KEYS[todoType];
+  return key ? $t(key) : $t('page.workspace.todos.actions.handle');
+}
+
+function resolveTodoHref(item: DashboardApi.WorkspaceTodo) {
+  return item.todoType === 'approveQuote'
+    ? `/approval/${item.id}`
+    : `/quotes/${item.id}/edit`;
+}
+
+const TODO_PRIORITY_RANK: Record<WorkspaceTodoView['priority'], number> = {
+  high: 1,
+  medium: 2,
+  urgent: 0,
+};
+
 export function mapWorkspaceTodos(
   todos: DashboardApi.WorkspaceTodo[],
 ): WorkspaceTodoView[] {
-  return todos.map((item) => ({
-    customer: item.customer,
-    done: item.done,
-    id: String(item.id),
-    priority: item.priority,
-    quoteNo: item.quoteNo,
-    time: item.time,
-    title: $t(`page.workspace.todos.${item.todoType}`),
-  }));
+  return todos
+    .map((item) => ({
+      actionLabel: resolveTodoActionLabel(item.todoType),
+      customer: item.customer,
+      done: item.done,
+      href: resolveTodoHref(item),
+      id: String(item.id),
+      priority: item.priority,
+      quoteNo: item.quoteNo,
+      time: item.time,
+      title: resolveTodoTitle(item.todoType),
+      todoType: item.todoType,
+    }))
+    .toSorted((left, right) => {
+      if (left.done !== right.done) {
+        return left.done ? 1 : -1;
+      }
+      return (
+        (TODO_PRIORITY_RANK[left.priority] ?? 9) -
+        (TODO_PRIORITY_RANK[right.priority] ?? 9)
+      );
+    });
 }
 
 export function mapWorkspacePipeline(
@@ -141,6 +199,23 @@ export function mapWorkspaceRoutes(
 export function mapWorkspaceNotice(
   notice: DashboardApi.WorkspaceNotice,
 ): WorkspaceNoticeView {
+  if (notice.type === 'COST_RISK') {
+    const quoteId = notice.payload?.quoteId;
+    const reason = notice.payload?.reason;
+    const modes = notice.payload?.costRiskModes;
+    return {
+      desc: formatQuoteCostRiskHint({
+        modes: Array.isArray(modes) ? modes.map(String) : undefined,
+        reason: typeof reason === 'string' ? reason : undefined,
+      }),
+      icon: 'lucide:triangle-alert',
+      id: notice.id,
+      link: quoteId ? `/quotes/${quoteId}/edit` : '/quotes/list',
+      time: notice.time,
+      title: $t('page.workspace.notices.costRiskTitle'),
+    };
+  }
+
   if (notice.type === 'QUOTE_EXPIRING') {
     const count = Number(notice.payload?.count ?? 0);
     const days = Number(notice.payload?.days ?? 3);

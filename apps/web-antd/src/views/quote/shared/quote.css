@@ -7,14 +7,31 @@
   min-width: 0;
 }
 
-.quote-grid :deep(.table-operations) {
+/* 待审批报价：Ant Design Tag warning 标准色（浅橙底 + 深橙字） */
+.quote-grid .quote-status-tag--pending.ant-tag-warning,
+.quote-editor-page .quote-status-tag--pending.ant-tag-warning {
+  color: #d46b08;
+  background-color: #fff7e6;
+  border-color: #ffd591;
+}
+
+.quote-library-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.quote-grid .table-operations {
+  display: inline-flex;
   flex-wrap: nowrap;
-  gap: 4px;
+  gap: 12px;
+  align-items: center;
   white-space: nowrap;
 }
 
-.quote-grid :deep(.table-operations .ant-btn-link) {
-  padding-inline: 4px;
+.quote-grid .table-operations .ant-btn-link {
+  padding-inline: 0;
 }
 
 .quote-grid .quote-no-link {
@@ -27,18 +44,47 @@
   border: none;
 }
 
+/* 成本风险行：淡红警示（vxe-table 单元格为 .vxe-cell，勿用 :deep） */
+.quote-grid .vxe-body--row.quote-row-risk .vxe-body--column .vxe-cell {
+  background-color: rgb(255 77 79 / 8%) !important;
+}
+
+.quote-grid .vxe-body--row.quote-row-risk.row--hover .vxe-body--column .vxe-cell {
+  background-color: rgb(255 77 79 / 12%) !important;
+}
+
+.dark .quote-grid .vxe-body--row.quote-row-risk .vxe-body--column .vxe-cell {
+  background-color: rgb(255 77 79 / 14%) !important;
+}
+
+.dark
+  .quote-grid
+  .vxe-body--row.quote-row-risk.row--hover
+  .vxe-body--column
+  .vxe-cell {
+  background-color: rgb(255 77 79 / 18%) !important;
+}
+
+.quote-cost-risk-banner {
+  margin-bottom: 16px;
+}
+
+.quote-cost-risk-banner .ant-alert-message {
+  font-weight: 600;
+}
+
 .quote-grid .quote-no-link:hover {
   text-decoration: underline;
 }
 
-.quote-grid :deep(.quote-row-expired) {
-  color: #cf1322;
-  background-color: rgb(255 77 79 / 6%);
+.quote-grid .vxe-body--row.quote-row-expired .vxe-body--column .vxe-cell {
+  color: #cf1322 !important;
+  background-color: rgb(255 77 79 / 6%) !important;
 }
 
-.quote-grid :deep(.quote-row-voided) {
-  color: hsl(var(--muted-foreground));
-  background-color: hsl(var(--muted) / 35%);
+.quote-grid .vxe-body--row.quote-row-voided .vxe-body--column .vxe-cell {
+  color: hsl(var(--muted-foreground)) !important;
+  background-color: hsl(var(--muted) / 35%) !important;
 }
 
 /* ── Detail readonly fields ── */
@@ -284,6 +330,14 @@
   min-width: 0;
 }
 
+.quote-editor-nav__change-reason {
+  max-width: 720px;
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: hsl(var(--muted-foreground));
+}
+
 .quote-editor-nav__title {
   margin: 0;
   font-size: 16px;
@@ -305,7 +359,28 @@
   flex-shrink: 0;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
   justify-content: flex-end;
+}
+
+.quote-editor-nav__risk {
+  display: flex;
+  flex: 1 1 240px;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  max-width: min(520px, 42vw);
+  margin-right: 4px;
+}
+
+.quote-editor-nav__risk-reason {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #cf1322;
+  text-align: right;
 }
 
 .quote-editor-nav__actions :deep(.ant-btn) {
@@ -406,16 +481,16 @@
 }
 
 .quote-editor-page .quote-action-btn--cancel-approval.ant-btn-default {
-  color: hsl(38deg 80% 32%);
-  background: color-mix(in srgb, hsl(38deg 92% 50%) 10%, hsl(var(--card)));
-  border-color: hsl(38deg 60% 62%);
+  color: hsl(0deg 65% 46%);
+  background: color-mix(in srgb, hsl(0deg 84% 60%) 8%, hsl(var(--card)));
+  border-color: hsl(0deg 55% 72%);
 }
 
 .quote-editor-page
   .quote-action-btn--cancel-approval.ant-btn-default:not(:disabled):hover {
-  color: hsl(38deg 80% 26%);
-  background: color-mix(in srgb, hsl(38deg 92% 50%) 16%, hsl(var(--card)));
-  border-color: hsl(38deg 60% 52%);
+  color: hsl(0deg 65% 40%);
+  background: color-mix(in srgb, hsl(0deg 84% 60%) 14%, hsl(var(--card)));
+  border-color: hsl(0deg 55% 62%);
 }
 
 .quote-editor-page .quote-action-btn--reject.ant-btn-default {
@@ -436,46 +511,31 @@
   border-color: hsl(var(--primary) / 45%);
 }
 
-.quote-editor-page .quote-action-btn--won.ant-btn-default {
-  color: hsl(142deg 64% 32%);
-  background: color-mix(in srgb, hsl(142deg 71% 45%) 8%, hsl(var(--card)));
-  border-color: hsl(142deg 45% 62%);
-}
-
-.quote-editor-page .quote-action-btn--won.ant-btn-default:not(:disabled):hover {
-  color: hsl(142deg 64% 26%);
-  background: color-mix(in srgb, hsl(142deg 71% 45%) 14%, hsl(var(--card)));
-  border-color: hsl(142deg 45% 52%);
-}
-
-.quote-editor-page .quote-action-btn--won.ant-btn-default:not(:disabled):active {
-  color: hsl(142deg 64% 24%);
-  background: color-mix(in srgb, hsl(142deg 71% 45%) 18%, hsl(var(--card)));
-  border-color: hsl(142deg 45% 48%);
-}
-
-.quote-editor-page .quote-action-btn--void.ant-btn-default {
-  color: hsl(25deg 90% 38%);
-  background: color-mix(in srgb, hsl(25deg 95% 53%) 10%, hsl(var(--card)));
-  border-color: hsl(25deg 70% 68%);
+.quote-editor-page .quote-action-btn--won.ant-btn-primary:not(.ant-btn-dangerous) {
+  background-color: #52c41a;
+  border-color: #52c41a;
+  box-shadow: none;
 }
 
 .quote-editor-page
-  .quote-action-btn--void.ant-btn-default:not(:disabled):hover {
-  color: hsl(25deg 90% 32%);
-  background: color-mix(in srgb, hsl(25deg 95% 53%) 16%, hsl(var(--card)));
-  border-color: hsl(25deg 70% 58%);
+  .quote-action-btn--won.ant-btn-primary:not(.ant-btn-dangerous):not(:disabled):hover {
+  background-color: #73d13d;
+  border-color: #73d13d;
 }
 
-.quote-editor-page .quote-action-btn--delete.ant-btn-primary.ant-btn-dangerous {
+.quote-editor-page
+  .quote-action-btn--won.ant-btn-primary:not(.ant-btn-dangerous):not(:disabled):active {
+  background-color: #389e0d;
+  border-color: #389e0d;
+}
+
+.quote-editor-page .quote-action-btn--delete.ant-btn-primary.ant-btn-dangerous,
+.quote-editor-page .quote-action-btn--rollback.ant-btn-primary.ant-btn-dangerous,
+.quote-editor-page .quote-action-btn--void.ant-btn-primary.ant-btn-dangerous {
   box-shadow: none;
 }
 
 .quote-editor-page .quote-action-btn--save.ant-btn-primary {
-  box-shadow: none;
-}
-
-.quote-editor-page .quote-action-btn--void.ant-btn-primary.ant-btn-dangerous {
   box-shadow: none;
 }
 
@@ -540,6 +600,16 @@
   .quote-editor-nav__actions {
     justify-content: flex-start;
     width: 100%;
+  }
+
+  .quote-editor-nav__risk {
+    flex-basis: 100%;
+    max-width: none;
+    margin-right: 0;
+  }
+
+  .quote-editor-nav__risk-reason {
+    text-align: left;
   }
 }
 
@@ -670,6 +740,10 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.quote-editor-page .quote-sheet-basic-row--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .quote-editor-page .quote-sheet-location-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -677,6 +751,10 @@
   gap: 16px 20px;
   align-items: start;
   width: 100%;
+}
+
+.quote-editor-page .quote-sheet-location-row--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .quote-editor-page .quote-sheet-sea-row {
@@ -697,7 +775,9 @@
 @media (width < 768px) {
   .quote-editor-page .quote-sheet-basic-row--2,
   .quote-editor-page .quote-sheet-basic-row--3,
-  .quote-editor-page .quote-sheet-location-row {
+  .quote-editor-page .quote-sheet-basic-row--4,
+  .quote-editor-page .quote-sheet-location-row,
+  .quote-editor-page .quote-sheet-location-row--4 {
     grid-template-columns: 1fr;
   }
 }

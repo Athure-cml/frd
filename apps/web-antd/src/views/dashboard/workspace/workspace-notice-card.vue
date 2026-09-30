@@ -6,6 +6,7 @@ import { IconifyIcon } from '@vben/icons';
 import { $t } from '#/locales';
 
 import WorkspaceCard from './workspace-card.vue';
+import WorkspaceEmpty from './workspace-empty.vue';
 
 defineProps<{
   items: WorkspaceNoticeView[];
@@ -24,7 +25,7 @@ const emit = defineEmits<{
     :title="$t('page.workspace.notices.title')"
     @action="emit('viewAll')"
   >
-    <ul class="workspace-notice-list">
+    <ul v-if="items.length > 0" class="workspace-notice-list">
       <li
         v-for="item in items"
         :key="item.id"
@@ -45,5 +46,10 @@ const emit = defineEmits<{
         <span class="workspace-notice-time">{{ item.time }}</span>
       </li>
     </ul>
+    <WorkspaceEmpty
+      v-else
+      illustration="emptyNotices"
+      :description="$t('page.workspace.notices.empty')"
+    />
   </WorkspaceCard>
 </template>

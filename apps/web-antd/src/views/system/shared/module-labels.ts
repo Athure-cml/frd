@@ -17,6 +17,7 @@ const MASTER_DATA_PREFIXES = new Set([
   'md_container_type',
   'md_dest_address',
   'md_global_port',
+  'md_quote_rule',
   'unit',
 ]);
 
@@ -48,6 +49,9 @@ export function resolvePermissionModule(code: string): null | string {
   if (MASTER_DATA_PREFIXES.has(root)) {
     return 'masterData';
   }
+  if (code === 'quote:approve' || code.startsWith('approval:config:')) {
+    return 'approval';
+  }
   if (root === 'dashboard' || root === 'quote') {
     return root;
   }
@@ -61,6 +65,7 @@ const MODULE_DISPLAY_ORDER = [
   'cost',
   'customer',
   'masterData',
+  'approval',
   'sys',
   'ai',
 ] as const;

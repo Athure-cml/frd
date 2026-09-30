@@ -6,6 +6,7 @@ import { requestClient } from '#/api/request';
 
 export namespace SystemUserApi {
   export interface SystemUser {
+    avatar?: string;
     dataScope: string;
     dept: SystemDeptApi.Department;
     id: number;

@@ -92,6 +92,13 @@
     "analytics": "Quote Analytics",
     "workspace": "Workbench"
   },
+  "notifications": {
+    "title": "Messages",
+    "unread": "Unread",
+    "markRead": "Mark as read",
+    "empty": "No messages yet",
+    "actionFailed": "Action failed. Please try again."
+  },
   "workspace": {
     "greetingMorning": "Good morning, {0}. Ready to get to work?",
     "greetingAfternoon": "Good afternoon, {0}. Keep quotes and costs on track.",
@@ -106,7 +113,18 @@
     "topRoutes": "Top Routes",
     "quickNav": "Shortcuts",
     "quickNavHint": "High-frequency tasks for quotes and cost maintenance.",
-    "recentQuotesHint": "Latest quote updates. Open analytics for full reports.",
+    "illustrations": {
+      "quote": "Create quotes",
+      "quoteDesc": "Draft and refine quotes easily",
+      "logistics": "Logistics costs",
+      "logisticsDesc": "Road & ocean rates at a glance",
+      "approval": "Approvals",
+      "approvalDesc": "Clear steps, faster decisions",
+      "analytics": "Insights",
+      "analyticsDesc": "Track trends and conversion"
+    },
+    "routesEmpty": "No top routes yet",
+    "recentQuotesHint": "Latest quote updates. Manage them in the quote list.",
     "resources": "Resources",
     "masterData": "Master Data",
     "system": "System",
@@ -122,10 +140,29 @@
     },
     "todos": {
       "title": "To-dos",
-      "followSent": "Follow up on sent quote",
+      "empty": "No pending tasks",
+      "pendingHint": "{0} pending",
+      "followSent": "Follow up on confirmed quote",
+      "approveQuote": "Approve pending quote",
       "confirmWon": "Confirm win and archive",
-      "completeDraft": "Complete draft quote lines",
+      "completeDraft": "Quote pending approval submission",
+      "reviewCostRisk": "Review cost change risk",
       "archiveLost": "Archive lost quote",
+      "filters": {
+        "all": "All",
+        "urgent": "Urgent",
+        "approve": "Approvals",
+        "follow": "Follow-ups",
+        "costRisk": "Cost risk"
+      },
+      "actions": {
+        "approve": "Approve",
+        "follow": "Follow up",
+        "review": "Review",
+        "complete": "Complete",
+        "archive": "Archive",
+        "handle": "Open"
+      },
       "priority": {
         "urgent": "Urgent",
         "high": "High",
@@ -135,10 +172,12 @@
     "pipeline": {
       "title": "Quote Progress",
       "inProgress": "In progress",
-      "done": "Completed"
+      "done": "Completed",
+      "empty": "No quotes in progress"
     },
     "notices": {
       "title": "Notifications",
+      "empty": "No system notices",
       "rateUpdateTitle": "Sea cost library updated",
       "rateUpdate": "Rates adjusted on 3 lanes. Review referenced costs.",
       "portSyncTitle": "Port sync completed",
@@ -148,7 +187,9 @@
       "quoteExpiringTitle": "Quotes expiring soon",
       "quoteExpiring": "{0} quote(s) expire within {1} day(s). Follow up promptly.",
       "costUpdatedTitle": "Referenced cost updated",
-      "costUpdated": "Quote {0} references updated {1} cost. Please review."
+      "costUpdated": "Quote {0} references updated {1} cost. Please review.",
+      "costRiskTitle": "Quote cost risk",
+      "costRisk": "Referenced quote library data was updated. Please re-import the quote."
     }
   },
   "analytics": {
@@ -302,6 +343,8 @@
       "batchCopyPreviewPlain": "Preview (Copy As-Is)",
       "batchCopyPreviewApply": "Preview (Apply Changes)",
       "batchCopyPreview": "Copy Preview",
+      "batchUpdatePreview": "Update Preview",
+      "batchUpdateConfirm": "Confirm Update",
       "batchCopyConfirm": "Confirm Copy",
       "batchCopyBack": "Back to Edit",
       "batchPreviewNext": "Preview",
@@ -310,6 +353,9 @@
       "batchDelete": "Batch Delete",
       "batchMenu": "Batch actions",
       "introduceQuote": "Introduce to Quote",
+      "promoteToQuoteLibrary": "To Quote Library",
+      "viewQuote": "View Quote",
+      "viewCost": "View Cost",
       "createShort": "Add",
       "templateShort": "Template",
       "batchEditShort": "Edit",
@@ -325,12 +371,24 @@
       "renew": "Renew",
       "renewRecord": "Renew {0}"
     },
+    "relation": {
+      "quoteGenerated": "In Quote Library",
+      "quoteNotGenerated": "Not in Quote Library",
+      "view": "View"
+    },
     "confirm": {
       "batchDelete": "Delete {0} selected record(s)? This cannot be undone."
     },
     "hint": {
       "apiPending": "「Enter {0}」 will be available after the cost API is connected.",
       "selectRows": "Select at least one row first",
+      "quoteLibraryLocked": "This cost is in the quote library. Remove it from the quote library before deleting the cost.",
+      "batchQuoteLibraryLocked": "Selection includes costs already in the quote library. Uncheck them or remove from the quote library before batch delete.",
+      "wonQuoteLocked": "This cost is referenced by a won quote and cannot be edited or deleted (renew is allowed).",
+      "batchWonQuoteLocked": "Selection includes costs referenced by won quotes; they cannot be batch-edited or deleted (renew is allowed).",
+      "promoteQuoteLibraryEmpty": "All selected rows are already in the quote library",
+      "promoteQuoteLibraryLoading": "Adding to quote library…",
+      "promoteQuoteLibrarySuccess": "{0} row(s) added to quote library",
       "selectAllAcrossPagesLoading": "Loading all matching records…",
       "selectAllAcrossPagesEmpty": "No records match the current filters",
       "selectAllAcrossPagesSuccess": "Selected {0} records across pages",
@@ -415,6 +473,9 @@
       "batchCopySuccess": "Copied {0} record(s)",
       "batchCopyPreviewHint": "Review {0} copied record(s) below. Data will be saved only after you confirm.",
       "batchCopyPreviewPartialHint": "{0} record(s) will be copied; showing the first {1} for preview. All will be saved after you confirm.",
+      "batchUpdateSuccess": "Updated {0} record(s).",
+      "batchUpdatePreviewHint": "Review {0} updated record(s) below. Changes will be saved only after you confirm.",
+      "batchUpdatePreviewPartialHint": "{0} record(s) will be updated; showing the first {1} for preview. All will be saved after you confirm.",
       "batchRenewPreviewHint": "Review {0} renewed record(s) below. Data will be saved only after you confirm."
     },
     "search": {
@@ -532,6 +593,8 @@
       "status": "Status",
       "updatedAt": "Updated",
       "remark": "Remark",
+      "relationData": "Related",
+      "quoteGenerated": "Quote generated",
       "operation": "Actions"
     },
     "status": {
@@ -541,6 +604,7 @@
       "expired": "Expired"
     },
     "statusFilterAll": "All statuses",
+    "quoteGeneratedFilterAll": "All",
     "statusHelp": "Before effective date: Pending. Past validity becomes Expired.",
     "roadGroups": {
       "route": "Route & Base Freight",
@@ -829,20 +893,49 @@
     "list": "Quote List",
     "library": {
       "road": "Truck Quote Library",
-      "roadDesc": "Historical quotes with trucking fee and truck extra fee columns.",
+      "roadDesc": "Only costs promoted from the cost library; fees follow quote rules and can be adjusted above the cost floor.",
       "sea": "Ocean Quote Library",
-      "seaDesc": "Historical quotes with ocean freight columns.",
+      "seaDesc": "Only costs promoted from the cost library; fees follow quote rules and can be adjusted above the cost floor.",
       "fumigation": "Fumigation Quote Library",
-      "fumigationDesc": "Historical quotes with fumigation fee columns."
+      "fumigationDesc": "Only costs promoted from the cost library; fees follow quote rules and can be adjusted above the cost floor.",
+      "editTitle": "Edit quote library fees",
+      "batchEditTitle": "Batch edit quote library fees",
+      "feeFloorHint": "Cost floor: {0}",
+      "deleteNameTitle": "quote library record",
+      "hint": {
+        "editFeesOnly": "Only fee fields are editable; values must not be below the cost floor.",
+        "batchFillFees": "Leave blank to skip a field; filled values overwrite the selected rows.",
+        "feeEmpty": "Enter at least one fee field",
+        "resetSuccess": "Fees reset to the default from cost and quote rules",
+        "deleteUnlocksCost": "Removing from the quote library unlocks the linked cost for editing.",
+        "quoteOrderLocked": "This record is referenced by a quote and cannot be edited or deleted."
+      },
+      "confirm": {
+        "deleteTitle": "Remove from quote library",
+        "delete": "Remove \"{0}\" from the quote library? The linked cost will become editable again.",
+        "batchDelete": "Remove {0} selected row(s) from the quote library? Linked costs will become editable again."
+      }
     },
     "createTitle": "New Quote",
     "editTitle": "Edit Quote",
     "viewTitle": "View Quote",
+    "risk": {
+      "tag": "Cost risk",
+      "modalTitle": "Cost risk notice",
+      "libraryRoad": "truck quote library",
+      "librarySea": "ocean quote library",
+      "libraryFumigation": "fumigation quote library",
+      "hintRoad": "Referenced truck quote library data was updated. Please re-import the quote.",
+      "hintSea": "Referenced ocean quote library data was updated. Please re-import the quote.",
+      "hintFumigation": "Referenced fumigation quote library data was updated. Please re-import the quote.",
+      "hintMultiple": "Referenced {0} data was updated. Please re-import the quote.",
+      "hintDefault": "Referenced quote library data was updated. Please re-import the quote."
+    },
     "hint": {
       "list": "Filter by route fields; expired rows in red, voided rows grayed out.",
-      "editor": "Fill 7 match keys, then click Import Cost Library.",
+      "editor": "Fill match keys, then import from the quote library or match recommended quote.",
       "readonly": "This quote is read-only.",
-      "matchKeys": "Zip code / City / State / POR / POL / POD / SSL for cost matching",
+      "matchKeys": "Zip code / City / State / POR / POL / POD / SSL for quote library matching",
       "zipAutoFill": "Fuzzy-search Zip code; City and State fill in on selection",
       "followUpStatus": "Follow-up records automatically capture the current quote status"
     },
@@ -858,48 +951,74 @@
       "costSource": "Cost Sources",
       "dataSource": "Data Sources",
       "printPreview": "Quote sheet preview",
-      "logs": "Logs & Follow-ups"
+      "logs": "Logs & Follow-ups",
+      "auditLogs": "Approval & Operation Logs"
     },
     "tabs": {
       "operationLog": "Operation Log",
+      "approvalLog": "Approval Log",
       "followUp": "Follow-ups"
     },
+    "audit": {
+      "node": "Step",
+      "operator": "Operator",
+      "operatedAt": "Time",
+      "result": "Result",
+      "comment": "Comment / Reason",
+      "content": "Content"
+    },
     "costTabs": {
-      "road": "Truck Cost",
-      "sea": "Ocean Cost",
-      "fumigation": "Fumigation Cost"
+      "road": "Truck Quote Library",
+      "sea": "Ocean Quote Library",
+      "fumigation": "Fumigation Quote Library"
     },
     "actions": {
       "create": "New Quote",
       "save": "Save",
       "addLine": "Add Manual Line",
-      "pickFromCost": "Add from Cost Library",
-      "importCost": "Import Cost Library",
-      "importCostData": "Import cost library data",
-      "importCostRoad": "Truck Cost Library",
-      "importCostSea": "Ocean Cost Library",
-      "importCostFumigation": "Fumigation Cost Library",
+      "pickFromCost": "Add from Quote Library",
+      "importCost": "Import Quote Library",
+      "importCostData": "Import quote library data",
+      "importCostRoad": "Truck Quote Library",
+      "importCostSea": "Ocean Quote Library",
+      "importCostFumigation": "Fumigation Quote Library",
       "syncPrice": "Sync Price",
       "syncSuccess": "Price synced from cost library",
       "syncFailed": "Sync failed — the cost record may have been removed",
       "view": "View",
-      "export": "Batch Export",
+      "export": "Export",
       "void": "Void",
       "submit": "Submit for Approval",
-      "send": "Send Quote",
+      "send": "Approve",
+      "approve": "Approve",
       "reject": "Reject",
-      "cancelApproval": "Cancel Approval",
-      "won": "Won",
+      "rollback": "Withdraw",
+      "cancelApproval": "Withdraw",
+      "withdraw": "Withdraw",
+      "won": "Confirm Won",
+      "confirmWon": "Confirm Won",
       "copy": "Copy as New",
-      "print": "Print",
+      "revise": "Start Revision",
+      "print": "Print Quote Sheet",
+      "printQuote": "Print Quote",
+      "matchQuote": "Match Quote",
+      "importQuote": "Import Quote",
       "previewSheet": "Preview quote sheet",
       "addFollowUp": "Add Follow-up",
       "backToList": "Back to list",
       "backToDetail": "Back to detail",
-      "generateSheet": "Match recommended quote"
+      "generateSheet": "Match Quote"
+    },
+    "revision": {
+      "fromChange": "Change Order",
+      "notCurrent": "Change Order",
+      "viewParent": "View original",
+      "changeReason": "Change reason"
     },
     "fields": {
       "quoteNo": "Quote No.",
+      "serviceType": "Service Type",
+      "oakType": "OAK / NON-OAK",
       "customerName": "Customer",
       "transportMode": "Mode",
       "routeSummary": "Route",
@@ -914,7 +1033,7 @@
       "operator": "Operator",
       "content": "Content",
       "operation": "Actions",
-      "costVersion": "Cost Version",
+      "costVersion": "Quote Library Version",
       "currency": "Currency",
       "baseCurrency": "Base Currency",
       "exchangeRate": "FX Rate (snapshot)",
@@ -929,6 +1048,8 @@
     },
     "placeholders": {
       "customer": "Select a customer",
+      "serviceType": "Select service type(s)",
+      "oakType": "Select OAK / NON-OAK",
       "routeSummary": "e.g. Shanghai → Los Angeles",
       "followContent": "Please enter follow-up content",
       "followUpBy": "Select follow-up owner",
@@ -939,21 +1060,33 @@
       "SEA": "Ocean",
       "RAIL": "Rail"
     },
+    "serviceType": {
+      "SEA": "Sea",
+      "FUMIGATION": "Fumigation",
+      "TRUCK": "Truck",
+      "INSURANCE": "Insurance",
+      "TRADE": "Trade",
+      "OTHER": "Other"
+    },
     "status": {
       "DRAFT": "Draft",
-      "PENDING_APPROVAL": "Pending Approval",
-      "SENT": "Sent",
+      "PENDING_APPROVAL": "Pending Approval Quote",
+      "SENT": "Confirmed",
       "WON": "Won",
       "REJECTED": "Rejected",
       "EXPIRED": "Expired",
       "VOIDED": "Voided",
+      "REVISING": "Revising",
+      "SUPERSEDED": "Superseded",
       "EFFECTIVE": "Effective",
       "FOLLOWING": "Following",
-      "PENDING": "Pending Approval",
+      "PENDING": "Pending Approval Quote",
       "LOST": "Rejected"
     },
     "validation": {
       "customerRequired": "Please select a customer",
+      "serviceTypeRequired": "Please select a service type",
+      "oakTypeRequired": "Please select OAK / NON-OAK",
       "porPolRequired": "Please select POR/POL",
       "porRequired": "Please select POR",
       "polRequired": "Please select POL",
@@ -963,8 +1096,8 @@
       "followUpBy": "Select follow-up owner"
     },
     "message": {
-      "noCostMatch": "No matching cost data. Please maintain the cost library first.",
-      "costImported": "Cost data imported. Adjust manually before saving.",
+      "noCostMatch": "No matching quote library data. Promote costs to the quote library first.",
+      "costImported": "Quote library data imported. Adjust manually before saving.",
       "selectExport": "Select quotes to export",
       "exporting": "Exporting…",
       "exportSuccess": "Export successful",
@@ -973,18 +1106,23 @@
       "deleteSuccess": "Quote {0} deleted",
       "voidSuccess": "Quote voided",
       "submitSuccess": "Submitted for approval",
-      "sendSuccess": "Quote sent",
+      "sendSuccess": "Approved — quote confirmed",
+      "approveSuccess": "Approved — quote confirmed",
       "rejectSuccess": "Quote rejected",
-      "cancelApprovalSuccess": "Approval cancelled; quote reverted to draft",
+      "cancelApprovalSuccess": "Withdrawn",
+      "rollbackSuccess": "Withdrawn",
+      "withdrawSuccess": "Withdrawn",
       "wonSuccess": "Marked as won",
       "copySuccess": "Copied as new draft",
       "copyPrefilled": "Quote content loaded — save to create a new quote",
+      "reviseSuccess": "Revision draft {0} created",
+      "reviseNeedReason": "Please enter a change reason",
       "followUpCreated": "Follow-up added",
       "followSuccess": "Follow-up status updated",
-      "noCostSnapshot": "No cost snapshot",
+      "noCostSnapshot": "No quote library snapshot",
       "noCostImported": "Not imported: {0}",
-      "costExpired": "Only active cost records can be imported. Please select a valid record or update the cost library.",
-      "noCostMatchType": "{0}: no matching cost data",
+      "costExpired": "Expired quote library records cannot be imported. Choose active or pending ones.",
+      "noCostMatchType": "{0}: no matching quote library data",
       "costImportedType": "Imported {0}",
       "costImporting": "Applying quote rules…",
       "maxSeaFreight": "Up to {0} ocean freight lines allowed",
@@ -997,6 +1135,7 @@
     "print": {
       "client": "Client (Customer)",
       "date": "Date (Quote Date)",
+      "validUntil": "Valid Until",
       "por": "POR (Origin Port)",
       "pod": "POD (Destination Port)",
       "pickUpAddressLine1": "PICK UP ADDRESS",
@@ -1012,6 +1151,11 @@
     "sheet": {
       "title": "Quotation Sheet",
       "date": "Date",
+      "validUntil": "Valid Until",
+      "serviceType": "Service Type",
+      "oakType": "OAK / NON-OAK",
+      "oak": "OAK",
+      "nonOak": "NON-OAK",
       "client": "Client",
       "pickUpAddress": "PICK UP ADDRESS",
       "city": "CITY",
@@ -1065,10 +1209,17 @@
       "deletePrefix": "Delete quote ",
       "deleteSuffix": "? This cannot be undone.",
       "void": "Void quote \"{0}\"?",
-      "send": "Send quote \"{0}\"?",
+      "revise": "Create a revision draft from this confirmed quote. The original stays confirmed. Enter the change reason:",
+      "send": "Approve quote \"{0}\"? It will become confirmed.",
+      "approve": "Approve quote \"{0}\"? It will become confirmed.",
       "reject": "Reject quote \"{0}\"?",
-      "cancelApproval": "Cancel approval and revert \"{0}\" to draft?",
+      "cancelApproval": "Withdraw approval for quote \"{0}\"?",
+      "rollback": "Withdraw approval for quote \"{0}\"?",
+      "withdraw": "Withdraw approval for quote \"{0}\"? This run will end.",
+      "submit": "Submit quote \"{0}\" for approval? It will become pending approval.",
+      "submitNeedSave": "This quote has unsaved changes. Please save before submitting for approval.",
       "won": "Mark this quote as won?",
+      "confirmWon": "Mark this quote as won?",
       "deleteFollowUp": "Delete this follow-up record?"
     },
     "costSource": {
@@ -1079,17 +1230,17 @@
       "stale": "Cost updated"
     },
     "costPicker": {
-      "title": "Pick from Cost Library",
-      "selectOne": "Select one cost record",
-      "selectSea": "Select at least one sea freight record",
+      "title": "Pick from Quote Library",
+      "selectOne": "Select one quote library record",
+      "selectSea": "Select at least one ocean quote library record",
       "selectedCount": "{0} selected",
       "confirmHint": "Click to select, double-click or press Confirm to import",
       "confirmHintSea": "Multi-select up to {0}; matched/imported rows are pre-checked",
-      "selectRows": "Select at least one cost record",
+      "selectRows": "Select at least one quote library record",
       "addSelected": "Add selected ({0})",
-      "selectedHint": "{0} cost record(s) selected",
+      "selectedHint": "{0} quote library record(s) selected",
       "roadPriceTitle": "Select price field",
-      "roadPriceHint": "Truck costs include multiple fee columns. Choose which field to use for this quote (default: ALL IN).",
+      "roadPriceHint": "Truck quote rows include multiple fee columns. Choose which field to use for this quote (default: ALL IN).",
       "priceField": "Price field",
       "roadBatchSummary": "{0} truck cost rows selected — same price field will apply to all",
       "allAlreadyAdded": "Selected cost(s) are already on this quote"
@@ -1258,6 +1409,7 @@
       "template": "View Templates",
       "customer": "Business Partners",
       "masterData": "Master Data",
+      "approval": "Approvals",
       "quote": "Quotes",
       "ai": "AI Assistant"
     },
@@ -1283,6 +1435,7 @@
       "code": "Code",
       "name": "Name",
       "username": "Username",
+      "avatar": "Avatar",
       "realName": "Name",
       "dept": "Department",
       "parentDept": "Parent",
@@ -1312,7 +1465,13 @@
       "user": "Assign departments and roles. Usernames cannot be changed after creation.",
       "role": "Configure data scope and permissions. The built-in super_admin role cannot be deleted.",
       "operationLog": "Audit trail of create, update, and delete actions on business data.",
-      "announcement": "Publish feature update notices. All signed-in users receive a modal popup."
+      "announcement": "Publish updates or activity notices via modal, top ticker, or both."
+    },
+    "activityTicker": {
+      "close": "Close",
+      "detailTitle": "Activity Details",
+      "label": "Current Activities",
+      "viewDetail": "Click to view activity details"
     },
     "announcementPage": {
       "publishSuccess": "Published. Users will see a popup after sign-in.",
@@ -1334,8 +1493,9 @@
       "readCountLabel": "Read",
       "unreadCountLabel": "Unread",
       "deleteConfirm": "Delete announcement \"{0}\"? Users will no longer see it.",
-      "disableConfirm": "Disable announcement \"{0}\"? It will no longer pop up.",
+      "disableConfirm": "Disable announcement \"{0}\"? It will no longer appear in modal or ticker.",
       "validation": {
+        "contentRequired": "Content is required",
         "required": "Title and content are required",
         "titleRequired": "Title is required",
         "scheduledAtRequired": "Please select a scheduled publish time"
@@ -1361,9 +1521,15 @@
         "publishNow": "Publish Now",
         "publishScheduled": "Schedule Publish"
       },
+      "displayType": {
+        "modal": "Modal",
+        "ticker": "Ticker",
+        "both": "Modal + Ticker"
+      },
       "placeholders": {
-        "title": "e.g. Cost library: mark favorites",
-        "content": "Describe what changed and how to use it. Line breaks are supported.",
+        "title": "Modal title summarizing the notice",
+        "content": "Modal body: describe what changed and how to use it",
+        "tickerContent": "Ticker body: text shown in the top scrolling activity bar",
         "validDays": "Leave empty for no expiry"
       },
       "searchPlaceholders": {
@@ -1371,20 +1537,23 @@
         "createdBy": "Publisher name"
       },
       "hints": {
-        "validDays": "Leave empty for no expiry. Users will stop seeing the popup after it expires."
+        "displayType": "Choose display mode first. Ticker only: no title, body is scroll copy. Modal or both: title and body required.",
+        "validDays": "Leave empty for no expiry. Stops showing in modal and ticker after expiry."
       },
       "fields": {
         "keyword": "Keyword",
         "title": "Title",
         "content": "Content",
         "validDays": "Validity",
+        "validDaysUnit": "days",
         "publishedAt": "Published at",
         "expiresAt": "Expires at",
         "createdBy": "Published by",
         "status": "Status",
         "publishMode": "Publish mode",
         "scheduledAt": "Scheduled at",
-        "readStats": "Read stats"
+        "readStats": "Read stats",
+        "displayType": "Display"
       }
     },
     "operationLogPage": {
@@ -1483,5 +1652,68 @@
     "proposeSaved": "Truck cost #{0} created",
     "proposeSavedChat": "Saved to truck cost library. Record ID: {0}.",
     "proposeSaveFailed": "Failed to save. Check required fields and try again."
+  },
+  "approval": {
+    "title": "Approvals",
+    "list": "Approval List",
+    "config": "Approval Config",
+    "detailTitle": "Approval Detail",
+    "workflowTitle": "Approval Workflow",
+    "sheetPreview": "Quote Preview",
+    "commentRequired": "Please enter approval comments",
+    "commentPlaceholder": "Enter approval comments",
+    "approveModalTitle": "Approve",
+    "rejectModalTitle": "Return",
+    "rejectSuccess": "Returned and sent back to draft",
+    "withdrawModalTitle": "Withdraw Approval",
+    "withdrawReason": "Withdrawal reason",
+    "withdrawReasonRequired": "Please enter a withdrawal reason",
+    "withdrawPlaceholder": "Enter the withdrawal reason",
+    "type": {
+      "quote": "Quote Approval",
+      "quoteRevision": "Revision Quote Approval"
+    },
+    "status": {
+      "PENDING": "In Progress",
+      "APPROVED": "Passed",
+      "REJECTED": "Returned",
+      "WITHDRAWN": "Withdrawn"
+    },
+    "fields": {
+      "approvalNo": "Approval No.",
+      "approvalType": "Type",
+      "relatedDocNo": "Related Doc No.",
+      "currentNode": "Current Step",
+      "initiatorName": "Initiator",
+      "initiatorDept": "Department",
+      "initiatedAt": "Initiated At",
+      "completedAt": "Completed At",
+      "duration": "Duration",
+      "status": "Status",
+      "comment": "Comment",
+      "configNo": "Config No.",
+      "configObject": "Target",
+      "configFlow": "Workflow"
+    },
+    "configObject": {
+      "QUOTE": "Quote"
+    },
+    "configForm": {
+      "createTitle": "New Approval Config",
+      "editTitle": "Edit Approval Config",
+      "flowHint": "Set approvers in order; one or more steps are allowed",
+      "addStep": "Add step",
+      "stepLabel": "Step {0}",
+      "approverRequired": "Please select an approver",
+      "flowRequired": "Configure at least one approval step",
+      "duplicateApprover": "The same approver cannot appear twice"
+    },
+    "actions": {
+      "view": "View",
+      "back": "Back to list",
+      "approve": "Approve",
+      "reject": "Return",
+      "createConfig": "New Config"
+    }
   }
 }

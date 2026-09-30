@@ -6,6 +6,7 @@ import { IconifyIcon } from '@vben/icons';
 import { $t } from '#/locales';
 
 import WorkspaceCard from './workspace-card.vue';
+import WorkspaceEmpty from './workspace-empty.vue';
 
 defineProps<{
   items: WorkspaceRouteView[];
@@ -26,7 +27,7 @@ const maxValue = (items: WorkspaceRouteView[]) =>
     :title="$t('page.workspace.topRoutes')"
     @action="emit('viewAll')"
   >
-    <ul class="workspace-routes-list">
+    <ul v-if="items.length > 0" class="workspace-routes-list">
       <li
         v-for="(item, index) in items"
         :key="item.name"
@@ -46,5 +47,10 @@ const maxValue = (items: WorkspaceRouteView[]) =>
         <span class="workspace-routes-value">{{ item.value }}</span>
       </li>
     </ul>
+    <WorkspaceEmpty
+      v-else
+      illustration="emptyRoutes"
+      :description="$t('page.workspace.routesEmpty')"
+    />
   </WorkspaceCard>
 </template>

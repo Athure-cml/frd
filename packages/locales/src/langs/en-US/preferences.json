@@ -192,6 +192,7 @@
   },
   "widget": {
     "title": "Widget",
+    "activityTicker": "Show Activity Ticker",
     "globalSearch": "Enable Global Search",
     "fullscreen": "Enable Fullscreen",
     "themeToggle": "Enable Theme Toggle",

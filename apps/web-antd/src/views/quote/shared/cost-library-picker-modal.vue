@@ -10,7 +10,7 @@ import { useVbenModal } from '@vben/common-ui';
 import { message } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getCostApi } from '#/api/cost';
+import { getQuoteLibraryListApi } from '#/api/quote/library';
 import { $t } from '#/locales';
 
 import { normalizeRoadCitySearchParam } from '../../cost-library/road/data';
@@ -204,7 +204,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async ({ page, sort }, formValues) => {
-          const api = getCostApi(pickerMode.value);
+          const api = getQuoteLibraryListApi(pickerMode.value);
           const params = { ...formValues } as Record<string, unknown>;
           if (pickerMode.value === 'road') {
             const normalizedCity = normalizeRoadCitySearchParam(params.city);
@@ -214,7 +214,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
               delete params.city;
             }
           }
-          const result = await api.list({
+          const result = await api({
             page: page.currentPage,
             pageSize: page.pageSize,
             sortField: sort.field,
@@ -356,7 +356,6 @@ async function applyOpenSearch() {
 
   const initialValues = {
     ...getInitialSearchValues(type, keys),
-    status: 'active',
   };
   await gridApi.formApi?.resetForm?.();
   await gridApi.formApi?.setValues?.(initialValues);

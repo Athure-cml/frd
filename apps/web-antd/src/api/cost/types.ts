@@ -27,6 +27,14 @@ export interface CostImportResult {
 export interface CostBatchUpdatePayload {
   fields: Record<string, unknown>;
   ids: number[];
+  previewLimit?: number;
+  previewOnly?: boolean;
+}
+
+export interface CostBatchUpdateResult<T> {
+  items: T[];
+  total?: number;
+  updated: number;
 }
 
 export interface CostBatchCopyResult<T> {
@@ -53,6 +61,8 @@ export interface FreightCostRecord {
   griValidDate?: string;
   highlight?: CostHighlightView | null;
   id: number;
+  inQuoteLibrary?: boolean;
+  quoteOrderLocked?: boolean;
   others?: number;
   othersValidDate?: string;
   pod: string;
@@ -102,6 +112,8 @@ export interface RoadCostRecord {
   fsc?: number;
   highlight?: CostHighlightView | null;
   id: number;
+  inQuoteLibrary?: boolean;
+  quoteOrderLocked?: boolean;
   logYardNameAddress?: string;
   otherFee?: number;
   pol: string;
@@ -132,6 +144,8 @@ export interface FumigationCostRecord {
   extraFields?: Record<string, unknown>;
   highlight?: CostHighlightView | null;
   id: number;
+  inQuoteLibrary?: boolean;
+  quoteOrderLocked?: boolean;
   indoorNonOak?: number;
   indoorOak?: number;
   indoorValidity?: string;

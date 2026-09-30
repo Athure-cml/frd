@@ -4,34 +4,104 @@
 
 .workspace-page {
   --ws-radius: 16px;
+
+  /* 极淡浅蓝，接近白色 */
+  --ws-hero-from: #f4f8fc;
+  --ws-hero-mid: #f7fafe;
+  --ws-hero-to: #fff;
+  --ws-body-bg: #fff;
+
+  /* 内容卡片弱阴影，避免厚重 */
+  --ws-shadow: 0 1px 2px rgb(15 23 42 / 3%), 0 4px 14px rgb(15 23 42 / 3%);
+
+  /* 通栏布局：取消外壳内边距，由 hero / body 各自控制 */
+  padding: 0 !important;
+  background: var(--ws-body-bg) !important;
 }
 
-/* —— Banner（与下方 KPI 卡片同表面，克制主色点缀） —— */
-.workspace-banner {
-  background: var(--ws-surface);
-  border: 1px solid var(--ws-border);
-  border-radius: var(--ws-radius-sm);
-  box-shadow: var(--ws-shadow);
+html.dark .workspace-page {
+  --ws-hero-from: color-mix(in srgb, hsl(var(--primary)) 8%, hsl(var(--background)));
+  --ws-hero-mid: color-mix(in srgb, hsl(var(--primary)) 4%, hsl(var(--background)));
+  --ws-hero-to: hsl(var(--background));
+  --ws-body-bg: hsl(var(--background));
 }
 
-.workspace-banner-content {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 20px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px;
+/* 顶部区域：欢迎语 + KPI 同一浅蓝色带，底部才融入白底 */
+.workspace-hero {
+  position: relative;
+  width: 100%;
+  padding: 0 0 28px;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    #eaf3fb 0%,
+    #f1f6fb 40%,
+    #f7fafd 78%,
+    #fff 100%
+  );
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 @media (min-width: 768px) {
-  .workspace-banner-content {
-    padding: 22px 24px;
+  .workspace-hero {
+    padding: 0 0 32px;
+  }
+}
+
+html.dark .workspace-hero {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, hsl(var(--primary)) 10%, hsl(var(--background))) 0%,
+    hsl(var(--background)) 100%
+  );
+  box-shadow: none;
+}
+
+/* KPI 下方：纯白底，与 hero 末端无缝衔接 */
+.workspace-body {
+  padding: 4px 16px 16px;
+  background: var(--ws-body-bg);
+}
+
+@media (min-width: 768px) {
+  .workspace-body {
+    padding: 0 24px 24px;
+  }
+}
+
+/* 欢迎栏：透明，与下方 KPI 共享 hero 色带，无独立底色/分割线 */
+.workspace-banner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 120px;
+  padding: 20px 16px 12px;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+@media (min-width: 768px) {
+  .workspace-banner {
+    min-height: 132px;
+    padding: 24px 24px 14px;
   }
 }
 
 .workspace-banner-text {
-  flex: 1 1 240px;
+  position: relative;
+  z-index: 2;
+  flex: 1 1 auto;
   min-width: 0;
+  max-width: none;
+  padding-right: 12px;
 }
 
 .workspace-banner-date {
@@ -46,6 +116,7 @@
   font-weight: 600;
   line-height: 1.35;
   color: var(--ws-ink);
+  text-shadow: 0 1px 0 rgb(255 255 255 / 65%);
 }
 
 @media (min-width: 768px) {
@@ -55,91 +126,143 @@
 }
 
 .workspace-banner-subtitle {
-  max-width: 52ch;
   margin: 8px 0 0;
   font-size: 14px;
   line-height: 1.55;
   color: var(--ws-muted);
+  white-space: nowrap;
 }
 
-.workspace-banner-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  width: 100%;
+/* 右侧扁平矢量插画：人物 + 上海天际线，马卡龙配色 */
+.workspace-banner-illust {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  width: min(48vw, 520px);
+  height: auto;
+  max-height: 168px;
+  margin-left: 8px;
+  pointer-events: none;
+  user-select: none;
+  object-fit: contain;
+  object-position: right bottom;
 }
 
-@media (min-width: 640px) {
-  .workspace-banner-actions {
-    width: auto;
+@media (max-width: 900px) {
+  .workspace-banner-illust {
+    width: min(42vw, 340px);
+    max-height: 132px;
+  }
+
+  .workspace-banner-subtitle {
+    white-space: normal;
   }
 }
 
-.workspace-create-btn {
-  display: inline-flex !important;
-  gap: 6px;
+@media (max-width: 640px) {
+  .workspace-banner-illust {
+    display: none;
+  }
+}
+
+/* KPI 紧贴欢迎语，同处 hero 浅蓝带上 */
+.workspace-hero .workspace-kpi-grid {
+  position: relative;
+  z-index: 2;
+  gap: 12px;
+  padding: 0 16px;
+  margin-top: 0 !important;
+}
+
+@media (min-width: 768px) {
+  .workspace-hero .workspace-kpi-grid {
+    padding: 0 24px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .workspace-hero .workspace-kpi-grid {
+    gap: 12px;
+    margin-top: 0 !important;
+  }
+}
+
+.workspace-hero .workspace-kpi-card {
+  background: rgb(255 255 255 / 94%);
+  border: 1px solid rgb(15 23 42 / 4%);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 3%), 0 4px 12px rgb(15 23 42 / 3%);
+  backdrop-filter: blur(6px);
+}
+
+/* 低饱和灰蓝图标 */
+.workspace-hero .workspace-kpi-icon,
+.workspace-hero .workspace-kpi-icon--primary,
+.workspace-hero .workspace-kpi-icon--accent,
+.workspace-hero .workspace-kpi-icon--success,
+.workspace-hero .workspace-kpi-icon--warning,
+.workspace-hero .workspace-kpi-icon--destructive {
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+html.dark .workspace-hero .workspace-kpi-card {
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+  box-shadow: none;
+}
+
+html.dark .workspace-hero .workspace-kpi-icon,
+html.dark .workspace-hero .workspace-kpi-icon--primary,
+html.dark .workspace-hero .workspace-kpi-icon--accent,
+html.dark .workspace-hero .workspace-kpi-icon--success,
+html.dark .workspace-hero .workspace-kpi-icon--warning,
+html.dark .workspace-hero .workspace-kpi-icon--destructive {
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted));
+}
+
+/* —— Empty state with illustration —— */
+.workspace-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   align-items: center;
-  height: 36px !important;
-  padding: 0 16px !important;
-  font-weight: 500;
-  border: none !important;
-  border-radius: 8px !important;
+  justify-content: center;
+  padding: 20px 12px 16px;
+  text-align: center;
 }
 
-.workspace-create-btn:hover {
-  background: var(--ws-action-hover) !important;
+.workspace-empty-illust {
+  display: block;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  object-position: center;
+  background: #fff;
+  border-radius: 16px;
 }
 
-.workspace-banner-secondary {
-  height: 36px !important;
-  color: var(--ws-ink) !important;
-  background: var(--ws-surface) !important;
-  border-color: var(--ws-border) !important;
-  border-radius: 8px !important;
-}
-
-.workspace-banner-secondary:hover {
-  color: var(--ws-action) !important;
-  border-color: color-mix(in srgb, hsl(var(--primary)) 30%, hsl(var(--border))) !important;
-}
-
-.workspace-menu-item {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-}
-
-/* 下拉挂到 body，使用 :root 级设计令牌 */
-.workspace-quick-dropdown .ant-dropdown-menu {
-  min-width: 200px;
-  padding: 6px;
-  background: hsl(var(--popover)) !important;
-  border: 1px solid hsl(var(--border));
-  border-radius: 10px;
-  box-shadow: 0 8px 28px color-mix(in srgb, hsl(var(--foreground)) 12%, transparent);
-}
-
-.workspace-quick-dropdown .ant-dropdown-menu-item {
-  border-radius: 8px;
-}
-
-.workspace-quick-dropdown .ant-dropdown-menu-item:hover {
-  color: hsl(var(--primary)) !important;
-  background: hsl(var(--accent)) !important;
+.workspace-empty-text {
+  max-width: 28ch;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ws-muted);
 }
 
 /* —— Layout grids —— */
 .workspace-mid-grid {
   display: grid;
   gap: 16px;
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 @media (min-width: 1024px) {
   .workspace-mid-grid {
     grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
     gap: 18px;
-    margin-top: 18px;
+    margin-top: 0;
   }
 }
 
@@ -194,26 +317,66 @@
 
 .workspace-todo-item {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: 1fr auto auto;
   gap: 8px 10px;
   align-items: center;
-  padding: 10px 8px;
+  padding: 10px 10px 10px 12px;
   cursor: pointer;
+  background: var(--ws-surface);
+  border: 1px solid color-mix(in srgb, var(--ws-border, #eef0f3) 80%, transparent);
+  border-left-color: transparent;
+  border-left-width: 3px;
   border-radius: 8px;
-  transition: background 200ms var(--ws-ease);
+  transition:
+    background 200ms var(--ws-ease),
+    border-color 200ms var(--ws-ease),
+    box-shadow 200ms var(--ws-ease);
 }
 
 .workspace-todo-item:hover {
-  background: var(--ws-canvas);
+  border-color: color-mix(in srgb, var(--ws-action) 28%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ws-action) 8%, transparent);
+}
+
+.workspace-todo-item--urgent {
+  background: color-mix(in srgb, var(--ws-danger) 6%, var(--ws-surface));
+  border-color: color-mix(in srgb, var(--ws-danger) 12%, transparent);
+  border-left-color: var(--ws-danger);
+}
+
+.workspace-todo-item--urgent:hover {
+  background: color-mix(in srgb, var(--ws-danger) 9%, var(--ws-surface));
+  border-color: color-mix(in srgb, var(--ws-danger) 22%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ws-danger) 8%, transparent);
+}
+
+.workspace-todo-item--high {
+  background: var(--ws-surface);
+  border-left-color: var(--ws-warning);
+}
+
+.workspace-todo-item--high:hover {
+  background: var(--ws-surface);
+  border-left-color: var(--ws-warning);
+}
+
+.workspace-todo-item--medium {
+  background: var(--ws-surface);
+  border-left-color: var(--ws-action);
+}
+
+.workspace-todo-item--medium:hover {
+  background: var(--ws-surface);
+  border-left-color: var(--ws-action);
+}
+
+.workspace-todo-item--done {
+  opacity: 0.62;
 }
 
 .workspace-todo-item--done .workspace-todo-title {
   color: var(--ws-muted);
   text-decoration: line-through;
-}
-
-.workspace-todo-check {
-  pointer-events: none;
 }
 
 .workspace-todo-body {
@@ -265,6 +428,13 @@
   font-size: 12px;
   color: var(--ws-muted);
   white-space: nowrap;
+}
+
+.workspace-todo-empty {
+  padding: 28px 12px;
+  font-size: 13px;
+  color: var(--ws-muted);
+  text-align: center;
 }
 
 /* —— Pipeline —— */
@@ -491,8 +661,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .workspace-todo-item,
-  .workspace-kpi-card,
-  .workspace-create-btn {
+  .workspace-kpi-card {
     transition: none;
   }
 }

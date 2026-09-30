@@ -15,6 +15,8 @@ import {
 import { $t } from '#/locales';
 
 import {
+  announcementRequiresContent,
+  announcementRequiresTitle,
   buildAnnouncementSavePayload,
   isEmptyRichContent,
   isPublishedLikeStatus,
@@ -91,6 +93,7 @@ const [Modal, modalApi] = useVbenModal({
     }
     publishMode.value = 'IMMEDIATE';
     formApi.setValues({
+      displayType: 'MODAL',
       publishMode: 'IMMEDIATE',
     });
   },
@@ -99,15 +102,23 @@ const [Modal, modalApi] = useVbenModal({
 
 async function submit(saveAction: AnnouncementApi.SaveAction) {
   const values = await formApi.getValues();
-  if (!String(values.title ?? '').trim()) {
+  if (
+    announcementRequiresTitle(values.displayType) &&
+    !String(values.title ?? '').trim()
+  ) {
     message.warning(
       $t('page.system.announcementPage.validation.titleRequired'),
     );
     return;
   }
   if (saveAction !== 'DRAFT') {
-    if (isEmptyRichContent(String(values.content ?? ''))) {
-      message.warning($t('page.system.announcementPage.validation.required'));
+    if (
+      announcementRequiresContent(values.displayType) &&
+      isEmptyRichContent(String(values.content ?? ''))
+    ) {
+      message.warning(
+        $t('page.system.announcementPage.validation.contentRequired'),
+      );
       return;
     }
     const { valid } = await formApi.validate();

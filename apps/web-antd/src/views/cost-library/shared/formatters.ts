@@ -67,6 +67,32 @@ export function formatDateMd(value: null | number | string | undefined) {
   return formatSingleCostDate(text) ?? text;
 }
 
+function toYmdDash(ymdSlash: string): null | string {
+  const match = ymdSlash.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+  if (!match) {
+    return null;
+  }
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+/** 报价库 / 报价单数据来源：统一展示 yyyy-MM-dd（不丢年份） */
+export function formatDateYmd(value: null | number | string | undefined) {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+  const text = String(value).trim();
+  const rangeMatch = text.match(/^(.+?)\s*[-–—~至到]\s*(.+)$/);
+  if (rangeMatch) {
+    const start = toYmdDash(formatDateMd(rangeMatch[1]?.trim() ?? ''));
+    const end = toYmdDash(formatDateMd(rangeMatch[2]?.trim() ?? ''));
+    if (start && end) {
+      return `${start} - ${end}`;
+    }
+  }
+  const full = formatDateMd(text);
+  return toYmdDash(full) ?? full;
+}
+
 function toMonthDay(ymd: string): null | string {
   const match = ymd.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
   if (!match) {

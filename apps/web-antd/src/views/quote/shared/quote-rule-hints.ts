@@ -137,6 +137,67 @@ export function hintForSheetField(
   return map[SHEET_FIELD_RULE_TARGET[field]];
 }
 
+/** 报价库列 → 规则目标（可按条件类型过滤） */
+export interface QuoteLibraryFieldRuleSpec {
+  conditionTypes?: QuoteRuleApi.ConditionType[];
+  targetField: QuoteRuleApi.TargetField;
+}
+
+export const QUOTE_LIBRARY_FIELD_RULES: Record<
+  string,
+  QuoteLibraryFieldRuleSpec
+> = {
+  allIn: { targetField: 'OCEAN_FREIGHT' },
+  allInFmOneWay: {
+    conditionTypes: ['ALWAYS', 'FUMIGATION_ENABLED'],
+    targetField: 'TRUCKING_FEE',
+  },
+  allInFmRound: {
+    conditionTypes: ['ALWAYS', 'FUMIGATION_ENABLED'],
+    targetField: 'TRUCKING_FEE',
+  },
+  allInNoFm: {
+    conditionTypes: ['ALWAYS', 'FUMIGATION_DISABLED'],
+    targetField: 'TRUCKING_FEE',
+  },
+  indoorNonOak: { targetField: 'FM_OAK' },
+  indoorOak: { targetField: 'FM_OAK' },
+  outdoorNonOak: { targetField: 'FM_NON_OAK' },
+  outdoorOak: { targetField: 'FM_NON_OAK' },
+};
+
+function matchesLibraryFieldRule(
+  rule: QuoteRuleApi.QuoteRule,
+  spec: QuoteLibraryFieldRuleSpec,
+) {
+  if (rule.targetField !== spec.targetField) {
+    return false;
+  }
+  if (!spec.conditionTypes?.length) {
+    return true;
+  }
+  return spec.conditionTypes.includes(rule.conditionType);
+}
+
+/** 报价库表头：展示全部可能生效的规则（不按行 POR 过滤） */
+export function buildQuoteLibraryRuleHintMap(rules: QuoteRuleApi.QuoteRule[]) {
+  const activeRules = rules
+    .filter((rule) => rule.status === 1)
+    .toSorted((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+  const map: Record<string, string> = {};
+
+  for (const [field, spec] of Object.entries(QUOTE_LIBRARY_FIELD_RULES)) {
+    const lines = activeRules
+      .filter((rule) => matchesLibraryFieldRule(rule, spec))
+      .map((rule) => formatQuoteRuleLine(rule));
+    if (lines.length > 0) {
+      map[field] = lines.join('\n');
+    }
+  }
+
+  return map;
+}
+
 /** 下拉/打印用公式文案：优先 remark，否则按计算参数拼接 */
 export function formatQuoteRuleFormulaValue(rule: QuoteRuleApi.QuoteRule) {
   const remark = rule.remark?.trim();

@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from '@vben/locales';
 import { useUserStore } from '@vben/stores';
 
+import { useTodoDrawer } from '#/layouts/use-todo-drawer';
 import { $t } from '#/locales';
 
 import { formatWorkspaceDate, resolveGreetingKey } from './data';
@@ -22,6 +23,7 @@ import './workspace.css';
 const userStore = useUserStore();
 const router = useRouter();
 const { locale } = useI18n();
+const { openTodoDrawer } = useTodoDrawer();
 
 const { metrics, todos, pipeline, notices, topRoutes } = useWorkspaceData();
 
@@ -44,37 +46,42 @@ function navTo(url: string) {
 
 <template>
   <div class="dashboard-shell workspace-page">
-    <WorkspaceHeader
-      :date-label="dateLabel"
-      :greeting="greeting"
-      :subtitle="$t('page.workspace.subtitle')"
-      @create-quote="navTo('/quotes/create')"
-      @nav="navTo"
-    />
-
-    <WorkspaceKpi :items="metrics" />
-
-    <div class="workspace-mid-grid">
-      <WorkspaceTrendCard />
-      <WorkspaceTodoCard
-        :items="todos"
-        @item-click="(id) => navTo(`/quotes/${id}/edit`)"
-        @view-all="navTo('/quotes/list')"
+    <section class="workspace-hero">
+      <WorkspaceHeader
+        :date-label="dateLabel"
+        :greeting="greeting"
+        :subtitle="$t('page.workspace.subtitle')"
       />
-    </div>
 
-    <div class="workspace-bottom-grid">
-      <WorkspacePipelineCard
-        :items="pipeline"
-        @item-click="(id) => navTo(`/quotes/${id}/edit`)"
-        @view-all="navTo('/quotes/list')"
-      />
-      <WorkspaceRoutesCard :items="topRoutes" @view-all="navTo('/analytics')" />
-      <WorkspaceNoticeCard
-        :items="notices"
-        @notice-click="navTo"
-        @view-all="navTo('/analytics')"
-      />
+      <WorkspaceKpi :items="metrics" />
+    </section>
+
+    <div class="workspace-body">
+      <div class="workspace-mid-grid">
+        <WorkspaceTrendCard />
+        <WorkspaceTodoCard
+          :items="todos"
+          @item-click="navTo"
+          @view-all="openTodoDrawer()"
+        />
+      </div>
+
+      <div class="workspace-bottom-grid">
+        <WorkspacePipelineCard
+          :items="pipeline"
+          @item-click="(id) => navTo(`/quotes/${id}/edit`)"
+          @view-all="navTo('/quotes/list')"
+        />
+        <WorkspaceRoutesCard
+          :items="topRoutes"
+          @view-all="navTo('/quotes/list')"
+        />
+        <WorkspaceNoticeCard
+          :items="notices"
+          @notice-click="navTo"
+          @view-all="navTo('/quotes/list')"
+        />
+      </div>
     </div>
   </div>
 </template>

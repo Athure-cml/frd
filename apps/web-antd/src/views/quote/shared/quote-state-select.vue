@@ -29,6 +29,7 @@ onMounted(async () => {
     :disabled="disabled"
     :options="stateOptions"
     option-filter-prop="label"
+    :placeholder="disabled ? '—' : undefined"
     show-search
   />
 </template>

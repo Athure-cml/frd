@@ -24,6 +24,11 @@
   letter-spacing: 0.02em;
 }
 
+.sys-user-avatar {
+  flex-shrink: 0;
+  border: 1px solid hsl(var(--border));
+}
+
 /* 系统公告：列表阅读统计（单行） */
 .sys-announcement-read-stats {
   white-space: nowrap;
@@ -69,6 +74,17 @@
 .system-announcement-form :deep(textarea.ant-input),
 .system-announcement-form :deep(.ant-picker) {
   width: 100%;
+}
+
+.system-announcement-form :deep(.sys-announcement-valid-days.ant-input-number-group-wrapper) {
+  width: 100%;
+}
+
+.system-announcement-form
+  :deep(.sys-announcement-valid-days .ant-input-number-group-addon) {
+  min-width: 36px;
+  color: hsl(var(--foreground) / 72%);
+  background: hsl(var(--muted));
 }
 
 @media (max-width: 640px) {

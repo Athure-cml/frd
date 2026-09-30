@@ -3,8 +3,8 @@ import type { QuoteStatus } from '#/api/quote';
 /** 草稿可编辑 */
 export const QUOTE_EDITABLE_STATUSES: QuoteStatus[] = ['DRAFT'];
 
-/** 草稿、已作废可删除 */
-export const QUOTE_DELETABLE_STATUSES: QuoteStatus[] = ['DRAFT', 'VOIDED'];
+/** 仅草稿可删除（作废单不可删） */
+export const QUOTE_DELETABLE_STATUSES: QuoteStatus[] = ['DRAFT'];
 
 /** 已放弃：拒绝 / 过期 / 作废 */
 export const QUOTE_ABANDONED_STATUSES: QuoteStatus[] = [
@@ -45,15 +45,14 @@ export function isQuoteDeletable(status: QuoteStatus) {
   return QUOTE_DELETABLE_STATUSES.includes(normalizeQuoteStatus(status));
 }
 
-/** 非草稿、非待审批、非已放弃、非成交 → 可作废 */
+/** 已确认报价 → 可作废 */
 export function canShowQuoteVoid(status: QuoteStatus) {
-  const normalized = normalizeQuoteStatus(status);
-  return (
-    normalized !== 'DRAFT' &&
-    normalized !== 'PENDING_APPROVAL' &&
-    !isQuoteAbandoned(status) &&
-    normalized !== 'WON'
-  );
+  return normalizeQuoteStatus(status) === 'SENT';
+}
+
+/** 已确认报价 → 可标记成交 */
+export function canShowQuoteWon(status: QuoteStatus) {
+  return normalizeQuoteStatus(status) === 'SENT';
 }
 
 export function isQuoteAbandoned(status: QuoteStatus) {

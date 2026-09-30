@@ -12,6 +12,7 @@ const sections = [
       { span: 1 },
       { span: 1 },
       { span: 1 },
+      { span: 1 },
       { span: 3, tall: true },
       { span: 1 },
     ],

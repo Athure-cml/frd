@@ -3,7 +3,7 @@ import type { CSSProperties } from 'vue';
 
 import type { VbenLayoutProps } from './vben-layout';
 
-import { computed, ref, watch } from 'vue';
+import { computed, ref, useSlots, watch } from 'vue';
 
 import {
   SCROLL_FIXED_CLASS,
@@ -14,7 +14,12 @@ import { IconifyIcon } from '@vben-core/icons';
 import { VbenIconButton } from '@vben-core/shadcn-ui';
 import { ELEMENT_ID_MAIN_CONTENT } from '@vben-core/shared/constants';
 
-import { useMouse, useScroll, useThrottleFn } from '@vueuse/core';
+import {
+  useMouse,
+  useResizeObserver,
+  useScroll,
+  useThrottleFn,
+} from '@vueuse/core';
 
 import {
   LayoutContent,
@@ -115,6 +120,16 @@ const {
  */
 const isHeaderAutoMode = computed(() => props.headerMode === 'auto');
 
+const slots = useSlots();
+
+const hasContentTopSlot = computed(() => !!slots['content-top']);
+const contentTopRef = ref<HTMLElement | null>(null);
+const contentTopHeight = ref(0);
+
+useResizeObserver(contentTopRef, (entries) => {
+  contentTopHeight.value = Math.round(entries[0]?.contentRect.height ?? 0);
+});
+
 const headerWrapperHeight = computed(() => {
   let height = 0;
   if (props.headerVisible && !props.headerHidden) {
@@ -122,6 +137,9 @@ const headerWrapperHeight = computed(() => {
   }
   if (props.tabbarEnable) {
     height += props.tabbarHeight;
+  }
+  if (hasContentTopSlot.value && !isFullContent.value) {
+    height += contentTopHeight.value;
   }
   return height;
 });
@@ -590,6 +608,14 @@ const idMainContent = ELEMENT_ID_MAIN_CONTENT;
         >
           <slot name="tabbar"></slot>
         </LayoutTabbar>
+
+        <div
+          v-if="hasContentTopSlot"
+          ref="contentTopRef"
+          class="w-full shrink-0"
+        >
+          <slot name="content-top"></slot>
+        </div>
       </div>
 
       <!-- </div> -->

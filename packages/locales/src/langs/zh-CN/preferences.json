@@ -192,6 +192,7 @@
   },
   "widget": {
     "title": "小部件",
+    "activityTicker": "显示活动通知栏",
     "globalSearch": "启用全局搜索",
     "fullscreen": "启用全屏",
     "themeToggle": "启用主题切换",

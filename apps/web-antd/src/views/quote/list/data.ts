@@ -1,6 +1,6 @@
 import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
-import type { QuoteApi } from '#/api/quote';
+import type { QuoteApi, QuoteServiceType } from '#/api/quote';
 
 import { getCustomerList } from '#/api/customer';
 import { getFumigationStationList } from '#/api/quote';
@@ -11,7 +11,6 @@ import { buildOperationColumn } from '../../system/shared/columns';
 import {
   canShowQuoteVoid,
   isQuoteDeletable,
-  isQuoteEditable,
   normalizeQuoteStatus,
 } from '../shared/quote-status';
 import {
@@ -29,16 +28,60 @@ export function getTransportModeOptions() {
   ];
 }
 
+export function getServiceTypeOptions() {
+  return [
+    { label: t('serviceType.SEA'), value: 'SEA' },
+    { label: t('serviceType.FUMIGATION'), value: 'FUMIGATION' },
+    { label: t('serviceType.TRUCK'), value: 'TRUCK' },
+    { label: t('serviceType.INSURANCE'), value: 'INSURANCE' },
+    { label: t('serviceType.TRADE'), value: 'TRADE' },
+    { label: t('serviceType.OTHER'), value: 'OTHER' },
+  ];
+}
+
 export const transportModeTagOptions = () => [
   { color: 'blue', label: t('transportMode.ROAD'), value: 'ROAD' },
   { color: 'cyan', label: t('transportMode.SEA'), value: 'SEA' },
   { color: 'purple', label: t('transportMode.RAIL'), value: 'RAIL' },
 ];
 
+/** 待审批报价：Ant Design warning 浅底 + 深橙字 */
+export const QUOTE_PENDING_APPROVAL_TAG_CLASS = 'quote-status-tag--pending';
+
+export function resolveQuoteStatusTag(
+  status: QuoteApi.QuoteListItem['status'],
+) {
+  const normalized = normalizeQuoteStatus(status);
+  const matched = statusTagOptions().find((item) => item.value === normalized);
+  return {
+    className: matched?.className,
+    color: matched?.color ?? 'default',
+    label: matched?.label ?? status,
+  };
+}
+
+export function resolveQuoteListStatusTag(row: QuoteApi.QuoteListItem) {
+  const normalized = normalizeQuoteStatus(row.status);
+  // 终态 / 变更中优先展示正式状态，不被成本风险标签覆盖
+  if (
+    row.costRiskActive &&
+    !row.voided &&
+    normalized !== 'REVISING' &&
+    normalized !== 'SUPERSEDED' &&
+    normalized !== 'VOIDED' &&
+    normalized !== 'WON' &&
+    normalized !== 'EXPIRED'
+  ) {
+    return { color: 'error', label: t('risk.tag') };
+  }
+  return resolveQuoteStatusTag(row.status);
+}
+
 export const statusTagOptions = () => [
   { color: 'default', label: t('status.DRAFT'), value: 'DRAFT' },
   {
-    color: 'processing',
+    className: QUOTE_PENDING_APPROVAL_TAG_CLASS,
+    color: 'warning',
     label: t('status.PENDING_APPROVAL'),
     value: 'PENDING_APPROVAL',
   },
@@ -47,9 +90,12 @@ export const statusTagOptions = () => [
   { color: 'warning', label: t('status.REJECTED'), value: 'REJECTED' },
   { color: 'warning', label: t('status.EXPIRED'), value: 'EXPIRED' },
   { color: 'error', label: t('status.VOIDED'), value: 'VOIDED' },
+  { color: 'processing', label: t('status.REVISING'), value: 'REVISING' },
+  { color: 'default', label: t('status.SUPERSEDED'), value: 'SUPERSEDED' },
   // 兼容旧数据展示
   {
-    color: 'processing',
+    className: QUOTE_PENDING_APPROVAL_TAG_CLASS,
+    color: 'warning',
     label: t('status.PENDING_APPROVAL'),
     value: 'PENDING',
   },
@@ -163,11 +209,38 @@ function transportModeLabel(value: string) {
   return option?.label ?? value;
 }
 
-export { transportModeLabel };
+function serviceTypeLabel(
+  value?: Array<QuoteServiceType | string> | QuoteServiceType | string,
+) {
+  if (value === undefined || value === null || value === '') {
+    return '';
+  }
+  const values = Array.isArray(value) ? value : [value];
+  return values
+    .map((item) => {
+      const option = getServiceTypeOptions().find((opt) => opt.value === item);
+      return option?.label ?? item;
+    })
+    .filter(Boolean)
+    .join('、');
+}
+
+export { serviceTypeLabel, transportModeLabel };
 
 export function quoteRowClassName({ row }: { row: QuoteApi.QuoteListItem }) {
   if (row.voided) {
     return 'quote-row-voided';
+  }
+  const status = normalizeQuoteStatus(row.status);
+  if (
+    row.costRiskActive &&
+    status !== 'VOIDED' &&
+    status !== 'WON' &&
+    status !== 'REVISING' &&
+    status !== 'SUPERSEDED' &&
+    status !== 'EXPIRED'
+  ) {
+    return 'quote-row-risk';
   }
   if (row.expired) {
     return 'quote-row-expired';
@@ -177,37 +250,21 @@ export function quoteRowClassName({ row }: { row: QuoteApi.QuoteListItem }) {
 
 export function useQuoteColumns(
   onActionClick: OnActionClickFn<QuoteApi.QuoteListItem>,
-  canEdit: boolean,
   canDelete: boolean,
   canVoid: boolean,
-  canApprove = false,
   canOperateRow: (row: QuoteApi.QuoteListItem) => boolean = () => true,
 ): VxeTableGridOptions<QuoteApi.QuoteListItem>['columns'] {
   const operationOptions: Array<Record<string, any> | string> = [
     { code: 'view', text: t('actions.view') },
   ];
-  if (canApprove) {
-    operationOptions.push({
-      code: 'send',
-      show: (row: QuoteApi.QuoteListItem) =>
-        normalizeQuoteStatus(row.status) === 'PENDING_APPROVAL',
-      text: t('actions.send'),
-    });
-  }
-  if (canEdit) {
-    operationOptions.push({
-      code: 'edit',
-      show: (row: QuoteApi.QuoteListItem) =>
-        canOperateRow(row) && isQuoteEditable(row.status),
-      text: $t('common.edit'),
-    });
-  }
   if (canVoid) {
     operationOptions.push({
       code: 'void',
       danger: true,
       show: (row: QuoteApi.QuoteListItem) =>
-        canOperateRow(row) && canShowQuoteVoid(row.status),
+        canOperateRow(row) &&
+        canShowQuoteVoid(row.status) &&
+        !row.costRiskActive,
       text: t('actions.void'),
     });
   }
@@ -221,15 +278,11 @@ export function useQuoteColumns(
     });
   }
 
-  const operationColumn = buildOperationColumn(
-    canEdit || canDelete || canVoid || canApprove,
-    onActionClick,
-    {
-      nameField: 'quoteNo',
-      nameTitle: 'QUOTE NO',
-      operationOptions,
-    },
-  );
+  const operationColumn = buildOperationColumn(true, onActionClick, {
+    nameField: 'quoteNo',
+    nameTitle: 'QUOTE NO',
+    operationOptions,
+  });
 
   const sheetCols = QUOTE_LIST_COLUMNS.map((col) => ({
     field: col.listSource === 'row' ? col.field : `sheet.${String(col.field)}`,
@@ -250,6 +303,15 @@ export function useQuoteColumns(
       title: 'QUOTE NO',
     },
     {
+      field: 'serviceTypes',
+      fixed: 'left',
+      formatter: ({ row }: { row: QuoteApi.QuoteListItem }) =>
+        serviceTypeLabel(row.serviceTypes),
+      minWidth: 120,
+      showOverflow: true,
+      title: t('fields.serviceType'),
+    },
+    {
       field: 'customerName',
       fixed: 'left',
       minWidth: 120,
@@ -258,20 +320,17 @@ export function useQuoteColumns(
     ...sheetCols,
     {
       align: 'center',
-      cellRender: {
-        name: 'CellTag',
-        options: statusTagOptions(),
-      },
       field: 'status',
       fixed: 'right',
+      slots: { default: 'status' },
       title: '状态',
-      width: 96,
+      width: 108,
     },
   ];
 
   if (operationColumn) {
-    operationColumn.minWidth = 220;
-    operationColumn.width = 220;
+    operationColumn.minWidth = 140;
+    operationColumn.width = 140;
     operationColumn.fixed = 'right';
     columns.push(operationColumn);
   }

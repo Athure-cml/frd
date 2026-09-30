@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 import type { QuoteApi, QuoteCostType } from '#/api/quote';
 
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 import { IconifyIcon } from '@vben/icons';
 
-import { Button, Tag } from 'ant-design-vue';
+import { Button, Tabs, Tag } from 'ant-design-vue';
 
 import { $t } from '#/locales';
 
@@ -26,6 +26,7 @@ const emit = defineEmits<{
 }>();
 
 const COST_TYPES: QuoteCostType[] = ['ROAD', 'SEA', 'FUMIGATION'];
+const activeTab = ref<QuoteCostType>('ROAD');
 
 function tabLabel(type: QuoteCostType) {
   return $t(
@@ -67,68 +68,54 @@ function onImport(type: QuoteCostType) {
 
 <template>
   <div class="quote-cost-source">
-    <div
-      v-for="section in sections"
-      :key="section.type"
-      class="quote-cost-source__block"
-    >
-      <div class="quote-cost-source__head">
-        <span class="quote-cost-source__title">{{
-          tabLabel(section.type)
-        }}</span>
-        <div class="quote-cost-source__actions">
-          <Tag v-if="section.matches.length === 0" color="default">
-            {{ $t('page.quote.message.noCostSnapshot') }}
-          </Tag>
-          <Button
-            v-if="canImport"
-            class="quote-cost-source__import-btn"
-            size="small"
-            @click="onImport(section.type)"
+    <Tabs v-model:active-key="activeTab">
+      <Tabs.TabPane
+        v-for="section in sections"
+        :key="section.type"
+        :tab="tabLabel(section.type)"
+      >
+        <div class="quote-cost-source__pane">
+          <div
+            v-if="canImport || section.matches.length === 0"
+            class="quote-cost-source__actions"
           >
-            <IconifyIcon class="mr-1 size-3.5" icon="lucide:database" />
-            {{ $t('page.quote.actions.importCostData') }}
-          </Button>
+            <Tag v-if="section.matches.length === 0" color="default">
+              {{ $t('page.quote.message.noCostSnapshot') }}
+            </Tag>
+            <Button
+              v-if="canImport"
+              class="quote-cost-source__import-btn"
+              size="small"
+              @click="onImport(section.type)"
+            >
+              <IconifyIcon class="mr-1 size-3.5" icon="lucide:database" />
+              {{ $t('page.quote.actions.importCostData') }}
+            </Button>
+          </div>
+          <CostSnapshotGrid
+            :empty-description="
+              $t('page.quote.message.noCostImported', [tabLabel(section.type)])
+            "
+            :match="section.match"
+            :matches="section.matches"
+            :type="section.type"
+          />
         </div>
-      </div>
-      <CostSnapshotGrid
-        :empty-description="
-          $t('page.quote.message.noCostImported', [tabLabel(section.type)])
-        "
-        :match="section.match"
-        :matches="section.matches"
-        :type="section.type"
-      />
-    </div>
+      </Tabs.TabPane>
+    </Tabs>
   </div>
 </template>
 
 <style scoped>
-.quote-cost-source {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.quote-cost-source :deep(.ant-tabs-nav) {
+  margin-bottom: 0;
 }
 
-.quote-cost-source__block {
+.quote-cost-source__pane {
   overflow: auto visible;
   border: 1px solid hsl(var(--border));
-  border-radius: calc(var(--radius) + 2px);
-}
-
-.quote-cost-source__head {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: color-mix(in srgb, hsl(var(--muted)) 22%, hsl(var(--card)));
-  border-bottom: 1px solid hsl(var(--border));
-}
-
-.quote-cost-source__title {
-  font-size: 13px;
-  font-weight: 600;
+  border-top: 0;
+  border-radius: 0 0 calc(var(--radius) + 2px) calc(var(--radius) + 2px);
 }
 
 .quote-cost-source__actions {
@@ -136,5 +123,10 @@ function onImport(type: QuoteCostType) {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  justify-content: flex-end;
+  min-height: 40px;
+  padding: 8px 14px;
+  background: color-mix(in srgb, hsl(var(--muted)) 22%, hsl(var(--card)));
+  border-bottom: 1px solid hsl(var(--border));
 }
 </style>

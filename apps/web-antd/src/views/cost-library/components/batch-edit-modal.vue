@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { VbenFormSchema } from '#/adapter/form';
+import type { CostMode, CostTableTemplate } from '#/api/cost';
 
 import { ref } from 'vue';
 
@@ -8,28 +9,30 @@ import { useVbenModal } from '@vben/common-ui';
 import { Button, message } from 'ant-design-vue';
 
 import { useVbenForm } from '#/adapter/form';
+import { batchUpdateRoadCost, fumigationCostApi, seaCostApi } from '#/api/cost';
+import { BATCH_COPY_PREVIEW_LIMIT } from '#/api/import-request';
 import { $t } from '#/locales';
 
 import { joinContainerTypes } from '../shared/freight-schema';
+import BatchCopyPreviewModal from './batch-copy-preview-modal.vue';
 
 const props = withDefaults(
   defineProps<{
-    batchUpdateFn: (
-      ids: number[],
-      fields: Record<string, unknown>,
-    ) => Promise<unknown>;
+    mode: CostMode;
     schema: VbenFormSchema[];
+    template?: CostTableTemplate;
     title: string;
-    /** 海运等同批量复制：双列宽弹窗 */
     wide?: boolean;
   }>(),
-  { wide: false },
+  { template: undefined, wide: false },
 );
 
 const emit = defineEmits<{ success: [] }>();
 
 const selectedIds = ref<number[]>([]);
 const submitting = ref(false);
+const skipResetOnClose = ref(false);
+const previewModalRef = ref<InstanceType<typeof BatchCopyPreviewModal>>();
 
 const [Form, formApi] = useVbenForm({
   layout: 'vertical',
@@ -39,14 +42,13 @@ const [Form, formApi] = useVbenForm({
 });
 
 const [Modal, modalApi] = useVbenModal({
-  async onConfirm() {
-    await handleConfirm();
-  },
+  footer: false,
   onOpenChange(isOpen) {
-    if (!isOpen) {
+    if (!isOpen && !skipResetOnClose.value) {
       formApi.resetForm();
       selectedIds.value = [];
     }
+    skipResetOnClose.value = false;
   },
 });
 
@@ -71,7 +73,22 @@ function normalizeBatchFields(values: Record<string, unknown>) {
   return fields;
 }
 
-async function handleConfirm() {
+function batchUpdate(payload: {
+  fields: Record<string, unknown>;
+  ids: number[];
+  previewLimit?: number;
+  previewOnly?: boolean;
+}) {
+  if (props.mode === 'road') {
+    return batchUpdateRoadCost(payload);
+  }
+  if (props.mode === 'sea') {
+    return seaCostApi.batchUpdate(payload);
+  }
+  return fumigationCostApi.batchUpdate(payload);
+}
+
+async function onConfirm() {
   if (selectedIds.value.length === 0) {
     return;
   }
@@ -81,17 +98,46 @@ async function handleConfirm() {
     message.warning($t('page.costLibrary.hint.batchEmpty'));
     return;
   }
+
   submitting.value = true;
   modalApi.lock();
   try {
-    await props.batchUpdateFn(selectedIds.value, fields);
-    message.success($t('ui.actionMessage.operationSuccess'));
-    emit('success');
+    const previewRequest = {
+      fields,
+      ids: selectedIds.value,
+      previewLimit: BATCH_COPY_PREVIEW_LIMIT,
+      previewOnly: true,
+    };
+    const result = await batchUpdate(previewRequest);
+    if (result.items.length === 0) {
+      message.warning($t('page.costLibrary.hint.batchUpdateSuccess', [0]));
+      return;
+    }
+    skipResetOnClose.value = true;
     modalApi.close();
+    previewModalRef.value?.open({
+      items: result.items,
+      operation: 'update',
+      request: {
+        fields,
+        ids: selectedIds.value,
+        previewOnly: false,
+      },
+      total: result.total ?? result.updated,
+    });
   } finally {
     submitting.value = false;
     modalApi.unlock();
   }
+}
+
+function onPreviewSuccess() {
+  emit('success');
+}
+
+function onPreviewBack() {
+  previewModalRef.value?.close();
+  modalApi.open();
 }
 
 function open(ids: number[]) {
@@ -114,11 +160,20 @@ defineExpose({ open });
       {{ $t('page.costLibrary.hint.batchFill') }}
     </p>
     <Form class="cost-drawer-form px-1" />
-    <template #footer>
-      <Button @click="modalApi.close()">{{ $t('common.cancel') }}</Button>
-      <Button :loading="submitting" type="primary" @click="handleConfirm">
+    <div class="mt-6 flex flex-wrap justify-end gap-2">
+      <Button :disabled="submitting" @click="modalApi.close()">
+        {{ $t('common.cancel') }}
+      </Button>
+      <Button :loading="submitting" type="primary" @click="onConfirm">
         {{ $t('common.confirm') }}
       </Button>
-    </template>
+    </div>
   </Modal>
+  <BatchCopyPreviewModal
+    ref="previewModalRef"
+    :mode="mode"
+    :template="template"
+    @back="onPreviewBack"
+    @success="onPreviewSuccess"
+  />
 </template>

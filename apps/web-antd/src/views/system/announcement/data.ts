@@ -89,6 +89,40 @@ export function getAnnouncementStatusLabel(
   return t(`status.${status.toLowerCase()}`);
 }
 
+export function getAnnouncementDisplayTypeLabel(
+  displayType: AnnouncementApi.DisplayType,
+) {
+  return t(`displayType.${displayType.toLowerCase()}`);
+}
+
+export function announcementRequiresTitle(
+  displayType?: AnnouncementApi.DisplayType,
+) {
+  return displayType === 'MODAL' || displayType === 'BOTH' || !displayType;
+}
+
+export function announcementRequiresContent(
+  displayType?: AnnouncementApi.DisplayType,
+) {
+  return (
+    displayType === 'MODAL' ||
+    displayType === 'BOTH' ||
+    displayType === 'TICKER' ||
+    !displayType
+  );
+}
+
+export function deriveTickerTitleFromContent(content?: null | string) {
+  const text = stripHtmlText(content);
+  if (!text) {
+    return '';
+  }
+  if (text.length <= 128) {
+    return text;
+  }
+  return `${text.slice(0, 125)}…`;
+}
+
 export function getAnnouncementStatusColor(
   status: AnnouncementApi.AnnouncementStatus,
 ) {
@@ -191,16 +225,46 @@ export function useAnnouncementFormSchema(options?: {
   const hidePublishOptions = options?.hidePublishOptions ?? false;
   const schema: VbenFormSchema[] = [
     {
+      component: 'RadioGroup',
+      componentProps: {
+        buttonStyle: 'solid',
+        options: [
+          { label: t('displayType.modal'), value: 'MODAL' },
+          { label: t('displayType.ticker'), value: 'TICKER' },
+          { label: t('displayType.both'), value: 'BOTH' },
+        ],
+        optionType: 'button',
+      },
+      defaultValue: 'MODAL',
+      fieldName: 'displayType',
+      formItemClass: 'col-span-full',
+      help: t('hints.displayType'),
+      label: t('fields.displayType'),
+    },
+    {
       component: 'Input',
       componentProps: {
         maxlength: 128,
         placeholder: t('placeholders.title'),
         showCount: true,
       },
+      dependencies: {
+        required(values) {
+          return announcementRequiresTitle(values?.displayType);
+        },
+        rules(values) {
+          return announcementRequiresTitle(values?.displayType)
+            ? 'required'
+            : null;
+        },
+        show(values) {
+          return values?.displayType !== 'TICKER';
+        },
+        triggerFields: ['displayType'],
+      },
       fieldName: 'title',
       formItemClass: 'col-span-full',
       label: t('fields.title'),
-      rules: 'required',
     },
   ];
 
@@ -246,7 +310,8 @@ export function useAnnouncementFormSchema(options?: {
     {
       component: 'InputNumber',
       componentProps: {
-        class: 'w-full',
+        addonAfter: t('fields.validDaysUnit'),
+        class: 'w-full sys-announcement-valid-days',
         min: 1,
         placeholder: t('placeholders.validDays'),
       },
@@ -265,11 +330,29 @@ export function useAnnouncementFormSchema(options?: {
         placeholder: t('placeholders.content'),
         previewable: true,
       },
+      dependencies: {
+        componentProps(values) {
+          const isTickerOnly = values?.displayType === 'TICKER';
+          return {
+            placeholder: isTickerOnly
+              ? t('placeholders.tickerContent')
+              : t('placeholders.content'),
+          };
+        },
+        required(values) {
+          return announcementRequiresContent(values?.displayType);
+        },
+        rules(values) {
+          return announcementRequiresContent(values?.displayType)
+            ? 'required'
+            : null;
+        },
+        triggerFields: ['displayType'],
+      },
       fieldName: 'content',
       formItemClass:
         'col-span-full sys-announcement-content-field sys-announcement-rich-field',
       label: t('fields.content'),
-      rules: 'required',
     },
   );
 
@@ -295,6 +378,15 @@ export function useAnnouncementColumns(
         minWidth: 160,
         showOverflow: 'tooltip',
         title: t('fields.content'),
+      },
+      {
+        field: 'displayType',
+        formatter: ({ cellValue }) =>
+          getAnnouncementDisplayTypeLabel(
+            cellValue as AnnouncementApi.DisplayType,
+          ),
+        title: t('fields.displayType'),
+        width: 108,
       },
       {
         className: 'col-sys-num',
@@ -367,14 +459,23 @@ export function buildAnnouncementSavePayload(
   values: Record<string, any>,
   saveAction: AnnouncementApi.SaveAction,
 ): AnnouncementApi.SavePayload {
+  const displayType = (values.displayType ??
+    'MODAL') as AnnouncementApi.DisplayType;
+  const content = String(values.content ?? '').trim();
+  let title = String(values.title ?? '').trim();
+  if (displayType === 'TICKER' && !title) {
+    title = deriveTickerTitleFromContent(content);
+  }
+
   return {
-    content: String(values.content ?? '').trim(),
+    content,
+    displayType,
     saveAction,
     scheduledAt:
       saveAction === 'PUBLISH_SCHEDULED' && values.scheduledAt
         ? dayjs(values.scheduledAt).format('YYYY-MM-DDTHH:mm:ss')
         : undefined,
-    title: String(values.title ?? '').trim(),
+    title,
     validDays: values.validDays ?? undefined,
   };
 }
@@ -382,6 +483,7 @@ export function buildAnnouncementSavePayload(
 export function mapAnnouncementToFormValues(row: AnnouncementApi.Announcement) {
   return {
     content: normalizeRichContent(row.content),
+    displayType: row.displayType ?? 'MODAL',
     publishMode:
       row.status === 'SCHEDULED'
         ? 'SCHEDULED'

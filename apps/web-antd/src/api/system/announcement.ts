@@ -10,6 +10,8 @@ export namespace AnnouncementApi {
 
   export type PublishMode = 'IMMEDIATE' | 'SCHEDULED';
 
+  export type DisplayType = 'BOTH' | 'MODAL' | 'TICKER';
+
   export type SaveAction =
     | 'DRAFT'
     | 'PUBLISH_IMMEDIATE'
@@ -19,6 +21,7 @@ export namespace AnnouncementApi {
   export interface Announcement {
     content: string;
     createdByName?: string;
+    displayType: DisplayType;
     enabled?: boolean;
     expiresAt?: null | string;
     id: number;
@@ -38,8 +41,16 @@ export namespace AnnouncementApi {
     status?: '' | AnnouncementStatus;
   }
 
+  export interface TickerItem {
+    content: string;
+    id: number;
+    text: string;
+    title: string;
+  }
+
   export interface SavePayload {
     content: string;
+    displayType: DisplayType;
     saveAction: SaveAction;
     scheduledAt?: null | string;
     title: string;
@@ -50,6 +61,12 @@ export namespace AnnouncementApi {
 export async function getPendingAnnouncements() {
   return requestClient.get<AnnouncementApi.Announcement[]>(
     '/sys/announcements/pending',
+  );
+}
+
+export async function getTickerAnnouncements() {
+  return requestClient.get<AnnouncementApi.TickerItem[]>(
+    '/sys/announcements/ticker',
   );
 }
 

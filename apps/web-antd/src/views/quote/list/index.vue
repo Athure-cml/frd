@@ -13,14 +13,13 @@ import { Page } from '@vben/common-ui';
 import { Download, Plus } from '@vben/icons';
 import { downloadFileFromBlob } from '@vben/utils';
 
-import { Button, message, Modal } from 'ant-design-vue';
+import { Button, message, Modal, Tag } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import {
   deleteQuote,
   exportQuotes,
   getQuoteList,
-  sendQuote,
   voidQuote,
 } from '#/api/quote';
 import { $t } from '#/locales';
@@ -32,6 +31,7 @@ import {
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import {
   quoteRowClassName,
+  resolveQuoteListStatusTag,
   useQuoteColumns,
   useQuoteSearchSchema,
 } from './data';
@@ -41,10 +41,8 @@ import '../shared/quote.css';
 const router = useRouter();
 const { hasAccessByCodes } = useAccess();
 const canCreate = hasAccessByCodes(['quote:create']);
-const canEdit = hasAccessByCodes(['quote:edit']);
 const canDelete = hasAccessByCodes(['quote:delete']);
 const canVoid = hasAccessByCodes(['quote:approve']);
-const canApprove = hasAccessByCodes(['quote:approve']);
 const canExport = hasAccessByCodes(['quote:export']);
 const exporting = ref(false);
 
@@ -57,10 +55,6 @@ async function onCreate() {
 }
 
 function onView(row: QuoteApi.QuoteListItem) {
-  router.push({ name: 'QuoteEdit', params: { id: row.id } });
-}
-
-function onEdit(row: QuoteApi.QuoteListItem) {
   router.push({ name: 'QuoteEdit', params: { id: row.id } });
 }
 
@@ -93,18 +87,6 @@ function onVoid(row: QuoteApi.QuoteListItem) {
   });
 }
 
-function onSend(row: QuoteApi.QuoteListItem) {
-  Modal.confirm({
-    title: $t('page.quote.actions.send'),
-    content: $t('page.quote.confirm.send', [row.quoteNo]),
-    onOk: async () => {
-      await sendQuote(row.id);
-      message.success($t('page.quote.message.sendSuccess'));
-      gridApi.query();
-    },
-  });
-}
-
 function onActionClick({
   code,
   row,
@@ -113,16 +95,8 @@ function onActionClick({
     onView(row);
     return;
   }
-  if (code === 'edit') {
-    onEdit(row);
-    return;
-  }
   if (code === 'void') {
     onVoid(row);
-    return;
-  }
-  if (code === 'send') {
-    onSend(row);
     return;
   }
   if (code === 'delete') {
@@ -168,14 +142,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridOptions: {
     id: 'quote-list',
-    columns: useQuoteColumns(
-      onActionClick,
-      canEdit,
-      canDelete,
-      canVoid,
-      canApprove,
-      canOperateRow,
-    ),
+    columns: useQuoteColumns(onActionClick, canDelete, canVoid, canOperateRow),
     height: 'auto',
     pagerConfig: {},
     proxyConfig: {
@@ -234,6 +201,14 @@ const [Grid, gridApi] = useVbenVxeGrid({
         <button class="quote-no-link" type="button" @click="onView(row)">
           {{ row.quoteNo }}
         </button>
+      </template>
+      <template #status="{ row }">
+        <Tag
+          :class="resolveQuoteListStatusTag(row).className"
+          :color="resolveQuoteListStatusTag(row).color"
+        >
+          {{ resolveQuoteListStatusTag(row).label }}
+        </Tag>
       </template>
     </Grid>
   </Page>

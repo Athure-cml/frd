@@ -144,6 +144,14 @@ export function useUserColumns(
   const columns: VxeTableGridOptions<SystemUserApi.SystemUser>['columns'] = [
     { fixed: 'left', type: 'seq', width: 52, title: '#' },
     {
+      align: 'center',
+      field: 'avatar',
+      fixed: 'left',
+      slots: { default: 'avatar' },
+      title: t('fields.avatar'),
+      width: 72,
+    },
+    {
       align: 'left',
       className: 'col-sys-code',
       field: 'username',

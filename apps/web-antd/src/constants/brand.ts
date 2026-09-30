@@ -1,3 +1,6 @@
+/** 报价单打印模板同款 Logo */
+export const FRD_QUOTE_LOGO_SRC = '/static/frd-quote-logo.png';
+
 const FRD_LOGO_FILL = {
   dark: '#FAFAFA',
   light: '#006FE6',

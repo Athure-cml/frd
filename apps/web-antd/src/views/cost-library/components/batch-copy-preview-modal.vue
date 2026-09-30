@@ -9,6 +9,7 @@ import type {
   CostTableTemplate,
   FreightCostRecord,
   FreightCostSave,
+  FumigationCostRecord,
   RoadCostRecord,
   RoadCostSave,
 } from '#/api/cost';
@@ -21,6 +22,8 @@ import { Button, message, Pagination, Table, Tag } from 'ant-design-vue';
 
 import {
   batchCopyRoadCost,
+  batchUpdateRoadCost,
+  fumigationCostApi,
   renewRoadCost,
   renewSeaCost,
   seaCostApi,
@@ -31,11 +34,11 @@ import { buildPreviewAntColumns } from '../shared/build-columns';
 import { formatStatus } from '../shared/formatters';
 import { costStatusTagOptions } from '../shared/tags';
 
-export type BatchPreviewOperation = 'copy' | 'renew';
+export type BatchPreviewOperation = 'copy' | 'renew' | 'update';
 
 const props = withDefaults(
   defineProps<{
-    mode?: Extract<CostMode, 'road' | 'sea'>;
+    mode?: CostMode;
     template?: CostTableTemplate;
   }>(),
   { mode: 'road', template: undefined },
@@ -43,7 +46,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{ back: []; success: [] }>();
 
-type PreviewItem = FreightCostRecord | RoadCostRecord;
+type PreviewItem = FreightCostRecord | FumigationCostRecord | RoadCostRecord;
 
 const previewItems = ref<PreviewItem[]>([]);
 const previewTotal = ref(0);
@@ -57,11 +60,15 @@ const previewPage = ref({ current: 1, pageSize: 20 });
 
 const isSea = computed(() => props.mode === 'sea');
 
-const modalTitle = computed(() =>
-  operation.value === 'renew'
-    ? $t('page.costLibrary.actions.batchRenewPreview')
-    : $t('page.costLibrary.actions.batchCopyPreview'),
-);
+const modalTitle = computed(() => {
+  if (operation.value === 'renew') {
+    return $t('page.costLibrary.actions.batchRenewPreview');
+  }
+  if (operation.value === 'update') {
+    return $t('page.costLibrary.actions.batchUpdatePreview');
+  }
+  return $t('page.costLibrary.actions.batchCopyPreview');
+});
 
 const previewHint = computed(() => {
   if (operation.value === 'renew') {
@@ -73,6 +80,15 @@ const previewHint = computed(() => {
     previewTotal.value ||
     (previewItems.value.length > 0 ? previewItems.value.length : 0);
   const shown = previewItems.value.length;
+  if (operation.value === 'update') {
+    if (total > shown) {
+      return $t('page.costLibrary.hint.batchUpdatePreviewPartialHint', [
+        total,
+        shown,
+      ]);
+    }
+    return $t('page.costLibrary.hint.batchUpdatePreviewHint', [total]);
+  }
   if (total > shown) {
     return $t('page.costLibrary.hint.batchCopyPreviewPartialHint', [
       total,
@@ -82,11 +98,15 @@ const previewHint = computed(() => {
   return $t('page.costLibrary.hint.batchCopyPreviewHint', [total]);
 });
 
-const confirmLabel = computed(() =>
-  operation.value === 'renew'
-    ? $t('page.costLibrary.actions.batchRenewConfirm')
-    : $t('page.costLibrary.actions.batchCopyConfirm'),
-);
+const confirmLabel = computed(() => {
+  if (operation.value === 'renew') {
+    return $t('page.costLibrary.actions.batchRenewConfirm');
+  }
+  if (operation.value === 'update') {
+    return $t('page.costLibrary.actions.batchUpdateConfirm');
+  }
+  return $t('page.costLibrary.actions.batchCopyConfirm');
+});
 
 const statusColorMap = computed(() => {
   const map = new Map<string, string>();
@@ -171,6 +191,39 @@ function onBack() {
   emit('back');
 }
 
+async function batchUpdate(payload: Record<string, unknown>) {
+  if (props.mode === 'road') {
+    return batchUpdateRoadCost(payload as any);
+  }
+  if (props.mode === 'sea') {
+    return seaCostApi.batchUpdate(payload as any);
+  }
+  return fumigationCostApi.batchUpdate(payload as any);
+}
+
+async function confirmUpdate() {
+  if (!pendingCopyRequest.value || confirming.value) {
+    return;
+  }
+  confirming.value = true;
+  try {
+    const payload = { ...pendingCopyRequest.value, previewOnly: false };
+    const result = await batchUpdate(payload);
+    const updated = result.updated || result.total || previewTotal.value;
+    if (updated === 0) {
+      message.warning($t('page.costLibrary.hint.batchUpdateSuccess', [0]));
+      return;
+    }
+    message.success($t('page.costLibrary.hint.batchUpdateSuccess', [updated]));
+    close();
+    emit('success');
+  } catch {
+    message.error($t('page.ai.requestFailed'));
+  } finally {
+    confirming.value = false;
+  }
+}
+
 async function confirmCopy() {
   if (!pendingCopyRequest.value || confirming.value) {
     return;
@@ -224,6 +277,10 @@ async function confirmRenew() {
 async function handleConfirm() {
   if (operation.value === 'renew') {
     await confirmRenew();
+    return;
+  }
+  if (operation.value === 'update') {
+    await confirmUpdate();
     return;
   }
   await confirmCopy();

@@ -29,7 +29,7 @@ export namespace DashboardApi {
     id: string;
     payload?: Record<string, unknown>;
     time: string;
-    type: 'COST_UPDATED' | 'QUOTE_EXPIRING';
+    type: 'COST_RISK' | 'COST_UPDATED' | 'QUOTE_EXPIRING';
   }
 
   export interface WorkspaceRouteItem {
@@ -53,7 +53,7 @@ export namespace DashboardApi {
     message?: string;
     payload?: Record<string, unknown>;
     title?: string;
-    type: 'COST_UPDATED' | 'QUOTE_EXPIRING';
+    type: 'COST_RISK' | 'COST_UPDATED' | 'QUOTE_EXPIRING';
   }
 }
 
@@ -61,8 +61,32 @@ export function getWorkspaceData() {
   return requestClient.get<DashboardApi.WorkspaceData>('/dashboard/workspace');
 }
 
+export function getDashboardTodos() {
+  return requestClient.get<DashboardApi.WorkspaceTodo[]>('/dashboard/todos');
+}
+
 export function getDashboardNotifications() {
   return requestClient.get<DashboardApi.NotificationItem[]>(
     '/dashboard/notifications',
   );
+}
+
+export function markDashboardNotificationRead(id: string) {
+  return requestClient.post(
+    `/dashboard/notifications/${encodeURIComponent(id)}/read`,
+  );
+}
+
+export function markAllDashboardNotificationsRead() {
+  return requestClient.post('/dashboard/notifications/read-all');
+}
+
+export function dismissDashboardNotification(id: string) {
+  return requestClient.delete(
+    `/dashboard/notifications/${encodeURIComponent(id)}`,
+  );
+}
+
+export function dismissAllDashboardNotifications() {
+  return requestClient.delete('/dashboard/notifications');
 }

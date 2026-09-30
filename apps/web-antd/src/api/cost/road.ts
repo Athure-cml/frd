@@ -3,6 +3,7 @@ import type { Recordable } from '@vben/types';
 import type {
   CostBatchCopyResult,
   CostBatchUpdatePayload,
+  CostBatchUpdateResult,
   CostImportResult,
   PageResult,
   RoadCostRecord,
@@ -54,9 +55,13 @@ export async function batchDeleteRoadCost(ids: number[]) {
 }
 
 export async function batchUpdateRoadCost(data: CostBatchUpdatePayload) {
-  return requestClient.patch<{ updated: number }>(`${BASE}/batch`, data, {
-    timeout: BATCH_REQUEST_TIMEOUT_MS,
-  });
+  return requestClient.patch<CostBatchUpdateResult<RoadCostRecord>>(
+    `${BASE}/batch`,
+    data,
+    {
+      timeout: BATCH_REQUEST_TIMEOUT_MS,
+    },
+  );
 }
 
 export async function batchCopyRoadCost(data: {

@@ -92,6 +92,13 @@
     "analytics": "报价分析",
     "workspace": "工作台"
   },
+  "notifications": {
+    "title": "系统消息",
+    "unread": "未读",
+    "markRead": "标为已读",
+    "empty": "暂无新消息",
+    "actionFailed": "操作失败，请稍后重试"
+  },
   "workspace": {
     "greetingMorning": "早上好，{0}，开始处理今日工作吧",
     "greetingAfternoon": "下午好，{0}，继续跟进报价与成本",
@@ -106,7 +113,18 @@
     "topRoutes": "热门线路",
     "quickNav": "常用功能",
     "quickNavHint": "高频业务入口，一键进入报价与成本维护。",
-    "recentQuotesHint": "最近更新的报价单，点击「报价分析」查看完整报表。",
+    "illustrations": {
+      "quote": "报价编制",
+      "quoteDesc": "轻松起草与完善报价单",
+      "logistics": "运力协同",
+      "logisticsDesc": "卡车海运成本一目了然",
+      "approval": "审批流转",
+      "approvalDesc": "节点清晰，高效确认",
+      "analytics": "经营洞察",
+      "analyticsDesc": "把握趋势与转化"
+    },
+    "routesEmpty": "暂无热门线路数据",
+    "recentQuotesHint": "最近更新的报价单，可在报价单列表中查看与管理。",
     "resources": "资源入口",
     "masterData": "主数据",
     "system": "系统",
@@ -122,10 +140,29 @@
     },
     "todos": {
       "title": "待办任务",
-      "followSent": "跟进已发送报价",
+      "empty": "暂无待办，报价流转正常",
+      "pendingHint": "未完成 {0} 项",
+      "followSent": "待跟进已确认报价单",
+      "approveQuote": "审批待审报价",
       "confirmWon": "确认成交并归档",
-      "completeDraft": "完善草稿报价明细",
+      "completeDraft": "待提交审批报价单",
+      "reviewCostRisk": "复核成本变更风险",
       "archiveLost": "归档未成交报价",
+      "filters": {
+        "all": "全部",
+        "urgent": "紧急",
+        "approve": "待审批",
+        "follow": "待跟进",
+        "costRisk": "成本风险"
+      },
+      "actions": {
+        "approve": "去审批",
+        "follow": "去跟进",
+        "review": "去复核",
+        "complete": "去完善",
+        "archive": "去归档",
+        "handle": "去处理"
+      },
       "priority": {
         "urgent": "紧急",
         "high": "高",
@@ -135,10 +172,12 @@
     "pipeline": {
       "title": "报价进度",
       "inProgress": "进行中",
-      "done": "已完成"
+      "done": "已完成",
+      "empty": "暂无进行中的报价"
     },
     "notices": {
       "title": "系统通知",
+      "empty": "暂无系统通知",
       "rateUpdateTitle": "海运成本库更新",
       "rateUpdate": "3 条航线费率已调整，请核对引用成本。",
       "portSyncTitle": "港口档案同步完成",
@@ -148,7 +187,9 @@
       "quoteExpiringTitle": "报价即将到期",
       "quoteExpiring": "{0} 份报价将在 {1} 日内失效，请及时跟进。",
       "costUpdatedTitle": "引用成本已更新",
-      "costUpdated": "报价单 {0} 引用的{1}成本已有更新，请核对。"
+      "costUpdated": "报价单 {0} 引用的{1}成本已有更新，请核对。",
+      "costRiskTitle": "报价单成本风险",
+      "costRisk": "引用的报价库数据有更新，请重新引入报价单"
     }
   },
   "analytics": {
@@ -302,6 +343,8 @@
       "batchCopyPreviewPlain": "预览（直接复制）",
       "batchCopyPreviewApply": "预览（应用修改）",
       "batchCopyPreview": "复制预览",
+      "batchUpdatePreview": "修改预览",
+      "batchUpdateConfirm": "确认修改",
       "batchCopyConfirm": "确认复制",
       "batchCopyBack": "返回修改",
       "batchPreviewNext": "预览",
@@ -310,6 +353,9 @@
       "batchDelete": "批量删除",
       "batchMenu": "批量操作",
       "introduceQuote": "引入报价单",
+      "promoteToQuoteLibrary": "入报价库",
+      "viewQuote": "查看报价",
+      "viewCost": "查看成本",
       "createShort": "新增",
       "templateShort": "模板",
       "batchEditShort": "批量改",
@@ -325,12 +371,24 @@
       "renew": "续期",
       "renewRecord": "续期录入{0}"
     },
+    "relation": {
+      "quoteGenerated": "已生成报价",
+      "quoteNotGenerated": "未生成报价",
+      "view": "查看"
+    },
     "confirm": {
       "batchDelete": "确认删除选中的 {0} 条记录？此操作不可恢复。"
     },
     "hint": {
       "apiPending": "「录入{0}」功能将在接入后端 API 后开放",
       "selectRows": "请先勾选要操作的记录",
+      "quoteLibraryLocked": "该成本已入报价库，请先在报价库中删除后再删除成本",
+      "batchQuoteLibraryLocked": "勾选内容存在已入报价库的成本，请取消勾选或在报价库中删除后再批量删除",
+      "wonQuoteLocked": "该成本已被成交报价单引用，无法修改或删除（续期除外）",
+      "batchWonQuoteLocked": "勾选内容存在已被成交报价单引用的成本，无法批量修改或删除（续期除外）",
+      "promoteQuoteLibraryEmpty": "所选记录均已入报价库，无需重复操作",
+      "promoteQuoteLibraryLoading": "正在入报价库…",
+      "promoteQuoteLibrarySuccess": "已成功入报价库 {0} 条",
       "selectAllAcrossPagesLoading": "正在获取全部匹配记录…",
       "selectAllAcrossPagesEmpty": "当前筛选条件下没有可全选的记录",
       "selectAllAcrossPagesSuccess": "已跨页全选 {0} 条",
@@ -415,6 +473,9 @@
       "batchCopySuccess": "已复制 {0} 条记录",
       "batchCopyPreviewHint": "请确认以下 {0} 条复制结果，确认后将写入数据库。",
       "batchCopyPreviewPartialHint": "共 {0} 条待复制，以下展示前 {1} 条预览；确认后将全部写入数据库。",
+      "batchUpdateSuccess": "已修改 {0} 条记录",
+      "batchUpdatePreviewHint": "请确认以下 {0} 条修改结果，确认后将写入数据库。",
+      "batchUpdatePreviewPartialHint": "共 {0} 条待修改，以下展示前 {1} 条预览；确认后将全部写入数据库。",
       "batchRenewPreviewHint": "请确认以下 {0} 条续期结果，确认后将写入数据库。"
     },
     "search": {
@@ -531,6 +592,8 @@
       "status": "状态",
       "updatedAt": "更新时间",
       "remark": "备注",
+      "relationData": "关联数据",
+      "quoteGenerated": "是否生成报价",
       "operation": "操作"
     },
     "status": {
@@ -540,6 +603,7 @@
       "expired": "已过期"
     },
     "statusFilterAll": "全部状态",
+    "quoteGeneratedFilterAll": "全部",
     "statusHelp": "生效期未到为未生效；超过有效期将自动变为已过期。",
     "roadGroups": {
       "route": "路线与基础运费",
@@ -828,20 +892,49 @@
     "list": "报价单列表",
     "library": {
       "road": "卡车报价库",
-      "roadDesc": "按报价单卡车费、卡车额外费字段汇总展示历史报价。",
+      "roadDesc": "仅展示已从成本库「入报价库」的数据；费用经规则处理后展示，可单独调整且不得低于成本原价。",
       "sea": "海运报价库",
-      "seaDesc": "按报价单海运费相关字段汇总展示历史报价。",
+      "seaDesc": "仅展示已从成本库「入报价库」的数据；费用经规则处理后展示，可单独调整且不得低于成本原价。",
       "fumigation": "熏蒸报价库",
-      "fumigationDesc": "按报价单熏蒸费相关字段汇总展示历史报价。"
+      "fumigationDesc": "仅展示已从成本库「入报价库」的数据；费用经规则处理后展示，可单独调整且不得低于成本原价。",
+      "editTitle": "修改报价库费用",
+      "batchEditTitle": "批量修改报价库费用",
+      "feeFloorHint": "成本原价下限：{0}",
+      "deleteNameTitle": "报价库记录",
+      "hint": {
+        "editFeesOnly": "仅可修改费用字段；填写值不能低于对应成本库原价。",
+        "batchFillFees": "留空的字段不会修改；填写后统一覆盖选中行的对应费用。",
+        "feeEmpty": "请至少填写一个费用字段",
+        "resetSuccess": "已重置为成本与报价规则匹配的默认费用",
+        "deleteUnlocksCost": "删除后将从报价库移除，对应成本恢复可编辑。",
+        "quoteOrderLocked": "该记录已被报价单引用，无法修改或删除。"
+      },
+      "confirm": {
+        "deleteTitle": "从报价库删除",
+        "delete": "确认从报价库删除「{0}」？删除后对应成本可再次编辑。",
+        "batchDelete": "确认从报价库删除选中的 {0} 条？删除后对应成本可再次编辑。"
+      }
     },
     "createTitle": "新建报价单",
     "editTitle": "编辑报价单",
     "viewTitle": "查看报价单",
+    "risk": {
+      "tag": "成本风险",
+      "modalTitle": "成本风险提示",
+      "libraryRoad": "卡车报价库",
+      "librarySea": "海运报价库",
+      "libraryFumigation": "熏蒸报价库",
+      "hintRoad": "引用的卡车报价库数据有更新，请重新引入报价单",
+      "hintSea": "引用的海运报价库数据有更新，请重新引入报价单",
+      "hintFumigation": "引用的熏蒸报价库数据有更新，请重新引入报价单",
+      "hintMultiple": "引用的{0}数据有更新，请重新引入报价单",
+      "hintDefault": "引用的报价库数据有更新，请重新引入报价单"
+    },
     "hint": {
       "list": "支持按路线字段多条件筛选；过期行标红、作废行置灰。",
-      "editor": "填写 7 个匹配字段后点击「引入成本库」自动带入费用。",
+      "editor": "填写匹配字段后点击「引入报价库」或「匹配推荐报价」自动带入费用。",
       "readonly": "当前报价单不可编辑，仅可查看。",
-      "matchKeys": "Zip code / City / State / POR / POL / POD / SSL 用于成本库联合匹配",
+      "matchKeys": "Zip code / City / State / POR / POL / POD / SSL 用于报价库联合匹配",
       "zipAutoFill": "输入 Zip code 可模糊查询，选中后自动填充 City、State",
       "followUpStatus": "跟进记录将自动记录当前单据状态，无需手动选择"
     },
@@ -857,48 +950,74 @@
       "costSource": "报价成本来源区",
       "dataSource": "数据来源",
       "logs": "单据日志 & 跟进记录",
+      "auditLogs": "审批 & 操作日志",
       "printPreview": "报价单样式预览"
     },
     "tabs": {
       "operationLog": "操作日志",
+      "approvalLog": "审批日志",
       "followUp": "跟进记录"
     },
+    "audit": {
+      "node": "操作节点",
+      "operator": "操作人",
+      "operatedAt": "操作时间",
+      "result": "结果",
+      "comment": "意见 / 原因",
+      "content": "内容"
+    },
     "costTabs": {
-      "road": "卡车成本库",
-      "sea": "海运成本库",
-      "fumigation": "熏蒸成本库"
+      "road": "卡车报价库",
+      "sea": "海运报价库",
+      "fumigation": "熏蒸报价库"
     },
     "actions": {
       "create": "新建报价单",
       "save": "保存",
       "addLine": "手动添加明细",
-      "pickFromCost": "从成本库添加",
-      "importCost": "引入成本库",
-      "importCostData": "引入成本库数据",
-      "importCostRoad": "选择卡车成本库",
-      "importCostSea": "选择海运成本库",
-      "importCostFumigation": "选择熏蒸成本库",
+      "pickFromCost": "从报价库添加",
+      "importCost": "引入报价库",
+      "importCostData": "引入报价库数据",
+      "importCostRoad": "选择卡车报价库",
+      "importCostSea": "选择海运报价库",
+      "importCostFumigation": "选择熏蒸报价库",
       "syncPrice": "同步单价",
       "syncSuccess": "已同步最新成本单价",
       "syncFailed": "同步失败，原成本可能已删除",
       "view": "查看",
-      "export": "批量导出",
+      "export": "导出",
       "void": "作废",
       "submit": "提交审批",
-      "send": "发送报价",
+      "send": "审批通过",
+      "approve": "审批通过",
       "reject": "拒绝",
-      "cancelApproval": "取消审批",
-      "won": "成交",
+      "rollback": "撤回",
+      "cancelApproval": "撤回",
+      "withdraw": "撤回",
+      "won": "确认成交",
+      "confirmWon": "确认成交",
       "copy": "复制新建",
+      "revise": "发起变更",
       "print": "打印报价单",
+      "printQuote": "打印报价",
+      "matchQuote": "匹配报价",
+      "importQuote": "引入报价",
       "previewSheet": "预览报价单",
       "addFollowUp": "新增跟进",
       "backToList": "返回列表",
       "backToDetail": "返回详情",
-      "generateSheet": "匹配推荐报价"
+      "generateSheet": "匹配报价"
+    },
+    "revision": {
+      "fromChange": "变更单",
+      "notCurrent": "变更单",
+      "viewParent": "查看原单",
+      "changeReason": "变更原因"
     },
     "fields": {
       "quoteNo": "报价单号",
+      "serviceType": "服务类型",
+      "oakType": "OAK / NON-OAK",
       "customerName": "客户名称",
       "transportMode": "运输方式",
       "routeSummary": "路线摘要",
@@ -913,7 +1032,7 @@
       "operator": "操作人",
       "content": "内容",
       "operation": "操作",
-      "costVersion": "成本库版本",
+      "costVersion": "报价库版本",
       "currency": "币种",
       "baseCurrency": "基准币种",
       "exchangeRate": "汇率快照",
@@ -928,6 +1047,8 @@
     },
     "placeholders": {
       "customer": "请选择客户",
+      "serviceType": "请选择服务类型（可多选）",
+      "oakType": "请选择 OAK / NON-OAK",
       "routeSummary": "如：上海 → 洛杉矶",
       "followContent": "填写本次跟进内容",
       "followUpBy": "请选择跟进人",
@@ -938,21 +1059,33 @@
       "SEA": "海运",
       "RAIL": "铁路"
     },
+    "serviceType": {
+      "SEA": "海运",
+      "FUMIGATION": "熏蒸",
+      "TRUCK": "卡车",
+      "INSURANCE": "保险",
+      "TRADE": "贸易",
+      "OTHER": "其他"
+    },
     "status": {
       "DRAFT": "草稿",
-      "PENDING_APPROVAL": "待审批",
-      "SENT": "已发送",
+      "PENDING_APPROVAL": "待审批报价",
+      "SENT": "已确认报价",
       "WON": "已成交",
       "REJECTED": "已拒绝",
       "EXPIRED": "已过期",
       "VOIDED": "已作废",
+      "REVISING": "变更中",
+      "SUPERSEDED": "已归档(变更)",
       "EFFECTIVE": "已生效",
       "FOLLOWING": "跟进中",
-      "PENDING": "待审批",
+      "PENDING": "待审批报价",
       "LOST": "已拒绝"
     },
     "validation": {
       "customerRequired": "请选择客户",
+      "serviceTypeRequired": "请选择服务类型",
+      "oakTypeRequired": "请选择 OAK / NON-OAK",
       "porPolRequired": "请选择 POR/POL",
       "porRequired": "请选择 POR",
       "polRequired": "请选择 POL",
@@ -962,8 +1095,8 @@
       "followUpBy": "请选择跟进人"
     },
     "message": {
-      "noCostMatch": "无对应成本数据，请先维护成本库",
-      "costImported": "已引入成本库数据，可手动调整后保存",
+      "noCostMatch": "无对应报价库数据，请先将成本入报价库",
+      "costImported": "已引入报价库数据，可手动调整后保存",
       "selectExport": "请先勾选要导出的报价单",
       "exporting": "正在导出…",
       "exportSuccess": "导出成功",
@@ -972,18 +1105,23 @@
       "deleteSuccess": "报价单 {0} 已删除",
       "voidSuccess": "已作废",
       "submitSuccess": "已提交审批",
-      "sendSuccess": "报价已发送",
+      "sendSuccess": "审批通过，报价已确认",
+      "approveSuccess": "审批通过，报价已确认",
       "rejectSuccess": "已拒绝",
-      "cancelApprovalSuccess": "已取消审批，报价单回到草稿",
-      "wonSuccess": "已成交",
+      "cancelApprovalSuccess": "已撤回",
+      "rollbackSuccess": "已撤回",
+      "withdrawSuccess": "已撤回",
+      "wonSuccess": "已确认成交",
       "copySuccess": "已复制为新草稿",
       "copyPrefilled": "已带入报价内容，保存后将生成新报价单",
+      "reviseSuccess": "已创建变更草稿 {0}",
+      "reviseNeedReason": "请填写变更原因",
       "followUpCreated": "跟进记录已添加",
       "followSuccess": "跟进状态已更新",
-      "noCostSnapshot": "暂无成本匹配快照",
+      "noCostSnapshot": "暂无报价库匹配快照",
       "noCostImported": "尚未引入{0}",
-      "costExpired": "只能引入生效中的成本数据，请选择有效记录或维护成本库",
-      "noCostMatchType": "{0}：无对应成本数据，请先维护成本库",
+      "costExpired": "不能引入已过期的报价库数据，请选择生效中或未生效的记录",
+      "noCostMatchType": "{0}：无对应报价库数据，请先将成本入报价库",
       "costImportedType": "已引入{0}",
       "costImporting": "正在按报价规则计算费用…",
       "maxSeaFreight": "最多引入 {0} 条海运费",
@@ -996,6 +1134,7 @@
     "print": {
       "client": "Client（客户）",
       "date": "Date（报价日期）",
+      "validUntil": "Valid Until（有效期）",
       "por": "POR（起运港）",
       "pod": "POD（目的港）",
       "pickUpAddressLine1": "PICK UP ADDRESS",
@@ -1011,6 +1150,11 @@
     "sheet": {
       "title": "报价单",
       "date": "Date",
+      "validUntil": "Valid Until",
+      "serviceType": "服务类型",
+      "oakType": "OAK / NON-OAK",
+      "oak": "OAK",
+      "nonOak": "NON-OAK",
       "client": "Client",
       "pickUpAddress": "PICK UP ADDRESS",
       "city": "CITY",
@@ -1064,10 +1208,17 @@
       "deletePrefix": "确定删除报价单 ",
       "deleteSuffix": " 吗？此操作不可恢复。",
       "void": "确定作废报价单「{0}」吗？",
-      "send": "确定发送报价单「{0}」吗？",
+      "revise": "将基于当前已确认报价创建变更草稿，原单保持已确认。请填写变更原因：",
+      "send": "确定审批通过报价单「{0}」吗？审批后将变为已确认报价。",
+      "approve": "确定审批通过报价单「{0}」吗？审批后将变为已确认报价。",
       "reject": "确定拒绝报价单「{0}」吗？",
-      "cancelApproval": "确定取消审批并退回草稿「{0}」吗？",
+      "cancelApproval": "确定撤回报价单「{0}」的审批吗？",
+      "rollback": "确定撤回报价单「{0}」的审批吗？",
+      "withdraw": "确定撤回报价单「{0}」的审批吗？本次流程将终止。",
+      "submit": "确定提交报价单「{0}」审批吗？提交后将变为待审批报价。",
+      "submitNeedSave": "当前报价单有未保存的修改，请先保存后再提交审批。",
       "won": "确认将该报价单标记为已成交？",
+      "confirmWon": "确认将该报价单标记为已成交？",
       "deleteFollowUp": "确定删除这条跟进记录吗？"
     },
     "costSource": {
@@ -1078,17 +1229,17 @@
       "stale": "成本已更新"
     },
     "costPicker": {
-      "title": "从成本库选择",
-      "selectOne": "请选择一条成本记录",
-      "selectSea": "请至少选择一条海运成本记录",
+      "title": "从报价库选择",
+      "selectOne": "请选择一条报价库记录",
+      "selectSea": "请至少选择一条海运报价库记录",
       "selectedCount": "已选 {0} 条",
       "confirmHint": "单击选中一行，双击或点「确认」引入",
       "confirmHintSea": "可多选，最多 {0} 条；已匹配/已引入的记录会自动勾选",
-      "selectRows": "请先选择成本记录",
+      "selectRows": "请先选择报价库记录",
       "addSelected": "添加已选（{0}）",
-      "selectedHint": "已选 {0} 条成本记录",
+      "selectedHint": "已选 {0} 条报价库记录",
       "roadPriceTitle": "选择计价字段",
-      "roadPriceHint": "卡车成本含多项费用，请选择用于本报价的计价字段（默认 ALL IN）。",
+      "roadPriceHint": "卡车报价含多项费用，请选择用于本报价的计价字段（默认 ALL IN）。",
       "priceField": "计价字段",
       "roadBatchSummary": "已选 {0} 条卡车成本，将使用同一计价字段",
       "allAlreadyAdded": "所选成本已在当前报价单中，请勿重复添加"
@@ -1257,6 +1408,7 @@
       "template": "视图模板",
       "customer": "客商管理",
       "masterData": "主数据",
+      "approval": "审批管理",
       "quote": "报价管理",
       "ai": "AI助手"
     },
@@ -1282,6 +1434,7 @@
       "code": "编码",
       "name": "名称",
       "username": "账号",
+      "avatar": "头像",
       "realName": "姓名",
       "dept": "部门",
       "parentDept": "上级部门",
@@ -1311,7 +1464,13 @@
       "user": "为用户分配部门与角色；账号创建后不可修改。",
       "role": "配置角色的数据范围与功能权限；内置超级管理员角色不可删除。",
       "operationLog": "记录用户对业务数据的创建、更新、删除操作，便于审计追溯。",
-      "announcement": "发布功能更新通知，所有在线用户登录后将收到弹窗提醒。"
+      "announcement": "发布功能更新或活动通知，可选择弹窗、顶部滚动条或两者同时展示。"
+    },
+    "activityTicker": {
+      "close": "关闭",
+      "detailTitle": "活动详情",
+      "label": "当前活动",
+      "viewDetail": "点击查看活动详情"
     },
     "announcementPage": {
       "publishSuccess": "公告已发布，用户登录后将收到弹窗提醒",
@@ -1333,8 +1492,9 @@
       "readCountLabel": "已读",
       "unreadCountLabel": "未读",
       "deleteConfirm": "确定删除公告「{0}」吗？删除后用户将不再看到该通知。",
-      "disableConfirm": "确定停用公告「{0}」吗？停用后将不再弹窗展示。",
+      "disableConfirm": "确定停用公告「{0}」吗？停用后将不再弹窗或滚动展示。",
       "validation": {
+        "contentRequired": "请填写正文",
         "required": "请填写标题和正文",
         "titleRequired": "请填写标题",
         "scheduledAtRequired": "请选择预约发布时间"
@@ -1360,9 +1520,15 @@
         "publishNow": "立即发布",
         "publishScheduled": "预约发布"
       },
+      "displayType": {
+        "modal": "弹窗",
+        "ticker": "滚动条",
+        "both": "弹窗 + 滚动条"
+      },
       "placeholders": {
-        "title": "例如：成本库新增「标记常用」功能",
-        "content": "简要说明本次更新内容与使用方式，支持换行",
+        "title": "弹窗标题，简要概括通知内容",
+        "content": "弹窗正文：简要说明更新内容与使用方式，支持换行",
+        "tickerContent": "滚动条正文：填写将在顶部滚动展示的活动文案",
         "validDays": "留空表示长期有效"
       },
       "searchPlaceholders": {
@@ -1370,20 +1536,23 @@
         "createdBy": "发布人姓名"
       },
       "hints": {
-        "validDays": "留空表示长期有效；到期后不再向用户弹窗展示。"
+        "displayType": "先选择展示方式。仅滚动条：不需标题，正文即滚动文案。弹窗或两者：需填写标题与正文。",
+        "validDays": "留空表示长期有效；到期后不再弹窗或滚动展示。"
       },
       "fields": {
         "keyword": "关键词",
         "title": "标题",
         "content": "正文",
         "validDays": "有效期",
+        "validDaysUnit": "天",
         "publishedAt": "发布时间",
         "expiresAt": "过期时间",
         "createdBy": "发布人",
         "status": "状态",
         "publishMode": "发布方式",
         "scheduledAt": "预约时间",
-        "readStats": "阅读情况"
+        "readStats": "阅读情况",
+        "displayType": "展示方式"
       }
     },
     "operationLogPage": {
@@ -1451,7 +1620,7 @@
     "parsePlaceholder": "粘贴客户邮件或询价文本…",
     "parseHint": "可选提示，例如：提取路线与箱型",
     "emptyHint": "可以问字段含义、报价流程，查成本，或让小福瑞帮填卡车/海运/熏蒸成本录入表单（你确认后才保存）。",
-    "greeting": "你好呀！我是小福瑞，福瑞多报价系统的 AI 助手。\n我可以帮你：\n· 解答系统用法和字段含义（比如 POR / POL）\n· 查询卡车、海运、熏蒸成本\n· 帮你打开成本录入表并预填数据（你确认后才保存）\n· 解析邮件 / Excel / PDF 里的询价信息\n有什么需要，随时叫我～",
+    "greeting": "你好呀！我是小福瑞，福瑞多货代系统的 AI 助手。\n我可以帮你：\n· 解答系统用法和字段含义（比如 POR / POL）\n· 查询卡车、海运、熏蒸成本\n· 帮你打开成本录入表并预填数据（你确认后才保存）\n· 解析邮件 / Excel / PDF 里的询价信息\n有什么需要，随时叫我～",
     "send": "发送",
     "sendHint": "Enter 发送 · Shift+Enter 换行",
     "clear": "清空会话",
@@ -1482,5 +1651,68 @@
     "proposeSaved": "已新增卡车成本 #{0}",
     "proposeSavedChat": "已按你的确认写入卡车成本库，记录 ID：{0}。",
     "proposeSaveFailed": "写入成本库失败，请核对必填项后重试"
+  },
+  "approval": {
+    "title": "审批管理",
+    "list": "审批单列表",
+    "config": "审批配置",
+    "detailTitle": "审批详情",
+    "workflowTitle": "审批流程",
+    "sheetPreview": "报价单预览",
+    "commentRequired": "请填写审批意见",
+    "commentPlaceholder": "请输入审批意见",
+    "approveModalTitle": "审批通过",
+    "rejectModalTitle": "审批驳回",
+    "rejectSuccess": "已驳回并退回草稿",
+    "withdrawModalTitle": "撤回审批",
+    "withdrawReason": "撤回原因",
+    "withdrawReasonRequired": "请填写撤回原因",
+    "withdrawPlaceholder": "请输入撤回原因",
+    "type": {
+      "quote": "报价单审批",
+      "quoteRevision": "变更报价单审批"
+    },
+    "status": {
+      "PENDING": "审批中",
+      "APPROVED": "已通过",
+      "REJECTED": "已驳回",
+      "WITHDRAWN": "已撤回"
+    },
+    "fields": {
+      "approvalNo": "审批单号",
+      "approvalType": "审批类型",
+      "relatedDocNo": "关联单据号",
+      "currentNode": "当前节点",
+      "initiatorName": "发起人",
+      "initiatorDept": "发起部门",
+      "initiatedAt": "发起时间",
+      "completedAt": "完成时间",
+      "duration": "审批用时",
+      "status": "状态",
+      "comment": "审批意见",
+      "configNo": "配置编号",
+      "configObject": "配置对象",
+      "configFlow": "配置流程"
+    },
+    "configObject": {
+      "QUOTE": "报价单"
+    },
+    "configForm": {
+      "createTitle": "新增审批配置",
+      "editTitle": "编辑审批配置",
+      "flowHint": "按顺序设置审批人，可配置一个或多个节点",
+      "addStep": "添加节点",
+      "stepLabel": "节点 {0}",
+      "approverRequired": "请选择审批人",
+      "flowRequired": "请至少配置一个审批节点",
+      "duplicateApprover": "同一审批人不能重复出现"
+    },
+    "actions": {
+      "view": "查看",
+      "back": "返回列表",
+      "approve": "同意",
+      "reject": "驳回",
+      "createConfig": "新增配置"
+    }
   }
 }

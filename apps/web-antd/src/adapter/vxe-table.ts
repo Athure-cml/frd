@@ -81,6 +81,73 @@ setupVbenVxeTable({
       },
     });
 
+    vxeUI.renderer.add('CellRelationLink', {
+      renderTableDefault({ attrs }, { row }) {
+        const direction = attrs?.direction as
+          | 'cost-to-quote'
+          | 'quote-to-cost'
+          | undefined;
+
+        if (direction === 'quote-to-cost') {
+          return h(
+            'div',
+            { class: 'cost-relation-cell' },
+            h(
+              Button,
+              {
+                class: 'cost-relation-cell__link',
+                size: 'small',
+                type: 'link',
+                onClick: (event: MouseEvent) => {
+                  event.stopPropagation();
+                  attrs?.onClick?.(row);
+                },
+              },
+              { default: () => $t('page.costLibrary.actions.viewCost') },
+            ),
+          );
+        }
+
+        const inQuoteLibrary = row.inQuoteLibrary === true;
+        const label = inQuoteLibrary
+          ? $t('page.costLibrary.relation.quoteGenerated')
+          : $t('page.costLibrary.relation.quoteNotGenerated');
+
+        return h(
+          'div',
+          { class: 'cost-relation-cell' },
+          h(
+            Tag,
+            {
+              bordered: false,
+              class: inQuoteLibrary
+                ? 'cost-relation-cell__tag--link'
+                : undefined,
+              color: inQuoteLibrary ? 'success' : 'default',
+              ...(inQuoteLibrary
+                ? {
+                    role: 'link',
+                    tabindex: 0,
+                    onClick: (event: MouseEvent) => {
+                      event.stopPropagation();
+                      attrs?.onClick?.(row);
+                    },
+                    onKeydown: (event: KeyboardEvent) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        attrs?.onClick?.(row);
+                      }
+                    },
+                  }
+                : {}),
+            },
+            { default: () => label },
+          ),
+        );
+      },
+    });
+
     vxeUI.renderer.add('CellTag', {
       renderTableDefault({ options, props }, { column, row }) {
         const value = get(row, column.field);
@@ -248,7 +315,9 @@ setupVbenVxeTable({
         }
 
         const btns = operations.map((opt) =>
-          opt.code === 'delete' ? renderConfirm(opt) : renderBtn(opt),
+          opt.code === 'delete' && opt.confirm !== false
+            ? renderConfirm(opt)
+            : renderBtn(opt),
         );
         return h(
           'div',

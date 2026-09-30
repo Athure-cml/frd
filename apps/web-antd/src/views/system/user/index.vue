@@ -8,13 +8,15 @@ import type { SystemUserApi } from '#/api/system/user';
 import { useAccess } from '@vben/access';
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
+import { preferences } from '@vben/preferences';
 
-import { Button, message, Modal, Tag } from 'ant-design-vue';
+import { Avatar, Button, message, Modal, Tag } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deleteUser, getUserList, updateUser } from '#/api/system/user';
 import { $t } from '#/locales';
 
+import { resolveAvatarUrl } from '../../_core/profile/profile-utils';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import {
   rowToUserFormValues,
@@ -28,6 +30,11 @@ import '../shared/system.css';
 
 const { hasAccessByCodes } = useAccess();
 const canManage = hasAccessByCodes(['sys:user:manage']);
+const defaultAvatar = preferences.app.defaultAvatar;
+
+function userAvatarSrc(avatar?: string) {
+  return resolveAvatarUrl(avatar, defaultAvatar);
+}
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
@@ -161,6 +168,13 @@ function onRefresh() {
           <Plus class="size-4" />
           {{ $t('page.system.actions.createUser') }}
         </Button>
+      </template>
+      <template #avatar="{ row }">
+        <Avatar
+          class="sys-user-avatar"
+          :size="36"
+          :src="userAvatarSrc(row.avatar)"
+        />
       </template>
       <template #username="{ row }">
         <span class="sys-code">{{ row.username }}</span>

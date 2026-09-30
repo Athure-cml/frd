@@ -2,6 +2,7 @@ import type { Recordable } from '@vben/types';
 
 import type {
   CostBatchUpdatePayload,
+  CostBatchUpdateResult,
   CostImportResult,
   FumigationCostRecord,
   FumigationCostSave,
@@ -21,9 +22,13 @@ export const fumigationCostApi = {
     return requestClient.post(`${base}/batch-delete`, { ids });
   },
   batchUpdate(data: CostBatchUpdatePayload) {
-    return requestClient.patch<{ updated: number }>(`${base}/batch`, data, {
-      timeout: BATCH_REQUEST_TIMEOUT_MS,
-    });
+    return requestClient.patch<CostBatchUpdateResult<FumigationCostRecord>>(
+      `${base}/batch`,
+      data,
+      {
+        timeout: BATCH_REQUEST_TIMEOUT_MS,
+      },
+    );
   },
   create(data: FumigationCostSave) {
     return requestClient.post<FumigationCostRecord>(base, data);

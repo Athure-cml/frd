@@ -12,6 +12,7 @@ defineOptions({
   name: 'PreferenceInterfaceControl',
 });
 
+const widgetActivityTicker = defineModel<boolean>('widgetActivityTicker');
 const widgetGlobalSearch = defineModel<boolean>('widgetGlobalSearch');
 const widgetFullscreen = defineModel<boolean>('widgetFullscreen');
 const widgetLanguageToggle = defineModel<boolean>('widgetLanguageToggle');
@@ -46,6 +47,9 @@ const positionItems = computed((): SelectOption[] => [
 </script>
 
 <template>
+  <SwitchItem v-model="widgetActivityTicker">
+    {{ $t('preferences.widget.activityTicker') }}
+  </SwitchItem>
   <SwitchItem v-model="widgetGlobalSearch">
     {{ $t('preferences.widget.globalSearch') }}
   </SwitchItem>

@@ -1,18 +1,17 @@
 <script lang="ts" setup>
 import type { WorkspaceTodoView } from './map-workspace';
 
-import { Checkbox } from 'ant-design-vue';
-
 import { $t } from '#/locales';
 
 import WorkspaceCard from './workspace-card.vue';
+import WorkspaceEmpty from './workspace-empty.vue';
 
 defineProps<{
   items: WorkspaceTodoView[];
 }>();
 
 const emit = defineEmits<{
-  itemClick: [id: string];
+  itemClick: [href: string];
   viewAll: [];
 }>();
 
@@ -30,22 +29,20 @@ const priorityClass: Record<WorkspaceTodoView['priority'], string> = {
     :title="$t('page.workspace.todos.title')"
     @action="emit('viewAll')"
   >
-    <ul class="workspace-todo-list">
+    <ul v-if="items.length > 0" class="workspace-todo-list">
       <li
         v-for="item in items"
         :key="item.id"
         class="workspace-todo-item"
-        :class="{ 'workspace-todo-item--done': item.done }"
+        :class="[
+          `workspace-todo-item--${item.priority}`,
+          { 'workspace-todo-item--done': item.done },
+        ]"
         role="button"
         tabindex="0"
-        @click="emit('itemClick', item.id)"
-        @keydown.enter="emit('itemClick', item.id)"
+        @click="emit('itemClick', item.href)"
+        @keydown.enter="emit('itemClick', item.href)"
       >
-        <Checkbox
-          :checked="item.done"
-          class="workspace-todo-check"
-          @click.stop
-        />
         <div class="workspace-todo-body">
           <p class="workspace-todo-title">{{ item.title }}</p>
           <p class="workspace-todo-meta">
@@ -61,5 +58,10 @@ const priorityClass: Record<WorkspaceTodoView['priority'], string> = {
         <span class="workspace-todo-time">{{ item.time }}</span>
       </li>
     </ul>
+    <WorkspaceEmpty
+      v-else
+      illustration="emptyTodos"
+      :description="$t('page.workspace.todos.empty')"
+    />
   </WorkspaceCard>
 </template>

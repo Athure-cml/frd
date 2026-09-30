@@ -67,10 +67,10 @@ function recordSnapshot<T extends Record<string, unknown>>(
   record: T,
 ): Record<string, unknown> {
   const { id: _id, updatedAt: _updatedAt, ...snapshot } = record;
-  return { ...snapshot };
+  return { ...snapshot, fromQuoteLibrary: true };
 }
 
-/** 将历史快照字段名对齐成本库列表字段，便于复用同一套列定义 */
+/** 将历史快照字段名对齐报价库列表字段，便于复用同一套列定义 */
 export function normalizeSnapshotRow(
   type: QuoteCostType,
   snapshot: Record<string, unknown> = {},
@@ -113,7 +113,7 @@ export function normalizeSnapshotRow(
   };
 }
 
-function parseValidityEnd(raw: unknown): Date | undefined {
+export function parseValidityEnd(raw: unknown): Date | undefined {
   if (raw === null || raw === undefined || raw === '') {
     return undefined;
   }
@@ -130,6 +130,26 @@ function parseValidityEnd(raw: unknown): Date | undefined {
   const date = new Date(parsed);
   date.setHours(0, 0, 0, 0);
   return date;
+}
+
+/** 多条海运报价取最早有效期结束日（YYYY-MM-DD），供报价单 validUntil 回填 */
+export function resolveValidUntilFromSeaRecords(
+  records: Array<{ freightValidDate?: null | string }>,
+): string | undefined {
+  let earliest: Date | undefined;
+  for (const record of records) {
+    const end = parseValidityEnd(record.freightValidDate);
+    if (end && (!earliest || end < earliest)) {
+      earliest = end;
+    }
+  }
+  if (!earliest) {
+    return undefined;
+  }
+  const y = earliest.getFullYear();
+  const m = String(earliest.getMonth() + 1).padStart(2, '0');
+  const d = String(earliest.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function parseEffectiveStart(raw: unknown): Date | undefined {
@@ -196,13 +216,13 @@ function resolveSnapshotStatus(
   return latestEnd < today ? 'expired' : 'active';
 }
 
-/** 报价引入成本：仅允许生效中记录 */
+/** 报价引入成本：允许生效中、未生效；已过期不可引入 */
 export function isActiveCostRecord(
   type: QuoteCostType,
   record: Record<string, unknown>,
 ): boolean {
   const status = record.status ?? resolveSnapshotStatus(type, record);
-  return status === 'active';
+  return status === 'active' || status === 'pending';
 }
 
 export function recordToCostMatchItem(
@@ -246,6 +266,7 @@ export interface CostImportContext {
   cifAmount?: number;
   fumigationEnabled?: boolean;
   fumigationPoint?: string;
+  oakType?: 'NON_OAK' | 'OAK';
   pod?: string;
   por?: string;
   quoteDate?: string;
@@ -257,10 +278,12 @@ export async function fetchCostImportFields(
   context: CostImportContext,
 ): Promise<QuoteApi.QuoteSheetFields> {
   const { fields } = await applyQuoteCostImport({
+    costRefId: record.id,
     costType: type,
     snapshot: recordSnapshot(record as unknown as Record<string, unknown>),
     fumigationEnabled: context.fumigationEnabled,
     fumigationPoint: context.fumigationPoint,
+    oakType: context.oakType,
     pod: context.pod,
     por: context.por,
     cifAmount: context.cifAmount,
@@ -331,16 +354,9 @@ export function mergeRoadCostImport(
   }
   sheet.truckRemark =
     fields.truckRemark ?? resolveRoadRemark(record) ?? sheet.truckRemark;
-
-  if (fumigationEnabled) {
-    sheet.truckingNonOakUsd = fields.truckingNonOakUsd;
-    sheet.truckingOakUsd = fields.truckingOakUsd;
-    sheet.truckingFee = undefined;
-  } else {
-    sheet.truckingFee = fields.truckingFee;
-    sheet.truckingNonOakUsd = undefined;
-    sheet.truckingOakUsd = undefined;
-  }
+  sheet.truckingFee = fields.truckingFee;
+  sheet.truckingNonOakUsd = undefined;
+  sheet.truckingOakUsd = undefined;
 }
 
 export function mergeSeaCostImport(

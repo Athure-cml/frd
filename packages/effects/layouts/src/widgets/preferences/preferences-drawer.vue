@@ -174,6 +174,7 @@ const shortcutKeysGlobalLockScreen = defineModel<boolean>(
   'shortcutKeysGlobalLockScreen',
 );
 
+const widgetActivityTicker = defineModel<boolean>('widgetActivityTicker');
 const widgetGlobalSearch = defineModel<boolean>('widgetGlobalSearch');
 const widgetFullscreen = defineModel<boolean>('widgetFullscreen');
 const widgetLanguageToggle = defineModel<boolean>('widgetLanguageToggle');
@@ -483,6 +484,7 @@ function handleCustomPreferencesUpdate(updates: CustomPreferencesRecord) {
                 v-model:app-preferences-button-position="
                   appPreferencesButtonPosition
                 "
+                v-model:widget-activity-ticker="widgetActivityTicker"
                 v-model:widget-fullscreen="widgetFullscreen"
                 v-model:widget-global-search="widgetGlobalSearch"
                 v-model:widget-language-toggle="widgetLanguageToggle"

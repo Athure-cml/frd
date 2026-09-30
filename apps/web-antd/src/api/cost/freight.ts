@@ -3,6 +3,7 @@ import type { Recordable } from '@vben/types';
 import type {
   CostBatchCopyResult,
   CostBatchUpdatePayload,
+  CostBatchUpdateResult,
   CostImportResult,
   FreightCostRecord,
   FreightCostSave,
@@ -21,9 +22,13 @@ function createFreightApi(base: string) {
       return requestClient.post(`${base}/batch-delete`, { ids });
     },
     batchUpdate(data: CostBatchUpdatePayload) {
-      return requestClient.patch<{ updated: number }>(`${base}/batch`, data, {
-        timeout: BATCH_REQUEST_TIMEOUT_MS,
-      });
+      return requestClient.patch<CostBatchUpdateResult<FreightCostRecord>>(
+        `${base}/batch`,
+        data,
+        {
+          timeout: BATCH_REQUEST_TIMEOUT_MS,
+        },
+      );
     },
     batchCopy(data: {
       applyOverrides?: boolean;

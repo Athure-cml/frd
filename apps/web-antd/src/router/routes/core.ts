@@ -65,6 +65,17 @@ const coreRoutes: RouteRecordRaw[] = [
     children: [],
   },
   {
+    name: 'LegacyAnalytics',
+    path: '/analytics',
+    redirect: '/workspace',
+    meta: {
+      hideInMenu: true,
+      hideInTab: true,
+      ignoreAccess: true,
+      title: 'Workspace',
+    },
+  },
+  {
     component: AuthPageLayout,
     meta: {
       hideInTab: true,

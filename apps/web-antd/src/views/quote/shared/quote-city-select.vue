@@ -48,6 +48,7 @@ function onSelect(value: string) {
     class="w-full"
     :disabled="disabled"
     :options="cityOptions"
+    :placeholder="disabled ? '—' : undefined"
     @focus="onFocus"
     @search="onSearch"
     @select="onSelect"

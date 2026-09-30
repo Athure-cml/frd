@@ -67,16 +67,29 @@ const MENU_SCHEMA: MenuModuleDef[] = [
     titleKey: 'page.quote.title',
     children: [
       {
-        kind: 'shared',
-        segment: 'analytics',
-        titleKey: 'page.dashboard.analytics',
-        permissionCode: 'dashboard:view',
-      },
-      {
         kind: 'group',
         segment: 'list',
         titleKey: 'page.quote.list',
-        match: (code) => code.startsWith('quote:'),
+        match: (code) =>
+          code.startsWith('quote:') && !code.startsWith('quote:library:'),
+      },
+      {
+        kind: 'group',
+        segment: 'library_road',
+        titleKey: 'page.quote.library.road',
+        match: (code) => code.startsWith('quote:library:road:'),
+      },
+      {
+        kind: 'group',
+        segment: 'library_sea',
+        titleKey: 'page.quote.library.sea',
+        match: (code) => code.startsWith('quote:library:sea:'),
+      },
+      {
+        kind: 'group',
+        segment: 'library_fumigation',
+        titleKey: 'page.quote.library.fumigation',
+        match: (code) => code.startsWith('quote:library:fumigation:'),
       },
     ],
   },
@@ -216,6 +229,30 @@ const MENU_SCHEMA: MenuModuleDef[] = [
         segment: 'md_container_type',
         titleKey: 'page.masterData.containerType',
         match: (code) => code.startsWith('md_container_type:'),
+      },
+      {
+        kind: 'group',
+        segment: 'md_quote_rule',
+        titleKey: 'page.masterData.quoteRule',
+        match: (code) => code.startsWith('md_quote_rule:'),
+      },
+    ],
+  },
+  {
+    module: 'approval',
+    titleKey: 'page.approval.title',
+    children: [
+      {
+        kind: 'group',
+        segment: 'list',
+        titleKey: 'page.approval.list',
+        match: (code) => code === 'quote:approve',
+      },
+      {
+        kind: 'group',
+        segment: 'config',
+        titleKey: 'page.approval.config',
+        match: (code) => code.startsWith('approval:config:'),
       },
     ],
   },

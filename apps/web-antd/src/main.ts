@@ -1,6 +1,8 @@
 import { initPreferences, updatePreferences } from '@vben/preferences';
 import { unmountGlobalLoading } from '@vben/utils';
 
+import { FRD_QUOTE_LOGO_SRC } from '#/constants/brand';
+
 import { overridesPreferences, preferencesExtension } from './preferences';
 
 /**
@@ -25,8 +27,9 @@ async function initApplication() {
     logo: {
       enable: true,
       fit: 'contain',
-      source: '',
-      sourceDark: '',
+      size: 52,
+      source: FRD_QUOTE_LOGO_SRC,
+      sourceDark: FRD_QUOTE_LOGO_SRC,
     },
     app: {
       enableCheckUpdates: true,

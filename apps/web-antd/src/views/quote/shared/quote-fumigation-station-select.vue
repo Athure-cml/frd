@@ -31,6 +31,8 @@ onMounted(async () => {
     :options="stationOptions"
     option-filter-prop="label"
     show-search
-    :placeholder="$t('page.quote.sheet.selectFumigationStation')"
+    :placeholder="
+      disabled ? '—' : $t('page.quote.sheet.selectFumigationStation')
+    "
   />
 </template>

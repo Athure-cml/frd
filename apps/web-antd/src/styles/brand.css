@@ -1,0 +1,35 @@
+/**
+ * FRD 宽 Logo：双列侧栏顶部占满可用宽度（与报价单打印模板比例接近）
+ */
+aside.bg-sidebar-deep .flex.h-full.items-center.text-lg > a {
+  justify-content: center;
+  width: 100%;
+  padding-inline: 6px;
+}
+
+aside.bg-sidebar-deep .flex.h-full.items-center.text-lg .relative.rounded-none.bg-transparent {
+  width: calc(100% - 4px) !important;
+  max-width: 76px;
+  height: 52px !important;
+}
+
+aside.bg-sidebar-deep .flex.h-full.items-center.text-lg img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* 常规侧栏 / 顶栏 Logo 同步放大 */
+aside.border-border .flex.h-full.items-center.text-lg .relative.rounded-none.bg-transparent,
+header .flex.h-full.items-center.text-lg .relative.rounded-none.bg-transparent {
+  width: auto !important;
+  max-width: 220px;
+  height: 52px !important;
+}
+
+aside.border-border .flex.h-full.items-center.text-lg img,
+header .flex.h-full.items-center.text-lg img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}

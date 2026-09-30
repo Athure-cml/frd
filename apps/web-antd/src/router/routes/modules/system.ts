@@ -7,7 +7,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       authority: ['super_admin', 'super', 'admin'],
       icon: 'lucide:settings',
-      order: 7,
+      order: 8,
       title: $t('page.system.title'),
     },
     name: 'System',

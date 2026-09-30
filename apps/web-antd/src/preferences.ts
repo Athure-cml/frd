@@ -3,7 +3,10 @@ import {
   definePreferencesExtension,
 } from '@vben/preferences';
 
+import { FRD_QUOTE_LOGO_SRC } from '#/constants/brand';
+
 const appTitle = import.meta.env.VITE_APP_TITLE;
+const companyName = '上海福瑞多供应链管理有限公司';
 
 interface WebAntdPreferencesExtension {
   defaultTableSize: number;
@@ -20,7 +23,7 @@ interface WebAntdPreferencesExtension {
 export const overridesPreferences = defineOverridesPreferences({
   app: {
     name: appTitle,
-    defaultHomePath: '/analytics',
+    defaultHomePath: '/workspace',
     layout: 'sidebar-mixed-nav',
     // mixed：菜单由后端 /menu/all 按权限码过滤；前端仅补 hideInMenu 的隐藏路由
     accessMode: 'mixed',
@@ -32,24 +35,25 @@ export const overridesPreferences = defineOverridesPreferences({
     styleType: 'background',
   },
   sidebar: {
-    width: 320,
+    width: 220,
   },
   theme: {
     mode: 'auto',
   },
   copyright: {
-    companyName: appTitle,
+    companyName,
     companySiteLink: '',
     date: String(new Date().getFullYear()),
     enable: true,
-    icp: '',
-    icpLink: '',
+    icp: '沪ICP备2026047688号',
+    icpLink: 'https://beian.miit.gov.cn/',
   },
   logo: {
     enable: true,
     fit: 'contain',
-    source: '',
-    sourceDark: '',
+    size: 52,
+    source: FRD_QUOTE_LOGO_SRC,
+    sourceDark: FRD_QUOTE_LOGO_SRC,
   },
 });
 

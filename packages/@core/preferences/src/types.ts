@@ -228,6 +228,8 @@ interface LogoPreferences {
   enable: boolean;
   /** logo图片适应方式 */
   fit: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+  /** logo 显示尺寸（px） */
+  size?: number;
   /** logo地址 */
   source: string;
   /** 暗色主题logo地址 (可选，若不设置则使用 source) */
@@ -357,6 +359,8 @@ interface TransitionPreferences {
 }
 
 interface WidgetPreferences {
+  /** 是否显示活动通知滚动栏 */
+  activityTicker: boolean;
   /** 是否启用全屏部件 */
   fullscreen: boolean;
   /** 是否启用全局搜索部件 */

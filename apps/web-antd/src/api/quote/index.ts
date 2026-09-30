@@ -4,6 +4,16 @@ import { requestClient } from '#/api/request';
 
 export type QuoteTransportMode = 'RAIL' | 'ROAD' | 'SEA';
 
+export type QuoteServiceType =
+  | 'FUMIGATION'
+  | 'INSURANCE'
+  | 'OTHER'
+  | 'SEA'
+  | 'TRADE'
+  | 'TRUCK';
+
+export type QuoteOakType = 'NON_OAK' | 'OAK';
+
 export type QuoteStatus =
   | 'DRAFT'
   | 'EFFECTIVE'
@@ -13,7 +23,9 @@ export type QuoteStatus =
   | 'PENDING'
   | 'PENDING_APPROVAL'
   | 'REJECTED'
+  | 'REVISING'
   | 'SENT'
+  | 'SUPERSEDED'
   | 'VOIDED'
   | 'WON';
 
@@ -86,6 +98,8 @@ export namespace QuoteApi {
     quoteDate?: string;
     quoteNo: string;
     routeSummary?: string;
+    serviceTypes?: QuoteServiceType[];
+    oakType?: QuoteOakType;
     sheet: QuoteSheetFields;
     status: QuoteStatus;
     totalAmount: number;
@@ -95,6 +109,17 @@ export namespace QuoteApi {
     voided: boolean;
     /** 当前用户是否可操作（创建人或超级管理员） */
     operable: boolean;
+    costRiskActive?: boolean;
+    costRiskReason?: string;
+    costRiskModes?: string[];
+    costRiskAt?: string;
+    parentQuoteId?: number;
+    rootQuoteId?: number;
+    revisionNo?: number;
+    revisionLabel?: string;
+    changeReason?: string;
+    currentVersion?: boolean;
+    supersededByQuoteId?: number;
   }
 
   export interface QuoteDetail extends QuoteListItem {
@@ -150,6 +175,8 @@ export namespace QuoteApi {
     }>;
     remark?: string;
     routeSummary?: string;
+    serviceTypes?: QuoteServiceType[];
+    oakType?: QuoteOakType;
     transportMode: QuoteTransportMode;
     validUntil?: string;
   }
@@ -177,6 +204,7 @@ export namespace QuoteApi {
     city?: string;
     fumigationEnabled?: boolean;
     fumigationPoint?: string;
+    oakType?: QuoteOakType;
     pickUpAddress?: string;
     pod?: string;
     pol?: string;
@@ -196,9 +224,11 @@ export namespace QuoteApi {
 
   export interface ApplyCostImportRequest {
     cifAmount?: number;
+    costRefId?: number;
     costType: QuoteCostType;
     fumigationEnabled?: boolean;
     fumigationPoint?: string;
+    oakType?: QuoteOakType;
     pod?: string;
     por?: string;
     quoteDate?: string;
@@ -207,6 +237,23 @@ export namespace QuoteApi {
 
   export interface ApplyCostImportResponse {
     fields: QuoteSheetFields;
+  }
+
+  export interface ApprovalHistoryItem {
+    action?: 'APPROVE' | 'REJECT' | 'ROLLBACK' | 'SUBMIT';
+    comment?: string;
+    id: number;
+    nodeTitle: string;
+    operatedAt?: string;
+    operatorName: string;
+    result: string;
+  }
+
+  export interface OperationLogItem {
+    createdAt?: string;
+    id: number;
+    realName?: string;
+    summary?: string;
   }
 }
 
@@ -257,6 +304,12 @@ export async function generateQuoteSheet(data: QuoteApi.GenerateSheetRequest) {
   );
 }
 
+export async function previewQuoteDocFee(pod?: string) {
+  return requestClient.get<{ docUsd?: string }>('/quotes/doc-fee', {
+    params: { pod },
+  });
+}
+
 export async function applyQuoteCostImport(
   data: QuoteApi.ApplyCostImportRequest,
 ) {
@@ -270,9 +323,10 @@ export async function submitQuote(id: number) {
   return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/submit`);
 }
 
-export async function cancelQuoteApproval(id: number) {
+export async function cancelQuoteApproval(id: number, comment: string) {
   return requestClient.post<QuoteApi.QuoteDetail>(
     `/quotes/${id}/cancel-approval`,
+    { comment },
   );
 }
 
@@ -297,8 +351,20 @@ export async function voidQuote(id: number) {
   return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/void`);
 }
 
+export async function dismissQuoteCostRisk(id: number) {
+  return requestClient.post<QuoteApi.QuoteDetail>(
+    `/quotes/${id}/dismiss-cost-risk`,
+  );
+}
+
 export async function copyQuote(id: number) {
   return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/copy`);
+}
+
+export async function reviseQuote(id: number, changeReason: string) {
+  return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/revise`, {
+    changeReason,
+  });
 }
 
 export async function exportQuotes(params: Recordable<any> = {}) {
@@ -309,9 +375,15 @@ export async function getQuoteOperationLogs(
   id: number,
   params: Recordable<any> = {},
 ) {
-  return requestClient.get<{ items: any[]; total: number }>(
-    `/quotes/${id}/operation-logs`,
-    { params },
+  return requestClient.get<{
+    items: QuoteApi.OperationLogItem[];
+    total: number;
+  }>(`/quotes/${id}/operation-logs`, { params });
+}
+
+export async function getQuoteApprovalLogs(id: number) {
+  return requestClient.get<QuoteApi.ApprovalHistoryItem[]>(
+    `/quotes/${id}/approval-logs`,
   );
 }
 

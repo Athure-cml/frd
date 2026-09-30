@@ -21,10 +21,43 @@ export function buildCostCheckboxColumn() {
 
 /** 状态标签「未生效 / 生效中 / 已过期」内容宽度 */
 const COST_STATUS_COL_WIDTH = 76;
+/** 关联数据：Tag + 查看 */
+export const COST_RELATION_COL_WIDTH = 120;
+export const QUOTE_RELATION_COL_WIDTH = 96;
 /** 操作「修改 / 复制 / 删除」 */
 const COST_OPERATION_COL_WIDTH_DEFAULT = 148;
+/** 报价库操作「修改 / 删除」 */
+const QUOTE_LIBRARY_OPERATION_COL_WIDTH = 108;
 /** 操作「修改 / 续期 / 复制 / 删除」 */
 const COST_OPERATION_COL_WIDTH_WITH_RENEW = 188;
+
+type RelationLinkRow = { id: number; inQuoteLibrary?: boolean };
+
+export function buildCostRelationColumn<T extends RelationLinkRow>(options: {
+  direction: 'cost-to-quote' | 'quote-to-cost';
+  onNavigate: (row: T) => void;
+}) {
+  const width =
+    options.direction === 'quote-to-cost'
+      ? QUOTE_RELATION_COL_WIDTH
+      : COST_RELATION_COL_WIDTH;
+  return {
+    align: 'center' as const,
+    cellRender: {
+      attrs: {
+        direction: options.direction,
+        onClick: options.onNavigate,
+      },
+      name: 'CellRelationLink',
+    },
+    field: 'relationLink',
+    ...(isMobileViewport() ? {} : { fixed: 'right' as const }),
+    minWidth: width,
+    showOverflow: false,
+    title: $t('page.costLibrary.fields.relationData'),
+    width,
+  };
+}
 
 export function buildCostStatusColumn() {
   return {
@@ -48,6 +81,61 @@ export function appendCostStatusColumn<T>(
   return columns;
 }
 
+type QuoteLibraryLockableRow = { inQuoteLibrary?: boolean };
+
+type QuoteOrderLockedRow = { quoteOrderLocked?: boolean };
+
+function disableWhenQuoteOrderLocked(row: QuoteOrderLockedRow) {
+  return row.quoteOrderLocked === true;
+}
+
+/** 成本库：成交报价单已引用 → 禁改删；仅入报价库 → 仍禁删 */
+function disableCostEditWhenWonLocked(row: QuoteOrderLockedRow) {
+  return row.quoteOrderLocked === true;
+}
+
+function disableCostDeleteWhenLocked(
+  row: QuoteLibraryLockableRow & QuoteOrderLockedRow,
+) {
+  return row.quoteOrderLocked === true || row.inQuoteLibrary === true;
+}
+
+/** 报价库列表操作列：禁用已被报价单引用的行，删除确认由页面 Modal 处理 */
+export function appendQuoteLibraryOperationColumn<T extends { id: number }>(
+  columns: VxeTableGridOptions<T>['columns'],
+  canEdit: boolean,
+  onActionClick: OnActionClickFn<T>,
+) {
+  const mobile = isMobileViewport();
+  const operation = buildOperationColumn(canEdit, onActionClick, {
+    minWidth: QUOTE_LIBRARY_OPERATION_COL_WIDTH,
+    nameField: 'id',
+    nameTitle: $t('page.quote.library.deleteNameTitle'),
+    operationOptions: [
+      {
+        code: 'edit',
+        disabled: disableWhenQuoteOrderLocked,
+      },
+      {
+        code: 'delete',
+        confirm: false,
+        disabled: disableWhenQuoteOrderLocked,
+      },
+    ],
+    width: QUOTE_LIBRARY_OPERATION_COL_WIDTH,
+  });
+  if (operation) {
+    operation.title = $t('page.costLibrary.fields.operation');
+    operation.minWidth = QUOTE_LIBRARY_OPERATION_COL_WIDTH;
+    operation.width = QUOTE_LIBRARY_OPERATION_COL_WIDTH;
+    if (mobile) {
+      delete (operation as { fixed?: string }).fixed;
+    }
+    columns?.push(operation);
+  }
+  return columns;
+}
+
 export function appendCostOperationColumn<T extends { id: number }>(
   columns: VxeTableGridOptions<T>['columns'],
   canEdit: boolean,
@@ -65,7 +153,10 @@ export function appendCostOperationColumn<T extends { id: number }>(
     nameField,
     nameTitle,
     operationOptions: [
-      'edit',
+      {
+        code: 'edit',
+        disabled: disableCostEditWhenWonLocked,
+      },
       ...(enableRenew
         ? [
             {
@@ -78,7 +169,10 @@ export function appendCostOperationColumn<T extends { id: number }>(
         code: 'copy',
         text: $t('page.costLibrary.actions.copy'),
       },
-      'delete',
+      {
+        code: 'delete',
+        disabled: disableCostDeleteWhenLocked,
+      },
     ],
   });
   if (operation) {
@@ -126,6 +220,10 @@ export function adaptCostColumnsForViewport<T>(
       next.width = COST_OPERATION_COL_WIDTH_WITH_RENEW;
       next.minWidth = COST_OPERATION_COL_WIDTH_WITH_RENEW;
     }
+    if (next.field === 'relationLink') {
+      next.width = COST_RELATION_COL_WIDTH;
+      next.minWidth = COST_RELATION_COL_WIDTH;
+    }
     if (next.field === 'status') {
       next.width = COST_STATUS_COL_WIDTH;
       next.minWidth = COST_STATUS_COL_WIDTH;
@@ -141,4 +239,32 @@ export function adaptCostColumnsForViewport<T>(
 
 export function costOperationTitle() {
   return $t('page.costLibrary.fields.operation');
+}
+
+export function injectRelationColumn<T extends { id: number }>(
+  columns: VxeTableGridOptions<T>['columns'],
+  options: {
+    direction: 'cost-to-quote' | 'quote-to-cost';
+    onNavigate: (row: T) => void;
+  },
+): VxeTableGridOptions<T>['columns'] {
+  if (!columns?.length) {
+    return columns;
+  }
+  const statusIndex = columns.findIndex(
+    (column) =>
+      column &&
+      typeof column === 'object' &&
+      'field' in column &&
+      column.field === 'status',
+  );
+  const relationColumn = buildCostRelationColumn(options);
+  if (statusIndex === -1) {
+    return [...columns, relationColumn];
+  }
+  return [
+    ...columns.slice(0, statusIndex),
+    relationColumn,
+    ...columns.slice(statusIndex),
+  ] as VxeTableGridOptions<T>['columns'];
 }

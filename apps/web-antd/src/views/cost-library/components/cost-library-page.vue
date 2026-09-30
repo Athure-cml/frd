@@ -41,6 +41,7 @@ import {
   getCostApi,
   unmarkCostHighlight,
 } from '#/api/cost';
+import { promoteToQuoteLibrary } from '#/api/quote/library';
 import {
   aiPrefillEventName,
   consumeAiCostPrefill,
@@ -52,11 +53,19 @@ import { buildListExportParams } from '../../shared/export-params';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import { normalizeRoadCitySearchParam } from '../road/data';
 import { createTemplateColumnBgStyleHandlers } from '../shared/column-bg-style';
-import { adaptCostColumnsForViewport } from '../shared/columns';
+import {
+  adaptCostColumnsForViewport,
+  injectRelationColumn,
+} from '../shared/columns';
+import {
+  navigateToQuoteLibrary,
+  useRelationFocus,
+} from '../shared/cost-quote-relation';
 import { withCostSearchFormLayout } from '../shared/cost-search-form-layout';
 import { getDefaultTemplate } from '../shared/default-templates';
 import { toCopyDrawerData, toRenewDrawerData } from '../shared/drawer-data';
 import { createHighlightOnlySearchField } from '../shared/highlight-only-search';
+import { createInQuoteLibrarySearchField } from '../shared/in-quote-library-search';
 import { createCostRowHighlightStyleHandlers } from '../shared/row-highlight-style';
 import {
   getGridStorageId,
@@ -106,6 +115,10 @@ const router = useRouter();
 const { hasAccessByCodes } = useAccess();
 const { isMobile } = usePreferences();
 const canEdit = hasAccessByCodes([props.editPermission]);
+const canPromoteQuoteLibrary = hasAccessByCodes([
+  `quote:library:${props.mode}:edit`,
+  props.editPermission,
+]);
 const canIntroduceQuote = hasAccessByCodes(['quote:create']);
 const canViewTemplates = hasAccessByCodes([`cost:${props.mode}:template:view`]);
 const introduceQuoteEnabled = computed(
@@ -151,9 +164,30 @@ const activeTemplate = computed(
 );
 
 function resolveColumns() {
-  return adaptCostColumnsForViewport(
-    props.columns(onActionClick, canEdit, activeTemplate.value),
+  return injectRelationColumn(
+    adaptCostColumnsForViewport(
+      props.columns(onActionClick, canEdit, activeTemplate.value),
+    ),
+    {
+      direction: 'cost-to-quote',
+      onNavigate: (row) => navigateToQuoteLibrary(router, props.mode, row.id),
+    },
   );
+}
+
+const highlightHandlers = createCostRowHighlightStyleHandlers();
+const relationFocus = useRelationFocus({
+  getPageRows: () => lastPageItems,
+  gridApi: () => gridApi,
+  mode: props.mode,
+});
+
+function resolveRowClassName(params: { row: CostGridRow }) {
+  const classes = [
+    highlightHandlers.rowClassName(params),
+    relationFocus.relationFocusRowClass(params),
+  ].filter(Boolean);
+  return classes.join(' ');
 }
 
 function applyTemplate(force = false) {
@@ -272,7 +306,6 @@ onMounted(() => {
 
 onActivated(() => {
   pageAlive = true;
-  // 标签切回时强制同步列，避免 KeepAlive/HMR 后表体空白且无 loading
   appliedLayoutSignature = '';
   refreshTemplates();
   applyAiCostPrefill(consumeAiCostPrefill(props.mode as AiCostPrefillMode));
@@ -335,7 +368,56 @@ function onDelete(row: any) {
     .catch(() => hideLoading());
 }
 
+function isQuoteLibraryLocked(row?: CostGridRow | null) {
+  return (
+    (row as undefined | { inQuoteLibrary?: boolean })?.inQuoteLibrary === true
+  );
+}
+
+function isWonQuoteLocked(row?: CostGridRow | null) {
+  return (
+    (row as undefined | { quoteOrderLocked?: boolean })?.quoteOrderLocked ===
+    true
+  );
+}
+
+function findRowById(id: number) {
+  return lastPageItems.find((row) => row.id === id);
+}
+
+function assertNoWonLockedSelection() {
+  const selected = getSelectedIds().map((id) => findRowById(id));
+  if (selected.some((row) => isWonQuoteLocked(row))) {
+    message.warning($t('page.costLibrary.hint.batchWonQuoteLocked'));
+    return false;
+  }
+  return true;
+}
+
+function assertNoLockedSelection() {
+  if (!assertNoWonLockedSelection()) {
+    return false;
+  }
+  const selected = getSelectedIds().map((id) => findRowById(id));
+  if (selected.some((row) => isQuoteLibraryLocked(row))) {
+    message.warning($t('page.costLibrary.hint.batchQuoteLibraryLocked'));
+    return false;
+  }
+  return true;
+}
+
 function onActionClick(params: OnActionClickParams<any>) {
+  if (
+    isWonQuoteLocked(params.row) &&
+    (params.code === 'edit' || params.code === 'delete')
+  ) {
+    message.warning($t('page.costLibrary.hint.wonQuoteLocked'));
+    return;
+  }
+  if (isQuoteLibraryLocked(params.row) && params.code === 'delete') {
+    message.warning($t('page.costLibrary.hint.quoteLibraryLocked'));
+    return;
+  }
   if (params.code === 'edit') {
     onEdit(params.row);
   }
@@ -587,6 +669,9 @@ function onBatchSuccess() {
 }
 
 function onBatchDelete() {
+  if (!assertNoLockedSelection()) {
+    return;
+  }
   const ids = getSelectedIds();
   if (ids.length === 0) {
     message.warning($t('page.costLibrary.hint.selectRows'));
@@ -607,6 +692,9 @@ function onBatchEdit() {
   const ids = getSelectedIds();
   if (ids.length === 0) {
     message.warning($t('page.costLibrary.hint.selectRows'));
+    return;
+  }
+  if (!assertNoWonLockedSelection()) {
     return;
   }
   batchModalRef.value?.open(ids);
@@ -661,6 +749,9 @@ function normalizeListParams(formValues?: Record<string, unknown>) {
   if (params.highlightOnly !== true) {
     delete params.highlightOnly;
   }
+  if (params.inQuoteLibrary !== true && params.inQuoteLibrary !== false) {
+    delete params.inQuoteLibrary;
+  }
   if (props.mode === 'road') {
     const normalizedCity = normalizeRoadCitySearchParam(params.city);
     if (normalizedCity) {
@@ -705,7 +796,11 @@ function onImport() {
 const searchFormOptions = useI18nFormOptions(() => {
   void isMobile.value;
   return withCostSearchFormLayout({
-    schema: [...props.searchSchema(), createHighlightOnlySearchField()],
+    schema: [
+      ...props.searchSchema(),
+      createInQuoteLibrarySearchField(),
+      createHighlightOnlySearchField(),
+    ],
   });
 });
 
@@ -718,6 +813,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       syncViewerMarkedIdsFromRows(lastPageItems);
       void applySelectionToRows(lastPageItems);
       syncSelection();
+      relationFocus.onDataRendered(lastPageItems);
     },
   },
   gridOptions: {
@@ -735,13 +831,14 @@ const [Grid, gridApi] = useVbenVxeGrid({
     ),
     pagerConfig: {},
     proxyConfig: {
+      autoLoad: true,
       ajax: {
         query: async ({ page, sort }, formValues) => {
           lastSort.value = { field: sort.field, order: sort.order };
           const searchKey = JSON.stringify(formValues ?? {});
           if (searchKey !== lastSearchKey.value) {
-            lastSearchKey.value = searchKey;
             onSearchCriteriaChange();
+            lastSearchKey.value = searchKey;
           }
           const result = await api.list({
             page: page.currentPage,
@@ -774,7 +871,8 @@ const [Grid, gridApi] = useVbenVxeGrid({
       zoom: !isMobile.value,
     },
     ...createTemplateColumnBgStyleHandlers(),
-    ...createCostRowHighlightStyleHandlers(),
+    rowClassName: resolveRowClassName,
+    rowStyle: highlightHandlers.rowStyle,
   } as VxeTableGridOptions,
 });
 
@@ -922,6 +1020,40 @@ function onIntroduceQuote() {
   stashRoadQuoteIntroduce(roadCostId);
   void router.push({ name: 'QuoteCreate' });
 }
+
+const promoteQuoteLibraryEnabled = computed(() => {
+  if (selectedCount.value === 0) {
+    return false;
+  }
+  return getSelectedIds().some((id) => !isQuoteLibraryLocked(findRowById(id)));
+});
+
+async function onPromoteToQuoteLibrary() {
+  const ids = getSelectedIds().filter(
+    (id) => !isQuoteLibraryLocked(findRowById(id)),
+  );
+  if (ids.length === 0) {
+    message.warning($t('page.costLibrary.hint.promoteQuoteLibraryEmpty'));
+    return;
+  }
+  const hideLoading = message.loading({
+    content: $t('page.costLibrary.hint.promoteQuoteLibraryLoading'),
+    duration: 0,
+    key: 'cost_promote_quote_library',
+  });
+  try {
+    const result = await promoteToQuoteLibrary(props.mode, ids);
+    message.success({
+      content: $t('page.costLibrary.hint.promoteQuoteLibrarySuccess', [
+        result.promoted,
+      ]),
+      key: 'cost_promote_quote_library',
+    });
+    onBatchSuccess();
+  } catch {
+    hideLoading();
+  }
+}
 </script>
 
 <template>
@@ -939,8 +1071,9 @@ function onIntroduceQuote() {
     />
     <BatchEditModal
       ref="batchModalRef"
-      :batch-update-fn="(ids, fields) => api.batchUpdate({ ids, fields })"
+      :mode="mode"
       :schema="batchEditSchema"
+      :template="activeTemplate"
       :title="batchEditTitle"
       :wide="mode === 'sea' || mode === 'road'"
       @success="onBatchSuccess"
@@ -1040,6 +1173,16 @@ function onIntroduceQuote() {
                 />
               </template>
             </Dropdown>
+            <Button
+              v-if="canPromoteQuoteLibrary"
+              :disabled="!promoteQuoteLibraryEnabled"
+              :size="toolbarSize"
+              type="primary"
+              ghost
+              @click="onPromoteToQuoteLibrary"
+            >
+              {{ $t('page.costLibrary.actions.promoteToQuoteLibrary') }}
+            </Button>
             <Dropdown
               v-if="canEdit"
               :disabled="selectedCount === 0"

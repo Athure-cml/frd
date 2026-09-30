@@ -16,7 +16,7 @@
   grid-template-columns: 1fr auto;
   gap: 12px;
   align-items: center;
-  padding: 14px 18px 10px;
+  padding: 16px 18px 12px;
   border-bottom: 2px solid #2f5597;
 }
 
@@ -37,10 +37,11 @@
 
 .quote-print-sheet__title {
   margin: 0;
-  font-size: 24px;
+  font-size: 38px;
   font-weight: 700;
+  line-height: 1.1;
   color: #1f4e79;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
 }
 
 .quote-print-sheet__info,

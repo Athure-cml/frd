@@ -17,14 +17,26 @@ defineOptions({ name: 'NotificationPopup' });
 
 withDefaults(
   defineProps<{
-    /** 显示圆点 */
+    /** 未读数量（>0 时显示数字徽标） */
+    count?: number;
+    /** 显示圆点（无 count 时生效） */
     dot?: boolean;
+    /** 空状态插画 */
+    emptyImage?: string;
+    /** 空状态文案 */
+    emptyText?: string;
     /** 消息列表 */
     notifications?: NotificationItem[];
+    /** 是否显示「查看所有消息」 */
+    showViewAll?: boolean;
   }>(),
   {
+    count: 0,
     dot: false,
+    emptyImage: '',
+    emptyText: '',
     notifications: () => [],
+    showViewAll: true,
   },
 );
 
@@ -61,8 +73,11 @@ const handleClear = () => {
     <template #trigger>
       <div class="mr-2 flex-center h-full" @click.stop="toggle()">
         <VbenIconButton class="bell-button relative text-foreground">
+          <span v-if="count > 0" class="bell-badge">
+            {{ count > 99 ? '99+' : count }}
+          </span>
           <span
-            v-if="dot"
+            v-else-if="dot"
             class="absolute top-0.5 right-0.5 size-2 rounded-sm bg-primary"
           ></span>
           <Bell class="size-4" />
@@ -85,7 +100,7 @@ const handleClear = () => {
         <ul class="flex! max-h-90 w-full flex-col">
           <template v-for="item in notifications" :key="item.id ?? item.title">
             <li
-              class="relative flex w-full cursor-pointer items-start gap-5 border-t border-border p-3 hover:bg-accent"
+              class="relative flex w-full cursor-pointer items-start gap-3 border-t border-border p-3 hover:bg-accent"
               @click="emit('onClick', item)"
             >
               <slot name="content" :item="item">
@@ -95,24 +110,27 @@ const handleClear = () => {
                 ></span>
 
                 <span
-                  class="relative flex size-10 shrink-0 overflow-hidden rounded-full"
+                  class="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted"
                 >
                   <img
                     :src="item.avatar"
-                    class="aspect-square size-full object-cover"
+                    alt=""
+                    class="aspect-square size-full object-contain p-1"
                   />
                 </span>
-                <div class="flex flex-col gap-1 leading-none">
-                  <p class="font-semibold">{{ item.title }}</p>
-                  <p class="my-1 line-clamp-2 text-xs text-muted-foreground">
-                    {{ item.message }}
-                  </p>
-                  <p class="line-clamp-2 text-xs text-muted-foreground">
-                    {{ item.date }}
-                  </p>
+                <div class="min-w-0 flex-1 pr-10">
+                  <div class="flex flex-col gap-1 leading-none">
+                    <p class="font-semibold">{{ item.title }}</p>
+                    <p class="my-1 line-clamp-2 text-xs text-muted-foreground">
+                      {{ item.message }}
+                    </p>
+                    <p class="line-clamp-2 text-xs text-muted-foreground">
+                      {{ item.date }}
+                    </p>
+                  </div>
                 </div>
                 <div
-                  class="absolute top-1/2 right-3 flex -translate-y-1/2 flex-row gap-1"
+                  class="absolute top-1/2 right-2 z-10 flex -translate-y-1/2 flex-row gap-1"
                 >
                   <slot name="action" :item="item">
                     <slot name="action-prepend" :item="item"></slot>
@@ -120,7 +138,7 @@ const handleClear = () => {
                       v-if="!item.isRead"
                       size="xs"
                       variant="ghost"
-                      class="h-6 px-2"
+                      class="h-7 w-7 shrink-0 bg-background/80"
                       :tooltip="$t('common.confirm')"
                       @click.stop="emit('read', item)"
                     >
@@ -130,7 +148,7 @@ const handleClear = () => {
                       v-if="item.isRead"
                       size="xs"
                       variant="ghost"
-                      class="h-6 px-2 text-destructive"
+                      class="h-7 w-7 shrink-0 bg-background/80 text-destructive"
                       :tooltip="$t('common.delete')"
                       @click.stop="emit('remove', item)"
                     >
@@ -146,8 +164,18 @@ const handleClear = () => {
       </VbenScrollbar>
 
       <template v-else>
-        <div class="flex-center min-h-37.5 w-full text-muted-foreground">
-          {{ $t('common.noData') }}
+        <div
+          class="notice-empty flex-center min-h-37.5 w-full flex-col gap-2 px-4 py-6"
+        >
+          <img
+            v-if="emptyImage"
+            :src="emptyImage"
+            alt=""
+            class="notice-empty__img"
+          />
+          <div class="text-center text-sm text-muted-foreground">
+            {{ emptyText || $t('common.noData') }}
+          </div>
         </div>
       </template>
 
@@ -162,7 +190,7 @@ const handleClear = () => {
         >
           {{ $t('ui.widgets.clearNotifications') }}
         </VbenButton>
-        <VbenButton size="sm" @click="handleViewAll">
+        <VbenButton v-if="showViewAll" size="sm" @click="handleViewAll">
           {{ $t('ui.widgets.viewAll') }}
         </VbenButton>
       </div>
@@ -177,6 +205,35 @@ const handleClear = () => {
       animation: bell-ring 1s both;
     }
   }
+}
+
+.bell-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+  background: #fa5151;
+  border-radius: 999px;
+}
+
+.notice-empty__img {
+  display: block;
+  width: 112px;
+  height: 112px;
+  object-fit: cover;
+  object-position: center;
+  background: #fff;
+  border-radius: 16px;
 }
 
 @keyframes bell-ring {

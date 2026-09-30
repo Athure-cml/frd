@@ -139,36 +139,15 @@ export function buildQuotePrintFeeRows(
     );
   }
 
-  if (fumigation) {
-    pushFeeRow(
-      rows,
-      t('page.quote.sheet.truckingFeeFmNonOak'),
-      sheet.truckingNonOakUsd,
-      unitContainer,
-      '',
-      '',
-      true,
-    );
-    pushFeeRow(
-      rows,
-      t('page.quote.sheet.truckingFeeFmOak'),
-      sheet.truckingOakUsd,
-      unitContainer,
-      '',
-      '',
-      true,
-    );
-  } else {
-    pushFeeRow(
-      rows,
-      t('page.quote.sheet.truckingFee'),
-      sheet.truckingFee,
-      unitContainer,
-      '',
-      '',
-      true,
-    );
-  }
+  pushFeeRow(
+    rows,
+    t('page.quote.sheet.truckingFee'),
+    sheet.truckingFee,
+    unitContainer,
+    '',
+    '',
+    true,
+  );
 
   if (fumigation) {
     pushFeeRow(

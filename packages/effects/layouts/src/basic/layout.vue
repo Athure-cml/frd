@@ -289,6 +289,7 @@ const headerSlots = computed(() => {
         :fit="preferences.logo.fit"
         :class="logoClass"
         :collapsed="logoCollapsed"
+        :logo-size="preferences.logo.size ?? 32"
         :src="preferences.logo.source"
         :src-dark="preferences.logo.sourceDark"
         :text="preferences.app.name"
@@ -382,6 +383,9 @@ const headerSlots = computed(() => {
       <VbenLogo
         v-if="preferences.logo.enable"
         :fit="preferences.logo.fit"
+        :logo-size="preferences.logo.size ?? 32"
+        :src="preferences.logo.source"
+        :src-dark="preferences.logo.sourceDark"
         :text="preferences.app.name"
         :theme="sidebarThemeSub"
       >
@@ -397,6 +401,10 @@ const headerSlots = computed(() => {
         :show-icon="preferences.tabbar.showIcon"
         :theme="theme"
       />
+    </template>
+
+    <template #content-top>
+      <slot name="content-top"></slot>
     </template>
 
     <!-- 主体内容 -->

@@ -9,11 +9,19 @@ import type { OceanFreightEntry } from '../shared/sheet-ocean-freight';
 
 import type { FreightCostRecord, RoadCostRecord } from '#/api/cost';
 import type { GlobalPortNameOption } from '#/api/master-data/global-port';
-import type { QuoteApi, QuoteCostType, QuoteStatus } from '#/api/quote';
+import type {
+  QuoteApi,
+  QuoteCostType,
+  QuoteOakType,
+  QuoteServiceType,
+  QuoteStatus,
+} from '#/api/quote';
 import type { QuoteRuleApi } from '#/api/quote-rule';
 
 import {
   computed,
+  h,
+  nextTick,
   onActivated,
   onMounted,
   onUnmounted,
@@ -49,13 +57,14 @@ import { getEnabledCurrencyOptions } from '#/api/currency';
 import { getCustomerList } from '#/api/customer';
 import { searchGlobalPortNameOptions } from '#/api/master-data/global-port';
 import {
+  applyQuoteCostImport,
   cancelQuoteApproval,
   createQuote,
   deleteQuote,
   generateQuoteSheet,
   getQuoteDetail,
-  rejectQuote,
-  sendQuote,
+  previewQuoteDocFee,
+  reviseQuote,
   submitQuote,
   updateQuote,
   voidQuote,
@@ -65,9 +74,11 @@ import { getQuoteRuleList } from '#/api/quote-rule';
 import { getShippingLineList } from '#/api/shipping-line';
 import { $t } from '#/locales';
 
-import { statusTagOptions } from '../list/data';
+import { getServiceTypeOptions, resolveQuoteStatusTag } from '../list/data';
 import CostLibraryPickerModal from '../shared/cost-library-picker-modal.vue';
 import CostSourceTables from '../shared/cost-source-tables.vue';
+import { formatQuoteCostRiskHint } from '../shared/format-cost-risk-hint';
+import QuoteAuditLogs from '../shared/quote-audit-logs.vue';
 import QuoteCitySelect from '../shared/quote-city-select.vue';
 import {
   stashQuoteCopySource,
@@ -93,6 +104,7 @@ import QuoteStateSelect from '../shared/quote-state-select.vue';
 import {
   canDraftCostActions,
   canShowQuoteVoid,
+  canShowQuoteWon,
   isQuoteDeletable,
   isQuoteEditable,
   normalizeQuoteStatus,
@@ -106,6 +118,7 @@ import {
   mergeSeaCostImport,
   pickRoadSheetFields,
   recordToCostMatchItem,
+  resolveValidUntilFromSeaRecords,
 } from '../shared/sheet-cost-import';
 import {
   buildOceanFreightEntries,
@@ -139,14 +152,36 @@ const loading = ref(false);
 const actionsReady = ref(false);
 const saving = ref(false);
 const generating = ref(false);
+/** 最近一次加载/保存后的表单内容快照（规范化后），用于判断是否真有未保存改动 */
+const savedFormSnapshot = ref('');
 const costPickerRef = ref<InstanceType<typeof CostLibraryPickerModal>>();
+const auditLogsRef = ref<{ reload: () => Promise<void> }>();
 const quoteId = ref<number>();
 const quoteNo = ref('');
 const operable = ref(false);
+const costRiskActive = ref(false);
+const costRiskReason = ref('');
+const costRiskModes = ref<string[]>([]);
+const costRiskModalShown = ref(false);
 const status = ref<QuoteStatus>('DRAFT');
+const revisionNo = ref(0);
+const revisionLabel = ref('');
+const changeReason = ref('');
+const parentQuoteId = ref<number>();
+const currentVersion = ref(true);
+const reviseReasonDraft = ref('');
+const revising = ref(false);
 const customerId = ref<number>();
 const customerName = ref('');
 const customerOptions = ref<Array<{ label: string; value: number }>>([]);
+const serviceTypes = ref<QuoteServiceType[]>([]);
+const serviceTypeOptions = computed(() => getServiceTypeOptions());
+const oakType = ref<QuoteOakType>();
+const hydratingSheet = ref(false);
+const oakTypeOptions = computed(() => [
+  { label: $t('page.quote.sheet.oak'), value: 'OAK' as const },
+  { label: $t('page.quote.sheet.nonOak'), value: 'NON_OAK' as const },
+]);
 const validUntil = ref<dayjs.Dayjs>();
 const currency = ref('USD');
 const currencyOptions = ref<Array<{ label: string; value: string }>>([]);
@@ -160,6 +195,9 @@ const ruleHintMap = computed(() =>
 );
 const oceanFreightEntries = ref<OceanFreightEntry[]>([]);
 const sheetPreviewOpen = ref(false);
+const withdrawOpen = ref(false);
+const withdrawSubmitting = ref(false);
+const withdrawComment = ref('');
 const sslRemarkByName = ref<SslRemarkLookup>(new Map());
 
 const cargoInsuranceOptions = ref<Array<{ label: string; value: string }>>([]);
@@ -214,19 +252,69 @@ const workflowStatus = computed(() => normalizeQuoteStatus(status.value));
 const isPendingApproval = computed(
   () => workflowStatus.value === 'PENDING_APPROVAL',
 );
+const isConfirmedQuote = computed(() => workflowStatus.value === 'SENT');
+const showDraftWorkflowActions = computed(
+  () =>
+    isCreate.value ||
+    (showWorkflowActions.value && workflowStatus.value === 'DRAFT'),
+);
+const showConfirmedToolbar = computed(
+  () => showWorkflowActions.value && isConfirmedQuote.value,
+);
+const canReviseAction = computed(
+  () =>
+    canOperate.value &&
+    canEdit &&
+    canCreate &&
+    isConfirmedQuote.value &&
+    currentVersion.value !== false,
+);
+const showPendingApprovalToolbar = computed(
+  () => showWorkflowActions.value && isPendingApproval.value,
+);
+const showReadonlyWorkflowToolbar = computed(
+  () =>
+    showWorkflowActions.value &&
+    !isPendingApproval.value &&
+    workflowStatus.value !== 'DRAFT' &&
+    !isConfirmedQuote.value,
+);
+const canCopyAction = computed(() => canCreate);
 const canVoidAction = computed(
-  () => canOperate.value && canApprove && canShowQuoteVoid(status.value),
+  () =>
+    canOperate.value &&
+    canApprove &&
+    canShowQuoteVoid(status.value) &&
+    !costRiskActive.value,
+);
+const canConfirmWonAction = computed(
+  () => canApprove && canShowQuoteWon(status.value) && !costRiskActive.value,
+);
+const isSavedDraft = computed(
+  () => !isCreate.value && !!quoteId.value && workflowStatus.value === 'DRAFT',
 );
 const canDeleteAction = computed(
-  () => canOperate.value && canDelete && isQuoteDeletable(status.value),
+  () =>
+    isSavedDraft.value &&
+    canOperate.value &&
+    canDelete &&
+    isQuoteDeletable(status.value),
 );
 const canUseCostLibrary = computed(
-  () => canOperate.value && canDraftCostActions(isCreate.value, status.value),
+  () =>
+    canOperate.value &&
+    !readOnly.value &&
+    (isCreate.value ? canCreate : canEdit) &&
+    canDraftCostActions(isCreate.value, status.value),
 );
 const canSubmitAction = computed(
-  () => canOperate.value && canSubmit && workflowStatus.value === 'DRAFT',
+  () =>
+    isSavedDraft.value &&
+    canOperate.value &&
+    canSubmit &&
+    !costRiskActive.value,
 );
-const canCancelApprovalAction = computed(
+const canRollbackAction = computed(
   () => canOperate.value && canSubmit && isPendingApproval.value,
 );
 
@@ -241,11 +329,42 @@ const pageTitle = computed(() => {
 
 const backLabel = computed(() => $t('page.quote.actions.backToList'));
 
-const statusColor = computed(
-  () =>
-    statusTagOptions().find((item) => item.value === status.value)?.color ??
-    'default',
-);
+const headerStatusTag = computed(() => {
+  const normalized = normalizeQuoteStatus(status.value);
+  // 变更中优先正式状态；恢复已确认后若仍有成本风险再显示异常
+  if (costRiskActive.value && normalized !== 'REVISING') {
+    return {
+      color: 'error',
+      label: $t('page.quote.risk.tag'),
+    };
+  }
+  const tag = resolveQuoteStatusTag(status.value);
+  return {
+    className: tag.className,
+    color: tag.color,
+    label: tag.label,
+  };
+});
+
+function showCostRiskModalIfNeeded() {
+  if (
+    !costRiskActive.value ||
+    costRiskModalShown.value ||
+    normalizeQuoteStatus(status.value) === 'REVISING'
+  ) {
+    return;
+  }
+  costRiskModalShown.value = true;
+  Modal.warning({
+    centered: true,
+    title: $t('page.quote.risk.modalTitle'),
+    content: formatQuoteCostRiskHint({
+      modes: costRiskModes.value,
+      reason: costRiskReason.value,
+    }),
+    okText: $t('common.confirm'),
+  });
+}
 
 const matchKeys = computed(() => ({
   zipCode: sheet.zipCode,
@@ -315,8 +434,11 @@ function onFumigationPointChange(value?: string) {
   sheet.fumigationPoint = value ?? '';
   sheet.fumigationEnabled = Boolean(value?.trim());
   if (value?.trim()) {
-    sheet.truckingFee = undefined;
+    if (!oakType.value) {
+      sheet.truckingFee = undefined;
+    }
   } else {
+    oakType.value = undefined;
     sheet.fmNonOak = 0;
     sheet.fmOak = 0;
     sheet.truckingNonOakUsd = undefined;
@@ -325,6 +447,12 @@ function onFumigationPointChange(value?: string) {
       (item) => item.costType !== 'FUMIGATION',
     );
   }
+  void refreshRoadTruckingFromMatch();
+}
+
+function onOakTypeChange(value?: QuoteOakType) {
+  oakType.value = value;
+  void refreshRoadTruckingFromMatch();
 }
 
 function syncOceanFreightToSheet() {
@@ -422,11 +550,74 @@ function buildCostImportContext(): CostImportContext {
     cifAmount: sheet.cifAmount,
     fumigationEnabled: fumigationEnabled.value,
     fumigationPoint: sheet.fumigationPoint,
+    oakType: oakType.value,
     pod: sheet.pod,
     por: sheet.por,
     quoteDate: quoteDate.value.format('YYYY-MM-DD'),
   };
 }
+
+async function refreshRoadTruckingFromMatch() {
+  if (hydratingSheet.value) {
+    return;
+  }
+  if (fumigationEnabled.value && !oakType.value) {
+    sheet.truckingFee = undefined;
+    return;
+  }
+  const roadMatch = costMatches.value.find((item) => item.costType === 'ROAD');
+  if (!roadMatch) {
+    return;
+  }
+  try {
+    if (roadMatch.snapshot && Object.keys(roadMatch.snapshot).length > 0) {
+      const { fields } = await applyQuoteCostImport({
+        costRefId: roadMatch.costRefId,
+        costType: 'ROAD',
+        snapshot: roadMatch.snapshot,
+        ...buildCostImportContext(),
+      });
+      mergeRoadCostImport(
+        sheet,
+        fields,
+        fumigationEnabled.value,
+        roadMatch.snapshot as RoadCostRecord,
+      );
+      return;
+    }
+    const record = await getRoadCost(roadMatch.costRefId);
+    const fields = await fetchCostImportFields(
+      'ROAD',
+      record,
+      buildCostImportContext(),
+    );
+    mergeRoadCostImport(sheet, fields, fumigationEnabled.value, record);
+  } catch {
+    // 无卡车成本或接口失败时保留当前卡车费
+  }
+}
+
+const applyDocFeeFromPod = useDebounceFn(async (pod?: string) => {
+  if (hydratingSheet.value || readOnly.value) {
+    return;
+  }
+  const value = pod?.trim();
+  if (!value) {
+    return;
+  }
+  try {
+    const result = await previewQuoteDocFee(value);
+    if (
+      result?.docUsd !== undefined &&
+      result?.docUsd !== null &&
+      result.docUsd !== ''
+    ) {
+      sheet.docUsd = normalizeUsdFieldValue(result.docUsd);
+    }
+  } catch {
+    // 未选择港口或规则未配置时跳过
+  }
+}, 280);
 
 async function applySeaFreightRecords(records: FreightCostRecord[]) {
   const context = buildCostImportContext();
@@ -453,6 +644,10 @@ async function applySeaFreightRecords(records: FreightCostRecord[]) {
   ];
   oceanFreightEntries.value = entries;
   syncOceanFreightToSheet();
+  const nextValidUntil = resolveValidUntilFromSeaRecords(limited);
+  if (nextValidUntil) {
+    validUntil.value = dayjs(nextValidUntil);
+  }
 }
 
 function syncFumigationFromSheet() {
@@ -481,12 +676,6 @@ function normalizeSheetUsdFields() {
       sheet[field] = normalizeUsdFieldValue(value);
     }
   }
-}
-
-function statusLabel(value: string) {
-  return (
-    statusTagOptions().find((item) => item.value === value)?.label ?? value
-  );
 }
 
 function mergeCostMatch(item: QuoteApi.QuoteCostMatchItem) {
@@ -530,39 +719,65 @@ async function applyDetailToForm(
 ) {
   const includeIdentity = options?.includeIdentity ?? true;
   const hydrateOnly = options?.hydrateOnly ?? false;
-  if (includeIdentity) {
-    quoteId.value = detail.id;
-    quoteNo.value = detail.quoteNo;
-    status.value = detail.status;
-    operable.value = detail.operable;
-  } else {
-    quoteId.value = undefined;
-    quoteNo.value = '';
-    status.value = 'DRAFT';
+  hydratingSheet.value = true;
+  try {
+    if (includeIdentity) {
+      quoteId.value = detail.id;
+      quoteNo.value = detail.quoteNo;
+      status.value = detail.status;
+      operable.value = detail.operable;
+      costRiskActive.value = detail.costRiskActive === true;
+      costRiskReason.value = detail.costRiskReason ?? '';
+      costRiskModes.value = detail.costRiskModes ?? [];
+      revisionNo.value = detail.revisionNo ?? 0;
+      revisionLabel.value = detail.revisionLabel ?? '';
+      changeReason.value = detail.changeReason ?? '';
+      parentQuoteId.value = detail.parentQuoteId;
+      currentVersion.value = detail.currentVersion !== false;
+    } else {
+      quoteId.value = undefined;
+      quoteNo.value = '';
+      status.value = 'DRAFT';
+      costRiskActive.value = false;
+      costRiskReason.value = '';
+      costRiskModes.value = [];
+      revisionNo.value = 0;
+      revisionLabel.value = '';
+      changeReason.value = '';
+      parentQuoteId.value = undefined;
+      currentVersion.value = true;
+    }
+    customerId.value = detail.customerId;
+    customerName.value = detail.customerName;
+    serviceTypes.value = [...(detail.serviceTypes ?? [])];
+    oakType.value = detail.oakType;
+    validUntil.value = detail.validUntil ? dayjs(detail.validUntil) : undefined;
+    currency.value = detail.currency;
+    remark.value = detail.remark ?? '';
+    Object.assign(sheet, detail.sheet ?? {});
+    if (!sheet.oceanFreight && sheet.ofUsd) {
+      sheet.oceanFreight = sheet.ofUsd;
+    }
+    if (
+      !hydrateOnly &&
+      sheet.truckingFee === undefined &&
+      sheet.truckingNonOakUsd !== undefined
+    ) {
+      sheet.truckingFee = sheet.truckingNonOakUsd;
+    }
+    if (!hydrateOnly && !sheet.pickUpAddress && (sheet.city || sheet.state)) {
+      sheet.pickUpAddress = [sheet.city, sheet.state]
+        .filter(Boolean)
+        .join(', ');
+    }
+    normalizeSheetUsdFields();
+    syncFumigationFromSheet();
+    costMatches.value = normalizeCostMatches(detail.costSnapshots ?? []);
+    loadOceanFreightEntriesFromSheet({ syncSheet: !hydrateOnly });
+  } finally {
+    await nextTick();
+    hydratingSheet.value = false;
   }
-  customerId.value = detail.customerId;
-  customerName.value = detail.customerName;
-  validUntil.value = detail.validUntil ? dayjs(detail.validUntil) : undefined;
-  currency.value = detail.currency;
-  remark.value = detail.remark ?? '';
-  Object.assign(sheet, detail.sheet ?? {});
-  if (!sheet.oceanFreight && sheet.ofUsd) {
-    sheet.oceanFreight = sheet.ofUsd;
-  }
-  if (
-    !hydrateOnly &&
-    sheet.truckingFee === undefined &&
-    sheet.truckingNonOakUsd !== undefined
-  ) {
-    sheet.truckingFee = sheet.truckingNonOakUsd;
-  }
-  if (!hydrateOnly && !sheet.pickUpAddress && (sheet.city || sheet.state)) {
-    sheet.pickUpAddress = [sheet.city, sheet.state].filter(Boolean).join(', ');
-  }
-  normalizeSheetUsdFields();
-  syncFumigationFromSheet();
-  costMatches.value = normalizeCostMatches(detail.costSnapshots ?? []);
-  loadOceanFreightEntriesFromSheet({ syncSheet: !hydrateOnly });
 }
 
 async function loadDetail() {
@@ -578,9 +793,16 @@ async function loadDetail() {
   try {
     const detail = await getQuoteDetail(id);
     await applyDetailToForm(detail, { hydrateOnly: true });
+    showCostRiskModalIfNeeded();
+    await nextTick();
+    // 控件可能回写后再拍基线，避免空值形态差异造成误判
+    await nextTick();
+    captureFormSnapshot();
+    await auditLogsRef.value?.reload();
   } finally {
     loading.value = false;
     actionsReady.value = true;
+    captureFormSnapshot();
   }
 }
 
@@ -799,6 +1021,8 @@ function buildPayload(): QuoteApi.QuoteSave {
   const payload: QuoteApi.QuoteSave = {
     customerId: customerId.value,
     customerName: customer?.label ?? customerName.value,
+    serviceTypes: [...serviceTypes.value],
+    oakType: fumigationEnabled.value ? oakType.value : undefined,
     transportMode: DEFAULT_TRANSPORT_MODE,
     currency: currency.value,
     validUntil: validUntil.value?.format('YYYY-MM-DD'),
@@ -814,13 +1038,108 @@ function buildPayload(): QuoteApi.QuoteSave {
   return payload;
 }
 
-function validateBasicSheetFields(): boolean {
-  if (!sheet.por?.trim()) {
-    message.error($t('page.quote.validation.porRequired'));
+/** 空串 / null / undefined 视为相同；数字与数字字符串视为相同 */
+function normalizeDirtyText(value: unknown): null | string {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  const text = String(value).trim();
+  return text === '' ? null : text;
+}
+
+function normalizeDirtyNumber(value: unknown): null | number {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function normalizeDirtyBool(value: unknown): boolean {
+  return value === true;
+}
+
+/** 只取会影响保存结果的字段，做规范化后再比对 */
+function buildFormSnapshot(): string {
+  const sheetSnapshot = {
+    cargoAgentFee: normalizeDirtyText(sheet.cargoAgentFee),
+    cargoInsurancePremium: normalizeDirtyText(sheet.cargoInsurancePremium),
+    cargoMaxWeightTon: normalizeDirtyText(sheet.cargoMaxWeightTon),
+    chassis: normalizeDirtyNumber(sheet.chassis),
+    cifAmount: normalizeDirtyNumber(sheet.cifAmount),
+    city: normalizeDirtyText(sheet.city),
+    docUsd: normalizeDirtyText(sheet.docUsd),
+    fmNonOak: normalizeDirtyNumber(sheet.fmNonOak),
+    fmOak: normalizeDirtyNumber(sheet.fmOak),
+    fumigationEnabled: normalizeDirtyBool(sheet.fumigationEnabled),
+    fumigationPoint: normalizeDirtyText(sheet.fumigationPoint),
+    nsLift: normalizeDirtyNumber(sheet.nsLift),
+    oceanFreight: normalizeDirtyText(sheet.oceanFreight || sheet.ofUsd),
+    pickUpAddress: normalizeDirtyText(sheet.pickUpAddress),
+    pod: normalizeDirtyText(sheet.pod),
+    pol: normalizeDirtyText(sheet.pol),
+    por: normalizeDirtyText(sheet.por),
+    redeliveryFee: normalizeDirtyNumber(sheet.redeliveryFee),
+    sheetRemark: normalizeDirtyText(sheet.sheetRemark),
+    ssl: normalizeDirtyText(sheet.ssl),
+    state: normalizeDirtyText(sheet.state),
+    supplier: normalizeDirtyText(sheet.supplier),
+    truckRemark: normalizeDirtyText(sheet.truckRemark),
+    truckingFee: normalizeDirtyNumber(sheet.truckingFee),
+    truckingNonOakUsd: normalizeDirtyNumber(sheet.truckingNonOakUsd),
+    truckingOakUsd: normalizeDirtyNumber(sheet.truckingOakUsd),
+    waiting: normalizeDirtyNumber(sheet.waiting),
+    zipCode: normalizeDirtyText(sheet.zipCode),
+  };
+  const oceanSnapshot = oceanFreightEntries.value.map((entry) => ({
+    costRefId: entry.costRefId ?? null,
+    rate: normalizeDirtyText(entry.rate),
+    remark: normalizeDirtyText(entry.remark),
+    ssl: normalizeDirtyText(entry.ssl),
+  }));
+  const costSnapshot = [...costMatches.value]
+    .map((item) => ({
+      costRefId: item.costRefId,
+      costType: item.costType,
+      costVersion: normalizeDirtyText(item.costVersion),
+    }))
+    .toSorted((a, b) => {
+      const typeCmp = a.costType.localeCompare(b.costType);
+      return typeCmp === 0 ? a.costRefId - b.costRefId : typeCmp;
+    });
+  return JSON.stringify({
+    costMatches: costSnapshot,
+    currency: normalizeDirtyText(currency.value),
+    customerId: customerId.value ?? null,
+    fumigationEnabled: fumigationEnabled.value === true,
+    oakType: oakType.value ?? null,
+    oceanFreightEntries: oceanSnapshot,
+    quoteDate: quoteDate.value?.format('YYYY-MM-DD') ?? null,
+    remark: normalizeDirtyText(remark.value),
+    serviceTypes: [...serviceTypes.value].slice().toSorted(),
+    sheet: sheetSnapshot,
+    validUntil: validUntil.value?.format('YYYY-MM-DD') ?? null,
+  });
+}
+
+function captureFormSnapshot() {
+  if (!quoteId.value) {
+    savedFormSnapshot.value = '';
+    return;
+  }
+  savedFormSnapshot.value = buildFormSnapshot();
+}
+
+function hasUnsavedChanges() {
+  if (!quoteId.value || !savedFormSnapshot.value) {
     return false;
   }
-  if (!sheet.pol?.trim()) {
-    message.error($t('page.quote.validation.polRequired'));
+  return buildFormSnapshot() !== savedFormSnapshot.value;
+}
+
+function validateRouteFields(): boolean {
+  if (!sheet.por?.trim()) {
+    message.error($t('page.quote.validation.porRequired'));
     return false;
   }
   if (!sheet.pod?.trim()) {
@@ -830,6 +1149,18 @@ function validateBasicSheetFields(): boolean {
   return true;
 }
 
+function validateBasicSheetFields(): boolean {
+  if (serviceTypes.value.length === 0) {
+    message.error($t('page.quote.validation.serviceTypeRequired'));
+    return false;
+  }
+  if (fumigationEnabled.value && !oakType.value) {
+    message.error($t('page.quote.validation.oakTypeRequired'));
+    return false;
+  }
+  return validateRouteFields();
+}
+
 async function onGenerateSheet(options?: { auto?: boolean }) {
   if (options?.auto && !isCreate.value) {
     return;
@@ -837,7 +1168,7 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
   if (!canUseCostLibrary.value) {
     return;
   }
-  if (!validateBasicSheetFields()) {
+  if (!validateRouteFields()) {
     return;
   }
 
@@ -845,6 +1176,7 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
   try {
     const keepFumigationPoint = sheet.fumigationPoint;
     const keepFumigationEnabled = fumigationEnabled.value;
+    const keepOakType = oakType.value;
     const existingRoadMatch = costMatches.value.find(
       (item) => item.costType === 'ROAD',
     );
@@ -862,6 +1194,7 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
       cifAmount: sheet.cifAmount,
       fumigationPoint: keepFumigationPoint,
       fumigationEnabled: keepFumigationEnabled,
+      oakType: keepOakType,
       quoteDate: quoteDate.value.format('YYYY-MM-DD'),
       skipRoadMatch: Boolean(existingRoadMatch),
     });
@@ -875,9 +1208,8 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
     normalizeSheetUsdFields();
     sheet.fumigationPoint = keepFumigationPoint ?? sheet.fumigationPoint;
     sheet.fumigationEnabled = keepFumigationEnabled;
-    if (keepFumigationEnabled) {
-      sheet.truckingFee = undefined;
-    } else {
+    oakType.value = keepOakType;
+    if (!keepFumigationEnabled) {
       sheet.fmNonOak = 0;
       sheet.fmOak = 0;
       sheet.truckingNonOakUsd = undefined;
@@ -894,6 +1226,9 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
       nextMatches.push(existingRoadMatch);
     }
     costMatches.value = normalizeCostMatches(nextMatches);
+    if (existingRoadMatch) {
+      await refreshRoadTruckingFromMatch();
+    }
     loadOceanFreightEntriesFromSheet();
     message.success($t('page.quote.message.sheetGenerated'));
   } catch (error: any) {
@@ -933,57 +1268,62 @@ async function onSave() {
   }
 }
 
-async function onSubmit() {
+function onSubmit() {
   const id = quoteId.value;
   if (!id) return;
-  await submitQuote(id);
-  message.success($t('page.quote.message.submitSuccess'));
-  await loadDetail();
-}
-
-async function onSend() {
-  const id = quoteId.value;
-  if (!id) return;
-  await sendQuote(id);
-  message.success($t('page.quote.message.sendSuccess'));
-  await loadDetail();
-}
-
-async function onCancelApproval() {
-  const id = quoteId.value;
-  if (!id) return;
+  if (hasUnsavedChanges()) {
+    Modal.warning({
+      centered: true,
+      title: $t('page.quote.actions.submit'),
+      content: $t('page.quote.confirm.submitNeedSave'),
+    });
+    return;
+  }
   Modal.confirm({
-    title: $t('page.quote.actions.cancelApproval'),
-    content: $t('page.quote.confirm.cancelApproval', [quoteNo.value]),
+    centered: true,
+    title: $t('page.quote.actions.submit'),
+    content: $t('page.quote.confirm.submit', [quoteNo.value]),
     onOk: async () => {
-      await cancelQuoteApproval(id);
-      message.success($t('page.quote.message.cancelApprovalSuccess'));
+      await submitQuote(id);
+      message.success($t('page.quote.message.submitSuccess'));
       await loadDetail();
     },
   });
 }
 
-async function onReject() {
+function onRollback() {
   const id = quoteId.value;
   if (!id) return;
-  Modal.confirm({
-    title: $t('page.quote.actions.reject'),
-    content: $t('page.quote.confirm.reject', [quoteNo.value]),
-    okType: 'danger',
-    onOk: async () => {
-      await rejectQuote(id);
-      message.success($t('page.quote.message.rejectSuccess'));
-      await loadDetail();
-    },
-  });
+  withdrawComment.value = '';
+  withdrawOpen.value = true;
+}
+
+async function onWithdrawOk() {
+  const id = quoteId.value;
+  if (!id) return;
+  const comment = withdrawComment.value.trim();
+  if (!comment) {
+    message.warning($t('page.approval.withdrawReasonRequired'));
+    throw new Error('withdraw reason required');
+  }
+  withdrawSubmitting.value = true;
+  try {
+    await cancelQuoteApproval(id, comment);
+    message.success($t('page.quote.message.withdrawSuccess'));
+    withdrawOpen.value = false;
+    await loadDetail();
+  } finally {
+    withdrawSubmitting.value = false;
+  }
 }
 
 async function onWon() {
   const id = quoteId.value;
   if (!id) return;
   Modal.confirm({
-    title: $t('page.quote.actions.won'),
-    content: $t('page.quote.confirm.won'),
+    centered: true,
+    title: $t('page.quote.actions.confirmWon'),
+    content: $t('page.quote.confirm.confirmWon'),
     onOk: async () => {
       await wonQuote(id);
       message.success($t('page.quote.message.wonSuccess'));
@@ -996,6 +1336,7 @@ async function onVoid() {
   const id = quoteId.value;
   if (!id) return;
   Modal.confirm({
+    centered: true,
     title: $t('page.quote.actions.void'),
     content: $t('page.quote.confirm.void', [quoteNo.value]),
     okType: 'danger',
@@ -1011,6 +1352,7 @@ async function onDelete() {
   const id = quoteId.value;
   if (!id) return;
   Modal.confirm({
+    centered: true,
     title: $t('common.delete'),
     content: $t('page.quote.confirm.delete', [quoteNo.value]),
     okType: 'danger',
@@ -1029,6 +1371,71 @@ function onCopy() {
   }
   stashQuoteCopySource(id);
   router.push({ name: 'QuoteCreate' });
+}
+
+function onRevise() {
+  const id = quoteId.value;
+  if (!id) {
+    return;
+  }
+  reviseReasonDraft.value = changeReason.value || '';
+  Modal.confirm({
+    centered: true,
+    width: 640,
+    title: $t('page.quote.actions.revise'),
+    content: () =>
+      h('div', { class: 'space-y-3' }, [
+        h(
+          'p',
+          { class: 'm-0 text-sm text-gray-600' },
+          $t('page.quote.confirm.revise'),
+        ),
+        h(Input.TextArea, {
+          value: reviseReasonDraft.value,
+          rows: 6,
+          maxlength: 512,
+          showCount: true,
+          placeholder: $t('page.quote.message.reviseNeedReason'),
+          'onUpdate:value': (value: string) => {
+            reviseReasonDraft.value = value;
+          },
+        }),
+      ]),
+    okText: $t('page.quote.actions.revise'),
+    okButtonProps: { loading: revising.value },
+    async onOk() {
+      const reason = reviseReasonDraft.value.trim();
+      if (!reason) {
+        message.warning($t('page.quote.message.reviseNeedReason'));
+        throw new Error('reason required');
+      }
+      revising.value = true;
+      try {
+        const detail = await reviseQuote(id, reason);
+        message.success(
+          $t('page.quote.message.reviseSuccess', [
+            detail.revisionLabel || detail.quoteNo,
+          ]),
+        );
+        await router.push({
+          name: 'QuoteEdit',
+          params: { id: String(detail.id) },
+        });
+      } finally {
+        revising.value = false;
+      }
+    },
+  });
+}
+
+function goParentQuote() {
+  if (!parentQuoteId.value) {
+    return;
+  }
+  router.push({
+    name: 'QuoteEdit',
+    params: { id: String(parentQuoteId.value) },
+  });
 }
 
 function goBack() {
@@ -1087,8 +1494,26 @@ watch(
       return;
     }
     if (name === 'QuoteEdit') {
+      costRiskModalShown.value = false;
       await loadDetail();
     }
+  },
+);
+
+watch(
+  () => route.params.id,
+  () => {
+    costRiskModalShown.value = false;
+  },
+);
+
+watch(
+  () => sheet.pod,
+  (pod) => {
+    if (hydratingSheet.value) {
+      return;
+    }
+    void applyDocFeeFromPod(pod);
   },
 );
 
@@ -1120,113 +1545,206 @@ onUnmounted(() => {
               >
                 {{ quoteNo }}
               </Tag>
-              <Tag v-if="!isCreate && actionsReady" :color="statusColor">
-                {{ statusLabel(status) }}
+              <Tag
+                v-if="!isCreate && actionsReady && revisionLabel"
+                color="purple"
+              >
+                {{ revisionLabel }}
               </Tag>
+              <Tag
+                v-if="!isCreate && actionsReady && parentQuoteId"
+                color="purple"
+              >
+                {{ $t('page.quote.revision.fromChange') }}
+              </Tag>
+              <Tag
+                v-if="!isCreate && actionsReady"
+                :class="headerStatusTag.className"
+                :color="headerStatusTag.color"
+              >
+                {{ headerStatusTag.label }}
+              </Tag>
+              <Button
+                v-if="!isCreate && actionsReady && parentQuoteId"
+                type="link"
+                class="!px-1"
+                @click="goParentQuote"
+              >
+                {{ $t('page.quote.revision.viewParent') }}
+              </Button>
             </div>
           </div>
           <div
             v-if="showToolbarActions"
             class="quote-editor-nav__actions quote-editor-actions"
           >
-            <Button
-              v-if="canUseCostLibrary"
-              class="quote-action-btn quote-action-btn--generate"
-              :loading="generating"
-              @click="onGenerateSheet"
-            >
-              <IconifyIcon class="mr-1 size-4" icon="lucide:file-spreadsheet" />
-              {{ $t('page.quote.actions.generateSheet') }}
-            </Button>
-            <Dropdown v-if="canUseCostLibrary" :trigger="['click']">
-              <Button class="quote-action-btn quote-action-btn--import">
-                <IconifyIcon class="mr-1 size-4" icon="lucide:database" />
-                {{ $t('page.quote.actions.importCost') }}
+            <template v-if="showDraftWorkflowActions">
+              <Button
+                v-if="!isCreate && canCopyAction"
+                class="quote-action-btn quote-action-btn--copy"
+                @click="onCopy"
+              >
+                <Copy class="mr-1 size-4" />
+                {{ $t('page.quote.actions.copy') }}
               </Button>
-              <template #overlay>
-                <Menu :items="importMenuItems" @click="onImportCostType" />
-              </template>
-            </Dropdown>
-            <Button
-              v-if="showWorkflowActions && canCreate"
-              class="quote-action-btn quote-action-btn--copy"
-              @click="onCopy"
-            >
-              <Copy class="mr-1 size-4" />
-              {{ $t('page.quote.actions.copy') }}
-            </Button>
-            <Button
-              v-if="showWorkflowActions && canSubmitAction"
-              class="quote-action-btn quote-action-btn--submit"
-              @click="onSubmit"
-            >
-              <IconifyIcon class="mr-1 size-4" icon="lucide:send" />
-              {{ $t('page.quote.actions.submit') }}
-            </Button>
-            <Button
-              v-if="showWorkflowActions && canCancelApprovalAction"
-              class="quote-action-btn quote-action-btn--cancel-approval"
-              @click="onCancelApproval"
-            >
-              <IconifyIcon class="mr-1 size-4" icon="lucide:undo-2" />
-              {{ $t('page.quote.actions.cancelApproval') }}
-            </Button>
-            <Button
-              v-if="
-                showWorkflowActions && workflowStatus === 'SENT' && canApprove
-              "
-              class="quote-action-btn quote-action-btn--reject"
-              @click="onReject"
-            >
-              <IconifyIcon class="mr-1 size-4" icon="lucide:circle-x" />
-              {{ $t('page.quote.actions.reject') }}
-            </Button>
-            <Button
-              v-if="
-                showWorkflowActions && workflowStatus === 'SENT' && canApprove
-              "
-              class="quote-action-btn quote-action-btn--won"
-              @click="onWon"
-            >
-              <IconifyIcon class="mr-1 size-4" icon="lucide:circle-check-big" />
-              {{ $t('page.quote.actions.won') }}
-            </Button>
-            <Button
-              v-if="showWorkflowActions && canVoidAction"
-              class="quote-action-btn quote-action-btn--void"
-              @click="onVoid"
-            >
-              <IconifyIcon class="mr-1 size-4" icon="lucide:ban" />
-              {{ $t('page.quote.actions.void') }}
-            </Button>
-            <Button
-              v-if="showWorkflowActions && canDeleteAction"
-              class="quote-action-btn quote-action-btn--delete"
-              danger
-              type="primary"
-              @click="onDelete"
-            >
-              {{ $t('common.delete') }}
-            </Button>
-            <Button
-              class="quote-action-btn quote-action-btn--print"
-              @click="openPrintPreview"
-            >
-              <IconifyIcon class="mr-1 size-4" icon="lucide:printer" />
-              {{ $t('page.quote.actions.print') }}
-            </Button>
-            <Button
-              v-if="canSave"
-              class="quote-action-btn quote-action-btn--save"
-              :loading="saving"
-              type="primary"
-              @click="onSave"
-            >
-              <template #icon>
-                <Save class="size-4" />
-              </template>
-              {{ $t('page.quote.actions.save') }}
-            </Button>
+              <Button
+                v-if="canUseCostLibrary"
+                class="quote-action-btn quote-action-btn--generate"
+                :loading="generating"
+                @click="onGenerateSheet"
+              >
+                <IconifyIcon
+                  class="mr-1 size-4"
+                  icon="lucide:file-spreadsheet"
+                />
+                {{ $t('page.quote.actions.matchQuote') }}
+              </Button>
+              <Dropdown v-if="canUseCostLibrary" :trigger="['click']">
+                <Button class="quote-action-btn quote-action-btn--import">
+                  <IconifyIcon class="mr-1 size-4" icon="lucide:database" />
+                  {{ $t('page.quote.actions.importQuote') }}
+                </Button>
+                <template #overlay>
+                  <Menu :items="importMenuItems" @click="onImportCostType" />
+                </template>
+              </Dropdown>
+              <Button
+                class="quote-action-btn quote-action-btn--print"
+                @click="openPrintPreview"
+              >
+                <IconifyIcon class="mr-1 size-4" icon="lucide:printer" />
+                {{ $t('page.quote.actions.printQuote') }}
+              </Button>
+              <Button
+                v-if="canSubmitAction"
+                class="quote-action-btn quote-action-btn--submit"
+                @click="onSubmit"
+              >
+                <IconifyIcon class="mr-1 size-4" icon="lucide:send" />
+                {{ $t('page.quote.actions.submit') }}
+              </Button>
+              <Button
+                v-if="canDeleteAction"
+                class="quote-action-btn quote-action-btn--delete"
+                danger
+                type="primary"
+                @click="onDelete"
+              >
+                {{ $t('common.delete') }}
+              </Button>
+              <Button
+                v-if="canSave"
+                class="quote-action-btn quote-action-btn--save"
+                :loading="saving"
+                type="primary"
+                @click="onSave"
+              >
+                <template #icon>
+                  <Save class="size-4" />
+                </template>
+                {{ $t('page.quote.actions.save') }}
+              </Button>
+            </template>
+
+            <template v-else-if="showPendingApprovalToolbar">
+              <Button
+                v-if="canCopyAction"
+                class="quote-action-btn quote-action-btn--copy"
+                @click="onCopy"
+              >
+                <Copy class="mr-1 size-4" />
+                {{ $t('page.quote.actions.copy') }}
+              </Button>
+              <Button
+                class="quote-action-btn quote-action-btn--print"
+                @click="openPrintPreview"
+              >
+                <IconifyIcon class="mr-1 size-4" icon="lucide:printer" />
+                {{ $t('page.quote.actions.print') }}
+              </Button>
+              <Button
+                v-if="canRollbackAction"
+                class="quote-action-btn quote-action-btn--rollback"
+                danger
+                type="primary"
+                @click="onRollback"
+              >
+                <IconifyIcon class="mr-1 size-4" icon="lucide:undo-2" />
+                {{ $t('page.quote.actions.withdraw') }}
+              </Button>
+            </template>
+
+            <template v-else-if="showConfirmedToolbar">
+              <Button
+                v-if="canReviseAction"
+                class="quote-action-btn quote-action-btn--revise"
+                type="primary"
+                ghost
+                :loading="revising"
+                @click="onRevise"
+              >
+                <IconifyIcon
+                  class="mr-1 size-4"
+                  icon="lucide:git-branch-plus"
+                />
+                {{ $t('page.quote.actions.revise') }}
+              </Button>
+              <Button
+                v-if="canCopyAction"
+                class="quote-action-btn quote-action-btn--copy"
+                @click="onCopy"
+              >
+                <Copy class="mr-1 size-4" />
+                {{ $t('page.quote.actions.copy') }}
+              </Button>
+              <Button
+                class="quote-action-btn quote-action-btn--print"
+                @click="openPrintPreview"
+              >
+                <IconifyIcon class="mr-1 size-4" icon="lucide:printer" />
+                {{ $t('page.quote.actions.print') }}
+              </Button>
+              <Button
+                v-if="canConfirmWonAction"
+                class="quote-action-btn quote-action-btn--won"
+                type="primary"
+                @click="onWon"
+              >
+                <IconifyIcon
+                  class="mr-1 size-4"
+                  icon="lucide:circle-check-big"
+                />
+                {{ $t('page.quote.actions.confirmWon') }}
+              </Button>
+              <Button
+                v-if="canVoidAction"
+                class="quote-action-btn quote-action-btn--void"
+                danger
+                type="primary"
+                @click="onVoid"
+              >
+                <IconifyIcon class="mr-1 size-4" icon="lucide:ban" />
+                {{ $t('page.quote.actions.void') }}
+              </Button>
+            </template>
+
+            <template v-else-if="showReadonlyWorkflowToolbar">
+              <Button
+                v-if="canCopyAction"
+                class="quote-action-btn quote-action-btn--copy"
+                @click="onCopy"
+              >
+                <Copy class="mr-1 size-4" />
+                {{ $t('page.quote.actions.copy') }}
+              </Button>
+              <Button
+                class="quote-action-btn quote-action-btn--print"
+                @click="openPrintPreview"
+              >
+                <IconifyIcon class="mr-1 size-4" icon="lucide:printer" />
+                {{ $t('page.quote.actions.print') }}
+              </Button>
+            </template>
           </div>
         </div>
       </header>
@@ -1244,13 +1762,37 @@ onUnmounted(() => {
             <div class="quote-editor-section__body">
               <Form layout="vertical">
                 <div class="quote-sheet-fields">
-                  <div class="quote-sheet-basic-row quote-sheet-basic-row--2">
+                  <div class="quote-sheet-basic-row quote-sheet-basic-row--4">
+                    <Form.Item
+                      :label="$t('page.quote.sheet.serviceType')"
+                      required
+                    >
+                      <Select
+                        v-model:value="serviceTypes"
+                        :disabled="readOnly"
+                        max-tag-count="responsive"
+                        :options="serviceTypeOptions"
+                        :placeholder="
+                          readOnly
+                            ? '—'
+                            : $t('page.quote.placeholders.serviceType')
+                        "
+                        allow-clear
+                        class="w-full"
+                        mode="multiple"
+                        show-search
+                      />
+                    </Form.Item>
                     <Form.Item :label="$t('page.quote.sheet.client')">
                       <Select
                         v-model:value="customerId"
                         :disabled="readOnly"
                         :options="customerOptions"
-                        :placeholder="$t('page.quote.placeholders.customer')"
+                        :placeholder="
+                          readOnly
+                            ? '—'
+                            : $t('page.quote.placeholders.customer')
+                        "
                         allow-clear
                         class="w-full"
                         show-search
@@ -1270,6 +1812,23 @@ onUnmounted(() => {
                         :value="quoteDate.format('YYYY-MM-DD')"
                       />
                     </Form.Item>
+                    <Form.Item :label="$t('page.quote.sheet.validUntil')">
+                      <DatePicker
+                        v-if="!readOnly"
+                        v-model:value="validUntil"
+                        allow-clear
+                        class="w-full"
+                        format="YYYY-MM-DD"
+                      />
+                      <Input
+                        v-else
+                        class="w-full"
+                        readonly
+                        :value="
+                          validUntil ? validUntil.format('YYYY-MM-DD') : '—'
+                        "
+                      />
+                    </Form.Item>
                   </div>
                   <div class="quote-sheet-basic-row quote-sheet-basic-row--3">
                     <Form.Item :label="$t('page.quote.sheet.por')" required>
@@ -1282,11 +1841,13 @@ onUnmounted(() => {
                         allow-clear
                         class="w-full"
                         option-label-prop="value"
-                        :placeholder="$t('page.quote.sheet.selectPort')"
+                        :placeholder="
+                          readOnly ? '—' : $t('page.quote.sheet.selectPort')
+                        "
                         @search="loadPortOptions"
                       />
                     </Form.Item>
-                    <Form.Item :label="$t('page.quote.sheet.pol')" required>
+                    <Form.Item :label="$t('page.quote.sheet.pol')">
                       <Select
                         v-model:value="sheet.pol"
                         :disabled="readOnly"
@@ -1296,7 +1857,9 @@ onUnmounted(() => {
                         allow-clear
                         class="w-full"
                         option-label-prop="value"
-                        :placeholder="$t('page.quote.sheet.selectPort')"
+                        :placeholder="
+                          readOnly ? '—' : $t('page.quote.sheet.selectPort')
+                        "
                         @search="loadPortOptions"
                       />
                     </Form.Item>
@@ -1310,12 +1873,19 @@ onUnmounted(() => {
                         allow-clear
                         class="w-full"
                         option-label-prop="value"
-                        :placeholder="$t('page.quote.sheet.selectPort')"
+                        :placeholder="
+                          readOnly ? '—' : $t('page.quote.sheet.selectPort')
+                        "
                         @search="loadPortOptions"
                       />
                     </Form.Item>
                   </div>
-                  <div class="quote-sheet-location-row">
+                  <div
+                    class="quote-sheet-location-row"
+                    :class="{
+                      'quote-sheet-location-row--4': fumigationEnabled,
+                    }"
+                  >
                     <Form.Item :label="$t('page.quote.sheet.city')">
                       <QuoteCitySelect
                         v-model="sheet.city"
@@ -1334,6 +1904,25 @@ onUnmounted(() => {
                         :model-value="sheet.fumigationPoint"
                         @update:model-value="
                           onFumigationPointChange($event as string | undefined)
+                        "
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      v-if="fumigationEnabled"
+                      :label="$t('page.quote.sheet.oakType')"
+                      required
+                    >
+                      <Select
+                        :disabled="readOnly"
+                        :options="oakTypeOptions"
+                        :placeholder="
+                          readOnly ? '—' : $t('page.quote.placeholders.oakType')
+                        "
+                        allow-clear
+                        class="w-full"
+                        :value="oakType"
+                        @update:value="
+                          onOakTypeChange($event as QuoteOakType | undefined)
                         "
                       />
                     </Form.Item>
@@ -1407,7 +1996,7 @@ onUnmounted(() => {
                       <Input class="w-full" readonly :value="entry.remark" />
                     </Form.Item>
                   </div>
-                  <Form.Item v-if="!fumigationEnabled">
+                  <Form.Item>
                     <template #label>
                       <QuoteRuleLabel
                         :hint="ruleHint('truckingFee')"
@@ -1422,38 +2011,6 @@ onUnmounted(() => {
                       :precision="0"
                     />
                   </Form.Item>
-                  <template v-else>
-                    <Form.Item>
-                      <template #label>
-                        <QuoteRuleLabel
-                          :hint="ruleHint('truckingNonOakUsd')"
-                          :label="$t('page.quote.sheet.truckingFeeFmNonOak')"
-                        />
-                      </template>
-                      <InputNumber
-                        v-model:value="sheet.truckingNonOakUsd"
-                        class="w-full"
-                        :disabled="readOnly"
-                        :min="0"
-                        :precision="0"
-                      />
-                    </Form.Item>
-                    <Form.Item>
-                      <template #label>
-                        <QuoteRuleLabel
-                          :hint="ruleHint('truckingOakUsd')"
-                          :label="$t('page.quote.sheet.truckingFeeFmOak')"
-                        />
-                      </template>
-                      <InputNumber
-                        v-model:value="sheet.truckingOakUsd"
-                        class="w-full"
-                        :disabled="readOnly"
-                        :min="0"
-                        :precision="0"
-                      />
-                    </Form.Item>
-                  </template>
                 </div>
               </Form>
             </div>
@@ -1602,7 +2159,11 @@ onUnmounted(() => {
                       class="w-full"
                       :disabled="readOnly"
                       :options="cargoInsuranceOptions"
-                      :placeholder="$t('page.quote.sheet.selectCargoInsurance')"
+                      :placeholder="
+                        readOnly
+                          ? '—'
+                          : $t('page.quote.sheet.selectCargoInsurance')
+                      "
                     />
                   </Form.Item>
                   <Form.Item>
@@ -1618,7 +2179,11 @@ onUnmounted(() => {
                       class="w-full"
                       :disabled="readOnly"
                       :options="cargoAgentFeeOptions"
-                      :placeholder="$t('page.quote.sheet.selectCargoAgentFee')"
+                      :placeholder="
+                        readOnly
+                          ? '—'
+                          : $t('page.quote.sheet.selectCargoAgentFee')
+                      "
                     />
                   </Form.Item>
                 </div>
@@ -1666,11 +2231,33 @@ onUnmounted(() => {
               />
             </div>
           </section>
+          <QuoteAuditLogs ref="auditLogsRef" :quote-id="quoteId" />
         </div>
       </Card>
       <CostLibraryPickerModal ref="costPickerRef" @confirm="onCostsConfirmed" />
       <Modal
+        v-model:open="withdrawOpen"
+        centered
+        :confirm-loading="withdrawSubmitting"
+        :title="$t('page.approval.withdrawModalTitle')"
+        width="560px"
+        @ok="onWithdrawOk"
+      >
+        <Form layout="vertical">
+          <Form.Item :label="$t('page.approval.withdrawReason')" required>
+            <Input.TextArea
+              v-model:value="withdrawComment"
+              :maxlength="500"
+              :placeholder="$t('page.approval.withdrawPlaceholder')"
+              :rows="4"
+              show-count
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+      <Modal
         v-model:open="sheetPreviewOpen"
+        centered
         class="quote-print-modal"
         :title="$t('page.quote.sections.printPreview')"
         width="1040px"

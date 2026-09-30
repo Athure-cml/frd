@@ -2,10 +2,7 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { CostMode } from '#/api/cost';
 import type { QuoteCostType } from '#/api/quote';
 
-import { $t } from '#/locales';
-
-import { buildColumnsFromTemplate } from '../../cost-library/shared/build-columns';
-import { getDefaultTemplate } from '../../cost-library/shared/default-templates';
+import { buildQuoteLibrarySnapshotColumns } from '../library/shared/quote-library-columns';
 
 export const QUOTE_COST_TYPE_TO_MODE: Record<QuoteCostType, CostMode> = {
   ROAD: 'road',
@@ -31,30 +28,9 @@ export function buildQuoteCostPickerColumns(
   ];
 }
 
-/** 与成本库列表一致的数据列（含 # 序号，无勾选/操作列） */
+/** 与报价库列表一致的数据列（含 # 序号，无勾选/操作列） */
 export function buildCostSnapshotColumns(
   mode: CostMode,
 ): VxeTableGridOptions['columns'] {
-  const template = getDefaultTemplate(mode);
-  const nameField =
-    mode === 'road' ? 'supplier' : mode === 'sea' ? 'pol' : 'station';
-  const nameTitle =
-    mode === 'road'
-      ? $t('page.costLibrary.roadFields.supplier')
-      : mode === 'sea'
-        ? $t('page.costLibrary.seaFields.pol')
-        : $t('page.costLibrary.fumigationFields.station');
-
-  return (
-    buildColumnsFromTemplate({
-      canEdit: false,
-      includeCheckbox: false,
-      includeOperation: false,
-      mode,
-      nameField,
-      nameTitle,
-      onActionClick: () => {},
-      template,
-    }) ?? []
-  );
+  return buildQuoteLibrarySnapshotColumns(mode) ?? [];
 }
