@@ -261,12 +261,14 @@ const showDraftWorkflowActions = computed(
 const showConfirmedToolbar = computed(
   () => showWorkflowActions.value && isConfirmedQuote.value,
 );
+/** 仅「已确认」且存在成本异常（风险）的当前版本可发起变更 */
 const canReviseAction = computed(
   () =>
     canOperate.value &&
     canEdit &&
     canCreate &&
     isConfirmedQuote.value &&
+    costRiskActive.value &&
     currentVersion.value !== false,
 );
 const showPendingApprovalToolbar = computed(

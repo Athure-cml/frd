@@ -15,6 +15,22 @@
   border-color: #ffd591;
 }
 
+/* 变更中：浅紫底 + 深紫字 */
+.quote-grid .quote-status-tag--revising.ant-tag-purple,
+.quote-editor-page .quote-status-tag--revising.ant-tag-purple {
+  color: #531dab;
+  background-color: #f9f0ff;
+  border-color: #d3adf7;
+}
+
+/* 已归档(变更)：浅灰蓝底 + 深蓝灰字 */
+.quote-grid .quote-status-tag--superseded.ant-tag-geekblue,
+.quote-editor-page .quote-status-tag--superseded.ant-tag-geekblue {
+  color: #1d39c4;
+  background-color: #f0f5ff;
+  border-color: #adc6ff;
+}
+
 .quote-library-toolbar {
   display: flex;
   flex-wrap: wrap;

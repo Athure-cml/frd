@@ -47,6 +47,10 @@ export const transportModeTagOptions = () => [
 
 /** 待审批报价：Ant Design warning 浅底 + 深橙字 */
 export const QUOTE_PENDING_APPROVAL_TAG_CLASS = 'quote-status-tag--pending';
+/** 变更中：浅紫底 + 深紫字 */
+export const QUOTE_REVISING_TAG_CLASS = 'quote-status-tag--revising';
+/** 已归档：浅灰蓝底 + 深蓝灰字 */
+export const QUOTE_SUPERSEDED_TAG_CLASS = 'quote-status-tag--superseded';
 
 export function resolveQuoteStatusTag(
   status: QuoteApi.QuoteListItem['status'],
@@ -90,8 +94,18 @@ export const statusTagOptions = () => [
   { color: 'warning', label: t('status.REJECTED'), value: 'REJECTED' },
   { color: 'warning', label: t('status.EXPIRED'), value: 'EXPIRED' },
   { color: 'error', label: t('status.VOIDED'), value: 'VOIDED' },
-  { color: 'processing', label: t('status.REVISING'), value: 'REVISING' },
-  { color: 'default', label: t('status.SUPERSEDED'), value: 'SUPERSEDED' },
+  {
+    className: QUOTE_REVISING_TAG_CLASS,
+    color: 'purple',
+    label: t('status.REVISING'),
+    value: 'REVISING',
+  },
+  {
+    className: QUOTE_SUPERSEDED_TAG_CLASS,
+    color: 'geekblue',
+    label: t('status.SUPERSEDED'),
+    value: 'SUPERSEDED',
+  },
   // 兼容旧数据展示
   {
     className: QUOTE_PENDING_APPROVAL_TAG_CLASS,

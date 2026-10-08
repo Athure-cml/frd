@@ -50,6 +50,7 @@ export function useApprovalColumns(
   const columns: VxeTableGridOptions<ApprovalApi.ListItem>['columns'] = [
     {
       field: 'approvalNo',
+      fixed: 'left',
       minWidth: 180,
       showOverflow: true,
       title: t('fields.approvalNo'),
@@ -57,6 +58,7 @@ export function useApprovalColumns(
     },
     {
       field: 'approvalType',
+      fixed: 'left',
       formatter: ({ row }: { row: ApprovalApi.ListItem }) => {
         if (row.approvalType === 'QUOTE_REVISION') {
           return t('type.quoteRevision');
@@ -117,6 +119,7 @@ export function useApprovalColumns(
     {
       align: 'center',
       field: 'status',
+      fixed: 'right',
       minWidth: 100,
       slots: { default: 'status' },
       title: t('fields.status'),

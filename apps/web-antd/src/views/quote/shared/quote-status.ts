@@ -55,6 +55,14 @@ export function canShowQuoteWon(status: QuoteStatus) {
   return normalizeQuoteStatus(status) === 'SENT';
 }
 
+/** 已确认且成本异常 → 可发起变更 */
+export function canShowQuoteRevise(
+  status: QuoteStatus,
+  costRiskActive: boolean,
+) {
+  return normalizeQuoteStatus(status) === 'SENT' && costRiskActive === true;
+}
+
 export function isQuoteAbandoned(status: QuoteStatus) {
   return QUOTE_ABANDONED_STATUSES.includes(normalizeQuoteStatus(status));
 }
