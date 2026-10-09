@@ -62,6 +62,7 @@ export interface FreightCostRecord {
   highlight?: CostHighlightView | null;
   id: number;
   inQuoteLibrary?: boolean;
+  quoteCount?: number;
   quoteOrderLocked?: boolean;
   others?: number;
   othersValidDate?: string;
@@ -113,6 +114,7 @@ export interface RoadCostRecord {
   highlight?: CostHighlightView | null;
   id: number;
   inQuoteLibrary?: boolean;
+  quoteCount?: number;
   quoteOrderLocked?: boolean;
   logYardNameAddress?: string;
   otherFee?: number;
@@ -145,6 +147,7 @@ export interface FumigationCostRecord {
   highlight?: CostHighlightView | null;
   id: number;
   inQuoteLibrary?: boolean;
+  quoteCount?: number;
   quoteOrderLocked?: boolean;
   indoorNonOak?: number;
   indoorOak?: number;

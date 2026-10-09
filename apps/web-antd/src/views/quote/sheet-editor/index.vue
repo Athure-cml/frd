@@ -72,6 +72,11 @@ import {
 } from '#/api/quote';
 import { getQuoteRuleList } from '#/api/quote-rule';
 import { getShippingLineList } from '#/api/shipping-line';
+import {
+  AI_PREFILL_QUOTE_EVENT,
+  clearAiQuotePrefill,
+  consumeAiQuotePrefill,
+} from '#/components/ai-assistant/ai-prefill-quote';
 import { $t } from '#/locales';
 
 import { getServiceTypeOptions, resolveQuoteStatusTag } from '../list/data';
@@ -123,7 +128,9 @@ import {
 import {
   buildOceanFreightEntries,
   entryFromSeaRecord,
+  joinOceanFreightLines,
   MAX_OCEAN_FREIGHT_LINES,
+  parseOceanFreightLines,
   resolveOceanFreightEntries,
   syncSeaMatchRemarks,
   syncSheetFromOceanFreightEntries,
@@ -665,13 +672,15 @@ function syncFumigationFromSheet() {
 }
 
 function normalizeSheetUsdFields() {
-  const fields = [
-    'oceanFreight',
-    'ofUsd',
-    'docUsd',
-    'cargoInsurancePremium',
-    'cargoAgentFee',
-  ] as const;
+  const joinedOcean = sheet.oceanFreight || sheet.ofUsd;
+  if (typeof joinedOcean === 'string' && joinedOcean.trim()) {
+    const normalized = joinOceanFreightLines(
+      parseOceanFreightLines(joinedOcean),
+    );
+    sheet.oceanFreight = normalized;
+    sheet.ofUsd = normalized;
+  }
+  const fields = ['docUsd', 'cargoInsurancePremium', 'cargoAgentFee'] as const;
   for (const field of fields) {
     const value = sheet[field];
     if (typeof value === 'string' && value.trim()) {
@@ -1014,6 +1023,129 @@ function consumeAiApplyFromStorage() {
   } catch {
     // ignore
   }
+}
+
+const ALLOWED_AI_SERVICE_TYPES = new Set<QuoteServiceType>([
+  'FUMIGATION',
+  'INSURANCE',
+  'OTHER',
+  'SEA',
+  'TRADE',
+  'TRUCK',
+]);
+
+function normalizeAiServiceTypes(raw: unknown): QuoteServiceType[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  const result: QuoteServiceType[] = [];
+  for (const item of raw) {
+    const value = String(item ?? '')
+      .trim()
+      .toUpperCase()
+      .replaceAll('-', '_')
+      .replaceAll(' ', '_') as QuoteServiceType;
+    if (ALLOWED_AI_SERVICE_TYPES.has(value) && !result.includes(value)) {
+      result.push(value);
+    }
+  }
+  return result;
+}
+
+function applyAiQuotePrefillPayload(form: Record<string, unknown>) {
+  const sheetPayload =
+    form.sheet && typeof form.sheet === 'object'
+      ? (form.sheet as Record<string, unknown>)
+      : null;
+  const fumigationPoint = String(
+    sheetPayload?.fumigationPoint ?? form.fumigationPoint ?? '',
+  ).trim();
+  // 与页面逻辑一致：没有熏蒸点就不启熏蒸、不展示 OAK/NON-OAK
+  const fumigationOn = Boolean(fumigationPoint);
+
+  let nextServiceTypes = normalizeAiServiceTypes(form.serviceTypes);
+  if (!fumigationOn) {
+    nextServiceTypes = nextServiceTypes.filter((item) => item !== 'FUMIGATION');
+  }
+  if (nextServiceTypes.length > 0) {
+    serviceTypes.value = nextServiceTypes;
+  }
+  if (typeof form.customerId === 'number' && form.customerId > 0) {
+    customerId.value = form.customerId;
+  }
+  if (typeof form.customerName === 'string' && form.customerName.trim()) {
+    customerName.value = form.customerName.trim();
+  }
+  if (typeof form.currency === 'string' && form.currency.trim()) {
+    currency.value = form.currency.trim();
+  }
+  if (typeof form.remark === 'string') {
+    remark.value = form.remark;
+  }
+
+  if (sheetPayload) {
+    Object.assign(sheet, sheetPayload);
+  }
+
+  if (fumigationOn) {
+    sheet.fumigationPoint = fumigationPoint;
+    sheet.fumigationEnabled = true;
+    const nextOak = String(form.oakType ?? '')
+      .trim()
+      .toUpperCase()
+      .replaceAll('-', '_');
+    oakType.value =
+      nextOak === 'OAK' || nextOak === 'NON_OAK' ? nextOak : undefined;
+  } else {
+    sheet.fumigationPoint = undefined;
+    sheet.fumigationEnabled = false;
+    sheet.fmNonOak = 0;
+    sheet.fmOak = 0;
+    oakType.value = undefined;
+  }
+
+  if (!sheet.oceanFreight && sheet.ofUsd) {
+    sheet.oceanFreight = sheet.ofUsd;
+  }
+  normalizeSheetUsdFields();
+
+  const matches = Array.isArray(form.costMatches)
+    ? (form.costMatches as QuoteApi.QuoteCostMatchItem[])
+    : [];
+  if (matches.length > 0) {
+    costMatches.value = normalizeCostMatches(
+      fumigationOn
+        ? matches
+        : matches.filter((item) => item.costType !== 'FUMIGATION'),
+    );
+  }
+  loadOceanFreightEntriesFromSheet();
+}
+
+async function consumeAiQuotePrefillFromStorage() {
+  if (!isCreate.value) {
+    return false;
+  }
+  const draft = consumeAiQuotePrefill();
+  if (!draft?.payload) {
+    return false;
+  }
+  hydratingSheet.value = true;
+  try {
+    applyAiQuotePrefillPayload(draft.payload);
+    message.success($t('page.ai.proposeQuotePrefilled'));
+    return true;
+  } catch {
+    message.error($t('page.ai.requestFailed'));
+    return false;
+  } finally {
+    await nextTick();
+    hydratingSheet.value = false;
+  }
+}
+
+function onAiQuotePrefillEvent() {
+  void consumeAiQuotePrefillFromStorage();
 }
 
 function buildPayload(): QuoteApi.QuoteSave {
@@ -1455,6 +1587,7 @@ function onPrint() {
 
 onMounted(async () => {
   window.addEventListener('ai-apply-cost', onAiApplyEvent);
+  window.addEventListener(AI_PREFILL_QUOTE_EVENT, onAiQuotePrefillEvent);
   await Promise.all([
     loadShippingLineRemarks(),
     loadCustomers(),
@@ -1465,9 +1598,12 @@ onMounted(async () => {
   await loadDetail();
   if (isCreate.value) {
     actionsReady.value = true;
-    consumeAiApplyFromStorage();
-    await consumeCopyFromStorage();
-    await consumeRoadIntroduceFromStorage();
+    const quotePrefillApplied = await consumeAiQuotePrefillFromStorage();
+    if (!quotePrefillApplied) {
+      consumeAiApplyFromStorage();
+      await consumeCopyFromStorage();
+      await consumeRoadIntroduceFromStorage();
+    }
     if (oceanFreightEntries.value.length === 0) {
       oceanFreightEntries.value = resolveOceanFreightEntries(
         sheet,
@@ -1477,12 +1613,16 @@ onMounted(async () => {
     }
   } else {
     sessionStorage.removeItem('ai-apply-cost');
+    clearAiQuotePrefill();
   }
 });
 
 onActivated(async () => {
   if (isCreate.value) {
-    await consumeRoadIntroduceFromStorage();
+    const quotePrefillApplied = await consumeAiQuotePrefillFromStorage();
+    if (!quotePrefillApplied) {
+      await consumeRoadIntroduceFromStorage();
+    }
   }
 });
 
@@ -1491,12 +1631,16 @@ watch(
   async (name) => {
     if (name === 'QuoteCreate') {
       actionsReady.value = true;
-      await consumeCopyFromStorage();
-      await consumeRoadIntroduceFromStorage();
+      const quotePrefillApplied = await consumeAiQuotePrefillFromStorage();
+      if (!quotePrefillApplied) {
+        await consumeCopyFromStorage();
+        await consumeRoadIntroduceFromStorage();
+      }
       return;
     }
     if (name === 'QuoteEdit') {
       costRiskModalShown.value = false;
+      clearAiQuotePrefill();
       await loadDetail();
     }
   },
@@ -1521,6 +1665,7 @@ watch(
 
 onUnmounted(() => {
   window.removeEventListener('ai-apply-cost', onAiApplyEvent);
+  window.removeEventListener(AI_PREFILL_QUOTE_EVENT, onAiQuotePrefillEvent);
 });
 </script>
 

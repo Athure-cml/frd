@@ -1,7 +1,7 @@
 import type {
   WorkspaceMetricView,
-  WorkspaceNoticeView,
   WorkspacePipelineView,
+  WorkspaceQuoteStatsView,
   WorkspaceRouteView,
   WorkspaceTodoView,
 } from './map-workspace';
@@ -12,8 +12,8 @@ import { getWorkspaceData } from '#/api/dashboard';
 
 import {
   mapWorkspaceMetrics,
-  mapWorkspaceNotice,
   mapWorkspacePipeline,
+  mapWorkspaceQuoteStats,
   mapWorkspaceRoutes,
   mapWorkspaceTodos,
 } from './map-workspace';
@@ -23,8 +23,12 @@ export function useWorkspaceData() {
   const metrics = ref<WorkspaceMetricView[]>([]);
   const todos = ref<WorkspaceTodoView[]>([]);
   const pipeline = ref<WorkspacePipelineView[]>([]);
-  const notices = ref<WorkspaceNoticeView[]>([]);
   const topRoutes = ref<WorkspaceRouteView[]>([]);
+  const quoteStats = ref<WorkspaceQuoteStatsView>({
+    months: [],
+    quoted: [],
+    won: [],
+  });
 
   async function load() {
     loading.value = true;
@@ -33,8 +37,8 @@ export function useWorkspaceData() {
       metrics.value = mapWorkspaceMetrics(data.metrics ?? []);
       todos.value = mapWorkspaceTodos(data.todos ?? []);
       pipeline.value = mapWorkspacePipeline(data.pipeline ?? []);
-      notices.value = (data.notices ?? []).map(mapWorkspaceNotice);
       topRoutes.value = mapWorkspaceRoutes(data.topRoutes ?? []);
+      quoteStats.value = mapWorkspaceQuoteStats(data.quoteStats);
     } finally {
       loading.value = false;
     }
@@ -48,8 +52,8 @@ export function useWorkspaceData() {
     loading,
     load,
     metrics,
-    notices,
     pipeline,
+    quoteStats,
     todos,
     topRoutes,
   };

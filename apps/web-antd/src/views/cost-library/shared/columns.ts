@@ -23,7 +23,7 @@ export function buildCostCheckboxColumn() {
 const COST_STATUS_COL_WIDTH = 76;
 /** 关联数据：Tag + 查看 */
 export const COST_RELATION_COL_WIDTH = 120;
-export const QUOTE_RELATION_COL_WIDTH = 96;
+export const QUOTE_RELATION_COL_WIDTH = 168;
 /** 操作「修改 / 复制 / 删除」 */
 const COST_OPERATION_COL_WIDTH_DEFAULT = 148;
 /** 报价库操作「修改 / 删除」 */
@@ -31,11 +31,16 @@ const QUOTE_LIBRARY_OPERATION_COL_WIDTH = 108;
 /** 操作「修改 / 续期 / 复制 / 删除」 */
 const COST_OPERATION_COL_WIDTH_WITH_RENEW = 188;
 
-type RelationLinkRow = { id: number; inQuoteLibrary?: boolean };
+type RelationLinkRow = {
+  id: number;
+  inQuoteLibrary?: boolean;
+  quoteCount?: number;
+};
 
 export function buildCostRelationColumn<T extends RelationLinkRow>(options: {
   direction: 'cost-to-quote' | 'quote-to-cost';
   onNavigate: (row: T) => void;
+  onNavigateQuotes?: (row: T) => void;
 }) {
   const width =
     options.direction === 'quote-to-cost'
@@ -47,6 +52,7 @@ export function buildCostRelationColumn<T extends RelationLinkRow>(options: {
       attrs: {
         direction: options.direction,
         onClick: options.onNavigate,
+        onQuoteClick: options.onNavigateQuotes,
       },
       name: 'CellRelationLink',
     },
@@ -246,6 +252,7 @@ export function injectRelationColumn<T extends { id: number }>(
   options: {
     direction: 'cost-to-quote' | 'quote-to-cost';
     onNavigate: (row: T) => void;
+    onNavigateQuotes?: (row: T) => void;
   },
 ): VxeTableGridOptions<T>['columns'] {
   if (!columns?.length) {

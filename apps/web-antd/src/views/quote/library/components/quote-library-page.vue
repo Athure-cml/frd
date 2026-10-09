@@ -38,6 +38,7 @@ import {
 } from '../../../cost-library/shared/columns';
 import {
   navigateToCostLibrary,
+  navigateToQuoteListByLibrary,
   useRelationFocus,
 } from '../../../cost-library/shared/cost-quote-relation';
 import { getDefaultTemplate } from '../../../cost-library/shared/default-templates';
@@ -144,6 +145,8 @@ const gridColumns = computed(() => {
       direction: 'quote-to-cost',
       onNavigate: (row) =>
         navigateToCostLibrary(router, props.mode as CostMode, row.id),
+      onNavigateQuotes: (row) =>
+        navigateToQuoteListByLibrary(router, props.mode as CostMode, row.id),
     },
   );
 });

@@ -18,11 +18,15 @@ export namespace DashboardApi {
   }
 
   export interface WorkspacePipelineItem {
+    currency?: string;
+    customerName?: string;
     id: number;
     progress: number;
     quoteNo: string;
+    serviceTypes?: string[];
     status: 'done' | 'progress';
     title: string;
+    totalAmount?: number;
   }
 
   export interface WorkspaceNotice {
@@ -37,10 +41,17 @@ export namespace DashboardApi {
     value: number;
   }
 
+  export interface WorkspaceQuoteStats {
+    months: string[];
+    quoted: number[];
+    won: number[];
+  }
+
   export interface WorkspaceData {
     metrics: WorkspaceMetric[];
     notices: WorkspaceNotice[];
     pipeline: WorkspacePipelineItem[];
+    quoteStats?: WorkspaceQuoteStats;
     todos: WorkspaceTodo[];
     topRoutes: WorkspaceRouteItem[];
   }
@@ -63,6 +74,12 @@ export function getWorkspaceData() {
 
 export function getDashboardTodos() {
   return requestClient.get<DashboardApi.WorkspaceTodo[]>('/dashboard/todos');
+}
+
+export function getDashboardTopRoutes() {
+  return requestClient.get<DashboardApi.WorkspaceRouteItem[]>(
+    '/dashboard/top-routes',
+  );
 }
 
 export function getDashboardNotifications() {

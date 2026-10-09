@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { EchartsUIType } from '@vben/plugins/echarts';
 
-import { onMounted, ref } from 'vue';
+import { ref, watch } from 'vue';
 
 import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 
@@ -10,13 +10,41 @@ import { $t } from '#/locales';
 import { readThemeColors } from '../shared/chart-theme';
 import { quoteAmountTrend } from './mock-data';
 
+const props = withDefaults(
+  defineProps<{
+    months?: string[];
+    quoted?: number[];
+    won?: number[];
+  }>(),
+  {
+    months: () => [],
+    quoted: () => [],
+    won: () => [],
+  },
+);
+
 const chartRef = ref<EchartsUIType>();
 const { renderEcharts } = useEcharts(chartRef);
 
-onMounted(() => {
-  const colors = readThemeColors();
+function formatMonthLabel(value: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  if (!match) {
+    return value;
+  }
+  const month = Number(match[2]);
+  return $t('page.workspace.monthLabel', [month]);
+}
 
-  renderEcharts({
+function renderChart() {
+  const colors = readThemeColors();
+  const hasLiveData = props.months.length > 0;
+  const months = hasLiveData
+    ? props.months.map((item) => formatMonthLabel(item))
+    : quoteAmountTrend.months;
+  const quoted = hasLiveData ? props.quoted : quoteAmountTrend.quoted;
+  const won = hasLiveData ? props.won : quoteAmountTrend.won;
+
+  void renderEcharts({
     color: [colors.primary, colors.success],
     grid: {
       bottom: 24,
@@ -34,18 +62,18 @@ onMounted(() => {
     },
     series: [
       {
-        data: quoteAmountTrend.quoted,
+        areaStyle: { opacity: 0.08 },
+        data: quoted,
         name: $t('page.analytics.chart.quotedAmount'),
         smooth: true,
         type: 'line',
-        areaStyle: { opacity: 0.08 },
       },
       {
-        data: quoteAmountTrend.won,
+        areaStyle: { opacity: 0.08 },
+        data: won,
         name: $t('page.analytics.chart.wonAmount'),
         smooth: true,
         type: 'line',
-        areaStyle: { opacity: 0.08 },
       },
     ],
     tooltip: {
@@ -55,7 +83,7 @@ onMounted(() => {
     },
     xAxis: {
       boundaryGap: false,
-      data: quoteAmountTrend.months,
+      data: months,
       type: 'category',
     },
     yAxis: {
@@ -66,7 +94,13 @@ onMounted(() => {
       type: 'value',
     },
   });
-});
+}
+
+watch(
+  () => [props.months, props.quoted, props.won],
+  () => renderChart(),
+  { deep: true, immediate: true },
+);
 </script>
 
 <template>

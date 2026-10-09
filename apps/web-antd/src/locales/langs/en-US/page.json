@@ -109,8 +109,15 @@
     "vsYesterday": "vs yesterday",
     "viewAll": "View all",
     "thisMonth": "This month",
+    "last12Months": "Last 12 months",
+    "monthLabel": "{0}",
     "quoteStats": "Quote Statistics",
     "topRoutes": "Top Routes",
+    "routesDrawer": {
+      "title": "Top Routes",
+      "subtitle": "Quote count ranking · last 30 days",
+      "empty": "No top routes yet"
+    },
     "quickNav": "Shortcuts",
     "quickNavHint": "High-frequency tasks for quotes and cost maintenance.",
     "illustrations": {
@@ -374,6 +381,8 @@
     "relation": {
       "quoteGenerated": "In Quote Library",
       "quoteNotGenerated": "Not in Quote Library",
+      "quoteReferenced": "Used by {0}",
+      "quoteNotReferenced": "Not used",
       "view": "View"
     },
     "confirm": {
@@ -891,6 +900,8 @@
   "quote": {
     "title": "Quotes",
     "list": "Quote List",
+    "libraryFilterHint": "Filtering quotes that reference {0} #{1}",
+    "clearLibraryFilter": "Clear filter",
     "library": {
       "road": "Truck Quote Library",
       "roadDesc": "Only costs promoted from the cost library; fees follow quote rules and can be adjusted above the cost floor.",
@@ -1617,11 +1628,11 @@
     "title": "Xiao Furui",
     "tabChat": "Chat",
     "tabParse": "Parse",
-    "chatPlaceholder": "Ask about the system or look up costs…",
+    "chatPlaceholder": "Ask about the system, look up costs, or say: create a quote for customer XX, POR→POL→POD…",
     "parsePlaceholder": "Paste email or inquiry text…",
     "parseHint": "Optional hint, e.g. extract route and container type",
-    "emptyHint": "Ask about fields, quote flow, or let Xiao Furui search the cost library.",
-    "greeting": "Hi! I'm Xiao Furui, the AI assistant for Furuiduo Quote.\nI can help you with:\n· System usage and field meanings (e.g. POR / POL)\n· Truck, ocean, and fumigation cost lookup\n· Parsing inquiry info from email / Excel / PDF\nJust ask anytime!",
+    "emptyHint": "Ask about fields, quote flow, draft a new quote (you click Create), or search/prefill cost forms.",
+    "greeting": "Hi! I'm Xiao Furui, the AI assistant for Furuiduo Quote.\nI can help you with:\n· System usage and field meanings (e.g. POR / POL)\n· Truck, ocean, and fumigation cost lookup\n· Draft a new quote from service type / customer / route and match quote library (you click Create)\n· Prefill cost forms (you confirm before saving)\n· Parsing inquiry info from email / Excel / PDF\nJust ask anytime!",
     "send": "Send",
     "sendHint": "Enter to send · Shift+Enter for newline",
     "clear": "Clear",
@@ -1645,6 +1656,10 @@
     "proposeDismissed": "Dismissed",
     "proposeOpened": "Form opened",
     "proposeOpenForm": "Opened the cost form. Review and confirm to save.",
+    "proposeQuoteReview": "Open new quote",
+    "proposeQuoteOpenForm": "Opened the new quote page with draft data. Review and click Create.",
+    "proposeQuotePrefilled": "Quote draft prefilled. Review and click Create.",
+    "proposeQuoteNoPermission": "No quote create permission; cannot open the new quote page.",
     "proposeNoEditPermission": "No matching cost edit permission; cannot open the form.",
     "proposeOnlyRoad": "Only truck cost proposals are supported for now",
     "proposeUnsupported": "This cost type is not supported for AI draft yet",

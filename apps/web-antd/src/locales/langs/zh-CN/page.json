@@ -109,8 +109,15 @@
     "vsYesterday": "较昨日",
     "viewAll": "查看全部",
     "thisMonth": "本月",
+    "last12Months": "近12个月",
+    "monthLabel": "{0}月",
     "quoteStats": "报价统计",
     "topRoutes": "热门线路",
+    "routesDrawer": {
+      "title": "热门线路",
+      "subtitle": "近 30 天报价次数排行",
+      "empty": "暂无热门线路数据"
+    },
     "quickNav": "常用功能",
     "quickNavHint": "高频业务入口，一键进入报价与成本维护。",
     "illustrations": {
@@ -374,6 +381,8 @@
     "relation": {
       "quoteGenerated": "已生成报价",
       "quoteNotGenerated": "未生成报价",
+      "quoteReferenced": "引用 {0}",
+      "quoteNotReferenced": "未引用",
       "view": "查看"
     },
     "confirm": {
@@ -890,6 +899,8 @@
   "quote": {
     "title": "报价管理",
     "list": "报价单列表",
+    "libraryFilterHint": "正在反查：{0} #{1} 被引用的报价单",
+    "clearLibraryFilter": "清除反查",
     "library": {
       "road": "卡车报价库",
       "roadDesc": "仅展示已从成本库「入报价库」的数据；费用经规则处理后展示，可单独调整且不得低于成本原价。",
@@ -1616,11 +1627,11 @@
     "title": "小福瑞",
     "tabChat": "对话",
     "tabParse": "文档解析",
-    "chatPlaceholder": "问系统用法、查成本，或说：帮我新增一条卡车成本…",
+    "chatPlaceholder": "问系统用法、查成本，或说：帮我建一份报价，客户XX，POR→POL→POD…",
     "parsePlaceholder": "粘贴客户邮件或询价文本…",
     "parseHint": "可选提示，例如：提取路线与箱型",
-    "emptyHint": "可以问字段含义、报价流程，查成本，或让小福瑞帮填卡车/海运/熏蒸成本录入表单（你确认后才保存）。",
-    "greeting": "你好呀！我是小福瑞，福瑞多货代系统的 AI 助手。\n我可以帮你：\n· 解答系统用法和字段含义（比如 POR / POL）\n· 查询卡车、海运、熏蒸成本\n· 帮你打开成本录入表并预填数据（你确认后才保存）\n· 解析邮件 / Excel / PDF 里的询价信息\n有什么需要，随时叫我～",
+    "emptyHint": "可以问字段含义、报价流程，查成本，拟新建报价（预填后你点创建），或让小福瑞帮填成本录入表单（你确认后才保存）。",
+    "greeting": "你好呀！我是小福瑞，福瑞多货代系统的 AI 助手。\n我可以帮你：\n· 解答系统用法和字段含义（比如 POR / POL）\n· 查询卡车、海运、熏蒸成本\n· 按服务类型/客户/路线拟新建报价并匹配报价库（你点创建才保存）\n· 帮你打开成本录入表并预填数据（你确认后才保存）\n· 解析邮件 / Excel / PDF 里的询价信息\n有什么需要，随时叫我～",
     "send": "发送",
     "sendHint": "Enter 发送 · Shift+Enter 换行",
     "clear": "清空会话",
@@ -1644,6 +1655,10 @@
     "proposeDismissed": "已放弃",
     "proposeOpened": "已打开录入表单",
     "proposeOpenForm": "已打开成本录入表单，请核对后点击确认保存",
+    "proposeQuoteReview": "打开新建报价",
+    "proposeQuoteOpenForm": "已打开新建报价页并预填，请核对后点击创建",
+    "proposeQuotePrefilled": "已按 AI 草稿预填新建报价，请核对后点击创建",
+    "proposeQuoteNoPermission": "没有报价创建权限，无法打开新建报价页",
     "proposeNoEditPermission": "没有对应成本库编辑权限，无法打开录入表单",
     "proposeOnlyRoad": "当前仅支持卡车成本拟新增",
     "proposeUnsupported": "暂不支持该类型成本拟新增",

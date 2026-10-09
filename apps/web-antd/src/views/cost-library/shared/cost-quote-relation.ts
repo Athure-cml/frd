@@ -45,6 +45,21 @@ export function navigateToCostLibrary(
   });
 }
 
+/** 报价库 → 报价单列表：反查引用了该报价库成本行的报价单 */
+export function navigateToQuoteListByLibrary(
+  router: Router,
+  mode: CostMode,
+  costId: number,
+) {
+  router.push({
+    path: '/quotes/list',
+    query: {
+      libraryCostId: String(costId),
+      libraryMode: mode,
+    },
+  });
+}
+
 async function fetchCostRecord(mode: CostMode, id: number) {
   if (mode === 'road') {
     return getRoadCost(id);

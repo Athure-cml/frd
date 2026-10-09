@@ -5,8 +5,8 @@ import type {
 } from '#/adapter/vxe-table';
 import type { QuoteApi } from '#/api/quote';
 
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
 import { Page } from '@vben/common-ui';
@@ -39,12 +39,48 @@ import {
 import '../shared/quote.css';
 
 const router = useRouter();
+const route = useRoute();
 const { hasAccessByCodes } = useAccess();
 const canCreate = hasAccessByCodes(['quote:create']);
 const canDelete = hasAccessByCodes(['quote:delete']);
 const canVoid = hasAccessByCodes(['quote:approve']);
 const canExport = hasAccessByCodes(['quote:export']);
 const exporting = ref(false);
+
+/** 报价库反查：/quotes/list?libraryMode=road&libraryCostId=123 */
+const libraryFilter = computed(() => {
+  const modeRaw = route.query.libraryMode;
+  const idRaw = route.query.libraryCostId;
+  const libraryMode =
+    typeof modeRaw === 'string' &&
+    (modeRaw === 'road' || modeRaw === 'sea' || modeRaw === 'fumigation')
+      ? modeRaw
+      : '';
+  const libraryCostId =
+    typeof idRaw === 'string' && /^\d+$/.test(idRaw) ? Number(idRaw) : 0;
+  if (!libraryMode || libraryCostId <= 0) {
+    return null;
+  }
+  return { libraryCostId, libraryMode };
+});
+
+const libraryFilterHint = computed(() => {
+  const filter = libraryFilter.value;
+  if (!filter) {
+    return '';
+  }
+  const modeLabel = $t(`page.quote.library.${filter.libraryMode}`);
+  return $t('page.quote.libraryFilterHint', [modeLabel, filter.libraryCostId]);
+});
+
+function clearLibraryFilter() {
+  const nextQuery = { ...route.query };
+  delete nextQuery.libraryMode;
+  delete nextQuery.libraryCostId;
+  router.replace({ query: nextQuery }).then(() => {
+    void gridApi.query();
+  });
+}
 
 function canOperateRow(row: QuoteApi.QuoteListItem) {
   return row.operable === true;
@@ -148,10 +184,17 @@ const [Grid, gridApi] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async ({ page }, formValues) => {
+          const filter = libraryFilter.value;
           return await getQuoteList({
             page: page.currentPage,
             pageSize: page.pageSize,
             ...formValues,
+            ...(filter
+              ? {
+                  libraryCostId: filter.libraryCostId,
+                  libraryMode: filter.libraryMode,
+                }
+              : {}),
           });
         },
       },
@@ -173,6 +216,13 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
   } as VxeTableGridOptions<QuoteApi.QuoteListItem>,
 });
+
+watch(
+  () => [route.query.libraryMode, route.query.libraryCostId],
+  () => {
+    void gridApi.query();
+  },
+);
 </script>
 
 <template>
@@ -181,6 +231,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
     :description="$t('page.quote.hint.list')"
     :title="$t('page.quote.list')"
   >
+    <div v-if="libraryFilter" class="quote-library-filter-banner">
+      <span>{{ libraryFilterHint }}</span>
+      <Button size="small" type="link" @click="clearLibraryFilter">
+        {{ $t('page.quote.clearLibraryFilter') }}
+      </Button>
+    </div>
     <Grid class="quote-grid" :form-options="searchFormOptions">
       <template #toolbar-tools>
         <Button

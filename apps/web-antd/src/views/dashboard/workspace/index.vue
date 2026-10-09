@@ -1,10 +1,14 @@
 <script lang="ts" setup>
+import type { NotificationItem } from '@vben/layouts';
+
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useI18n } from '@vben/locales';
 import { useUserStore } from '@vben/stores';
 
+import { useNotificationDrawer } from '#/layouts/use-notification-drawer';
+import { useRoutesDrawer } from '#/layouts/use-routes-drawer';
 import { useTodoDrawer } from '#/layouts/use-todo-drawer';
 import { $t } from '#/locales';
 
@@ -24,8 +28,20 @@ const userStore = useUserStore();
 const router = useRouter();
 const { locale } = useI18n();
 const { openTodoDrawer } = useTodoDrawer();
+const { openRoutesDrawer } = useRoutesDrawer();
+const {
+  acting: noticeActing,
+  avatarSrc: noticeAvatarSrc,
+  loadNotifications,
+  markRead,
+  notifications,
+  openNoticeDrawer,
+  remove,
+} = useNotificationDrawer();
 
-const { metrics, todos, pipeline, notices, topRoutes } = useWorkspaceData();
+const { metrics, todos, pipeline, topRoutes, quoteStats } = useWorkspaceData();
+
+void loadNotifications(true);
 
 const userName = computed(
   () => userStore.userInfo?.realName || userStore.userInfo?.username || '',
@@ -40,6 +56,15 @@ const dateLabel = computed(() =>
 function navTo(url: string) {
   if (url.startsWith('/')) {
     router.push(url).catch(() => undefined);
+  }
+}
+
+function handleNoticeClick(item: NotificationItem) {
+  if (!item.isRead && item.id) {
+    markRead(item).catch(() => undefined);
+  }
+  if (item.link) {
+    navTo(item.link);
   }
 }
 </script>
@@ -58,7 +83,7 @@ function navTo(url: string) {
 
     <div class="workspace-body">
       <div class="workspace-mid-grid">
-        <WorkspaceTrendCard />
+        <WorkspaceTrendCard :stats="quoteStats" />
         <WorkspaceTodoCard
           :items="todos"
           @item-click="navTo"
@@ -74,12 +99,16 @@ function navTo(url: string) {
         />
         <WorkspaceRoutesCard
           :items="topRoutes"
-          @view-all="navTo('/quotes/list')"
+          @view-all="openRoutesDrawer()"
         />
         <WorkspaceNoticeCard
-          :items="notices"
-          @notice-click="navTo"
-          @view-all="navTo('/quotes/list')"
+          :avatar-src="noticeAvatarSrc"
+          :items="notifications"
+          :loading="noticeActing"
+          @notice-click="handleNoticeClick"
+          @read="markRead"
+          @remove="remove"
+          @view-all="openNoticeDrawer()"
         />
       </div>
     </div>

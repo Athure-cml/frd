@@ -24,6 +24,14 @@ export namespace AiApi {
     warnings?: string[];
   }
 
+  export interface ProposedQuote {
+    matched?: boolean;
+    payload: Record<string, unknown>;
+    summary: string;
+    title: string;
+    warnings?: string[];
+  }
+
   export interface OpenPage {
     page: string;
     routeName: string;
@@ -35,6 +43,7 @@ export namespace AiApi {
     model: string;
     openPages?: OpenPage[];
     proposedCosts?: ProposedCost[];
+    proposedQuotes?: ProposedQuote[];
     reply: string;
     toolCalls: string[];
   }

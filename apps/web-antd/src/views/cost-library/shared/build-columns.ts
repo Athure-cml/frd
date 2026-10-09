@@ -16,6 +16,7 @@ import { $t } from '#/locales';
 
 import { formatFumigationStationShort } from '../fumigation/fumigation-supplier-cache';
 import { formatAmount, formatPercent } from '../road/formatters';
+import { formatTruckSupplierShort } from '../road/truck-supplier-cache';
 import { buildFumigationColumnsFromLayout } from './build-fumigation-columns';
 import { applyColumnBgParams, resolveColumnBgColor } from './column-bg-style';
 import { buildColumnSortBy } from './column-sort';
@@ -57,6 +58,8 @@ export interface BuildColumnsOptions<T extends { id: number }> {
   onActionClick: OnActionClickFn<T>;
   /** 仅卡车成本库列表：STATION 列显示熏蒸供应商简称 */
   stationDisplayShort?: boolean;
+  /** 仅卡车成本库列表：SUPPLIER 列显示卡车供应商简称 */
+  supplierDisplayShort?: boolean;
   seqWidth?: number;
   template?: CostTableTemplate;
 }
@@ -238,6 +241,7 @@ function buildLeafColumn(
     override?: CostTableFieldOverride;
     required?: boolean;
     stationDisplayShort?: boolean;
+    supplierDisplayShort?: boolean;
     title: string;
   },
 ) {
@@ -353,6 +357,15 @@ function buildLeafColumn(
       formatFumigationStationShort(cellValue);
   }
 
+  if (
+    options.mode === 'road' &&
+    entry.field === 'supplier' &&
+    options.supplierDisplayShort
+  ) {
+    column.formatter = ({ cellValue }: { cellValue: null | string }) =>
+      formatTruckSupplierShort(cellValue);
+  }
+
   if (entry.format === 'tag') {
     column.cellRender = {
       name: 'CellTag',
@@ -374,7 +387,10 @@ function resolveFieldColumns(
   mode: CostMode,
   layout: CostTableTemplateLayout,
   catalogMap: Map<string, FieldCatalogEntry>,
-  stationDisplayShort?: boolean,
+  options?: {
+    stationDisplayShort?: boolean;
+    supplierDisplayShort?: boolean;
+  },
 ) {
   return (
     resolveLayoutFieldOrder(mode, layout)
@@ -387,7 +403,8 @@ function resolveFieldColumns(
         return buildLeafColumn(entry, {
           mode,
           override: layout.fieldOverrides?.[field],
-          stationDisplayShort,
+          stationDisplayShort: options?.stationDisplayShort,
+          supplierDisplayShort: options?.supplierDisplayShort,
           required: isFieldRequiredInLayout(layout, field),
           title: resolveFieldTitle(mode, field, layout),
         });
@@ -400,18 +417,17 @@ function buildLayoutColumns(
   mode: CostMode,
   layout: CostTableTemplateLayout,
   catalogMap: Map<string, FieldCatalogEntry>,
-  options?: { flattenGroups?: boolean; stationDisplayShort?: boolean },
+  options?: {
+    flattenGroups?: boolean;
+    stationDisplayShort?: boolean;
+    supplierDisplayShort?: boolean;
+  },
 ) {
   const order = resolveLayoutFieldOrder(mode, layout);
   const groups = layout.groups ?? [];
 
   if (options?.flattenGroups || groups.length === 0 || order.length === 0) {
-    return resolveFieldColumns(
-      mode,
-      layout,
-      catalogMap,
-      options?.stationDisplayShort,
-    );
+    return resolveFieldColumns(mode, layout, catalogMap, options);
   }
 
   // fieldOrder + groups：按顺序输出叶子列，连续同组字段合并为二级表头
@@ -441,6 +457,7 @@ function buildLayoutColumns(
             mode,
             override: layout.fieldOverrides?.[field],
             stationDisplayShort: options?.stationDisplayShort,
+            supplierDisplayShort: options?.supplierDisplayShort,
             required: isFieldRequiredInLayout(layout, field),
             title: resolveFieldTitle(mode, field, layout),
           }) as Record<string, unknown>,
@@ -471,6 +488,7 @@ function buildLayoutColumns(
             mode,
             override: layout.fieldOverrides?.[groupedField],
             stationDisplayShort: options?.stationDisplayShort,
+            supplierDisplayShort: options?.supplierDisplayShort,
             required: isFieldRequiredInLayout(layout, groupedField),
             title: resolveFieldTitle(mode, groupedField, layout),
           }) as Record<string, unknown>,
@@ -503,6 +521,7 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
     nameTitle,
     onActionClick,
     stationDisplayShort = false,
+    supplierDisplayShort = false,
     seqWidth = 52,
     template = getDefaultTemplate(mode),
   } = options;
@@ -534,6 +553,7 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
     {
       flattenGroups: mode === 'road',
       stationDisplayShort,
+      supplierDisplayShort,
     },
   );
 

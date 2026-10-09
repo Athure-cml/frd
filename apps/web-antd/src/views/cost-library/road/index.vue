@@ -8,11 +8,13 @@ import { loadFumigationSupplierCache } from '../fumigation/fumigation-supplier-c
 import { getRoadRowName, useRoadColumns, useRoadSearchSchema } from './data';
 import { useRoadBatchSchema } from './form-schema';
 import Form from './modules/form.vue';
+import { loadTruckSupplierCache } from './truck-supplier-cache';
 
 const roadBatchSchema = useRoadBatchSchema();
 
 onMounted(() => {
   void loadFumigationSupplierCache();
+  void loadTruckSupplierCache();
 });
 </script>
 

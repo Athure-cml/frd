@@ -2,8 +2,14 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { QuoteApi, QuoteServiceType } from '#/api/quote';
 
+import { reactive } from 'vue';
+
+import { useDebounceFn } from '@vueuse/core';
+
 import { getCustomerList } from '#/api/customer';
-import { getFumigationStationList } from '#/api/quote';
+import { getUsStateList } from '#/api/master-data/us-state';
+import { searchDestCityNameOptions } from '#/api/master-data/us-state-zip';
+import { getFumigationStationList, lookupQuoteZip } from '#/api/quote';
 import { $t } from '#/locales';
 
 import { createPortSelectProps } from '../../cost-library/shared/freight-schema';
@@ -19,6 +25,90 @@ import {
 } from '../shared/sheet-columns';
 
 const t = (key: string) => $t(`page.quote.${key}`);
+
+function createZipSearchProps() {
+  const options = reactive<Array<{ label: string; value: string }>>([]);
+  const search = useDebounceFn(async (keyword: string) => {
+    const q = keyword.trim();
+    if (!q) {
+      options.splice(0);
+      return;
+    }
+    const rows = await lookupQuoteZip(q, 30);
+    options.splice(
+      0,
+      options.length,
+      ...rows.map((row) => ({
+        label: `${row.zipCode} · ${row.city}, ${row.stateCode}`,
+        value: row.zipCode,
+      })),
+    );
+  }, 280);
+  return {
+    allowClear: true,
+    class: 'w-full',
+    filterOption: false,
+    options,
+    onSearch: search,
+  };
+}
+
+function createCitySearchProps() {
+  const params = reactive({ keyword: '' });
+  const setKeyword = useDebounceFn((keyword: string) => {
+    params.keyword = keyword.trim();
+  }, 280);
+  return {
+    allowClear: true,
+    api: async (p: { keyword?: string }) => {
+      const keyword = p?.keyword?.trim() || '';
+      if (!keyword) {
+        return [];
+      }
+      return searchDestCityNameOptions({
+        keyword,
+        limit: 50,
+      });
+    },
+    class: 'w-full',
+    filterOption: false,
+    immediate: false,
+    optionFilterProp: 'label',
+    params,
+    showSearch: true,
+    onSearch: setKeyword,
+  };
+}
+
+function stateFilterOption(
+  input: string,
+  option?: { label?: string; value?: string },
+) {
+  const keyword = input.trim().toLowerCase();
+  if (!keyword) {
+    return true;
+  }
+  const label = String(option?.label ?? '').toLowerCase();
+  const value = String(option?.value ?? '').toLowerCase();
+  return label.includes(keyword) || value.includes(keyword);
+}
+
+function createStateSearchProps() {
+  return {
+    allowClear: true,
+    api: async () => {
+      const states = await getUsStateList();
+      return states.map((state) => ({
+        label: `${state.code} · ${state.nameZh}`,
+        value: state.code,
+      }));
+    },
+    class: 'w-full',
+    filterOption: stateFilterOption,
+    optionFilterProp: 'label',
+    showSearch: true,
+  };
+}
 
 export function getTransportModeOptions() {
   return [
@@ -179,6 +269,24 @@ export function useQuoteSearchSchema(): VbenFormSchema[] {
       }),
       fieldName: 'pod',
       label: 'POD',
+    },
+    {
+      component: 'AutoComplete',
+      componentProps: createZipSearchProps(),
+      fieldName: 'zipCode',
+      label: 'ZIP CODE',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: createCitySearchProps(),
+      fieldName: 'city',
+      label: 'CITY',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: createStateSearchProps(),
+      fieldName: 'state',
+      label: 'STATE',
     },
     {
       component: 'Input',

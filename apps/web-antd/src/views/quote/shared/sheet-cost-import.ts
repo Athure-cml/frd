@@ -48,6 +48,7 @@ export function getInitialSearchValues(
 
 const ROAD_REMARK_FIELD = 'cf_road_remark';
 
+/** 仅取业务表头 REMARK（cf_road_remark），不回退操作备注。 */
 export function resolveRoadRemark(
   record: Pick<RoadCostRecord, 'extraFields' | 'remark'>,
 ): string {
@@ -58,7 +59,7 @@ export function resolveRoadRemark(
       return String(custom).trim();
     }
   }
-  return record.remark?.trim() ?? '';
+  return '';
 }
 
 export { formatSeaOfRate } from './sheet-ocean-freight';

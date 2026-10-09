@@ -7,6 +7,7 @@ import {
   resolveSeaRemarkForMatch,
   resolveSeaSslRemark,
 } from './quote-sea-ssl-remark';
+import { normalizeUsdFieldValue } from './quote-sheet-format';
 
 export const MAX_OCEAN_FREIGHT_LINES = 3;
 
@@ -17,20 +18,25 @@ export interface OceanFreightEntry {
   ssl: string;
 }
 
+/** 海运费率统一两位小数；公式文本原样保留 */
+function normalizeOceanRatePart(value?: null | number | string) {
+  return normalizeUsdFieldValue(value);
+}
+
 export function parseOceanFreightLines(value?: string): string[] {
   if (!value?.trim()) {
     return [];
   }
   return value
     .split('/')
-    .map((part) => part.trim())
+    .map((part) => normalizeOceanRatePart(part.trim()))
     .filter(Boolean)
     .slice(0, MAX_OCEAN_FREIGHT_LINES);
 }
 
 export function joinOceanFreightLines(lines: string[]): string {
   return lines
-    .map((line) => line.trim())
+    .map((line) => normalizeOceanRatePart(line.trim()))
     .filter(Boolean)
     .slice(0, MAX_OCEAN_FREIGHT_LINES)
     .join('/');
@@ -39,11 +45,7 @@ export function joinOceanFreightLines(lines: string[]): string {
 export function formatSeaOfRate(
   record: Pick<FreightCostRecord, 'allIn' | 'freight'>,
 ) {
-  const price = record.allIn ?? record.freight;
-  if (price === null || price === undefined || Number.isNaN(Number(price))) {
-    return '';
-  }
-  return String(price);
+  return normalizeOceanRatePart(record.allIn ?? record.freight);
 }
 
 export function resolveSeaRemark(
@@ -63,10 +65,7 @@ export function formatSeaRateFromSnapshot(
     return '';
   }
   const price = snapshot.allIn ?? snapshot.freight ?? snapshot.baseFreight;
-  if (price === null || price === undefined || Number.isNaN(Number(price))) {
-    return '';
-  }
-  return String(price);
+  return normalizeOceanRatePart(price as null | number | string | undefined);
 }
 
 export function entryFromSeaRecord(

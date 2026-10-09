@@ -15,6 +15,7 @@ import { $t } from '#/locales';
 
 import { buildColumnsFromTemplate } from '../shared/build-columns';
 import { createCostStatusSearchField } from '../shared/status-search';
+import { createTruckSupplierSearchProps } from './truck-supplier-cache';
 
 const t = (key: string) => $t(`page.costLibrary.roadFields.${key}`);
 
@@ -159,8 +160,8 @@ export function useRoadSearchSchema(): VbenFormSchema[] {
       label: t('por'),
     },
     {
-      component: 'Input',
-      componentProps: { autocomplete: 'off' },
+      component: 'ApiSelect',
+      componentProps: createTruckSupplierSearchProps(),
       fieldName: 'supplier',
       label: t('supplier'),
     },
@@ -208,25 +209,43 @@ export function useRoadColumns(
     nameTitle: t('supplier'),
     onActionClick,
     stationDisplayShort: true,
+    supplierDisplayShort: true,
     template,
   });
+}
+
+/** 与后端 SearchText.MULTI_VALUE_DELIMITER 一致；供应商名常含逗号，不可用 CSV */
+const SUPPLIER_MULTI_DELIMITER = '|';
+
+function normalizeDelimitedSearchParam(
+  value: unknown,
+  delimiter: string,
+): string | undefined {
+  if (Array.isArray(value)) {
+    const parts = value
+      .map(String)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return parts.length > 0 ? parts.join(delimiter) : undefined;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
+  }
+  return undefined;
 }
 
 /** 搜索栏 CITY 多选 → 后端逗号分隔 */
 export function normalizeRoadCitySearchParam(
   city: unknown,
 ): string | undefined {
-  if (Array.isArray(city)) {
-    const cities = city
-      .map(String)
-      .map((item) => item.trim())
-      .filter(Boolean);
-    return cities.length > 0 ? cities.join(',') : undefined;
-  }
-  if (typeof city === 'string' && city.trim()) {
-    return city.trim();
-  }
-  return undefined;
+  return normalizeDelimitedSearchParam(city, ',');
+}
+
+/** 搜索栏 SUPPLIER 多选 → 后端管道符分隔（全称可含逗号，如 Inc.） */
+export function normalizeRoadSupplierSearchParam(
+  supplier: unknown,
+): string | undefined {
+  return normalizeDelimitedSearchParam(supplier, SUPPLIER_MULTI_DELIMITER);
 }
 
 export function getRoadRowName(row: RoadCostRecord) {

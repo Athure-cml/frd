@@ -2,6 +2,7 @@ import type { DashboardApi } from '#/api/dashboard';
 
 import { $t } from '#/locales';
 
+import { serviceTypeLabel } from '../../quote/list/data';
 import { formatQuoteCostRiskHint } from '../../quote/shared/format-cost-risk-hint';
 
 export interface WorkspaceMetricView {
@@ -26,9 +27,12 @@ export interface WorkspaceTodoView {
 }
 
 export interface WorkspacePipelineView {
+  amountLabel: string;
+  customerName: string;
   id: string;
   progress: number;
   quoteNo: string;
+  serviceTypeLabel: string;
   status: 'done' | 'progress';
   title: string;
 }
@@ -45,6 +49,12 @@ export interface WorkspaceNoticeView {
 export interface WorkspaceRouteView {
   name: string;
   value: number;
+}
+
+export interface WorkspaceQuoteStatsView {
+  months: string[];
+  quoted: number[];
+  won: number[];
 }
 
 const METRIC_META: Record<
@@ -175,13 +185,27 @@ export function mapWorkspaceTodos(
     });
 }
 
+function formatPipelineAmount(amount?: number, currency?: string) {
+  const value = Number(amount ?? 0);
+  const safe = Number.isFinite(value) ? value : 0;
+  const formatted = safe.toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  });
+  const code = currency?.trim() || 'USD';
+  return `${code} ${formatted}`;
+}
+
 export function mapWorkspacePipeline(
   pipeline: DashboardApi.WorkspacePipelineItem[],
 ): WorkspacePipelineView[] {
   return pipeline.map((item) => ({
+    amountLabel: formatPipelineAmount(item.totalAmount, item.currency),
+    customerName: item.customerName?.trim() || '—',
     id: String(item.id),
     progress: item.progress,
     quoteNo: item.quoteNo,
+    serviceTypeLabel: serviceTypeLabel(item.serviceTypes) || '—',
     status: item.status,
     title: item.title,
   }));
@@ -190,10 +214,22 @@ export function mapWorkspacePipeline(
 export function mapWorkspaceRoutes(
   routes: DashboardApi.WorkspaceRouteItem[],
 ): WorkspaceRouteView[] {
-  return routes.map((item) => ({
-    name: item.name,
-    value: item.value,
-  }));
+  return routes
+    .map((item) => ({
+      name: item.name?.trim() ?? '',
+      value: item.value,
+    }))
+    .filter((item) => item.name);
+}
+
+export function mapWorkspaceQuoteStats(
+  stats?: DashboardApi.WorkspaceQuoteStats | null,
+): WorkspaceQuoteStatsView {
+  return {
+    months: stats?.months ?? [],
+    quoted: stats?.quoted ?? [],
+    won: stats?.won ?? [],
+  };
 }
 
 export function mapWorkspaceNotice(

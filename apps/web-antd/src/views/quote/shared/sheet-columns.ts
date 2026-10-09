@@ -51,6 +51,9 @@ export const QUOTE_LIST_COLUMNS: Array<{
   { field: 'por', title: 'POR', width: 96 },
   { field: 'pol', title: 'POL', width: 96 },
   { field: 'pod', title: 'POD', width: 96 },
+  { field: 'zipCode', title: 'ZIP CODE', width: 100 },
+  { field: 'city', title: 'CITY', width: 100 },
+  { field: 'state', title: 'STATE', width: 80 },
   { field: 'pickUpAddress', title: 'PICK UP ADDRESS', width: 180 },
   { field: 'fumigationPoint', title: 'STATION', width: 120 },
   {

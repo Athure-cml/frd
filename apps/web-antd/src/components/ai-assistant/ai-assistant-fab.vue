@@ -27,9 +27,18 @@ import {
   notifyAiCostPrefill,
   stashAiCostPrefill,
 } from '#/components/ai-assistant/ai-prefill-cost';
+import {
+  AI_QUOTE_ROUTE_NAME,
+  notifyAiQuotePrefill,
+  stashAiQuotePrefill,
+} from '#/components/ai-assistant/ai-prefill-quote';
 import { $t } from '#/locales';
 
 type UiProposedCost = AiApi.ProposedCost & {
+  status?: 'dismissed' | 'opened';
+};
+
+type UiProposedQuote = AiApi.ProposedQuote & {
   status?: 'dismissed' | 'opened';
 };
 
@@ -37,6 +46,7 @@ type UiMessage = {
   citedCosts?: AiApi.CitedCost[];
   content: string;
   proposedCosts?: UiProposedCost[];
+  proposedQuotes?: UiProposedQuote[];
   role: 'assistant' | 'user';
 };
 
@@ -156,6 +166,7 @@ function saveChatMessages(list: UiMessage[]) {
       citedCosts: msg.citedCosts,
       content: msg.content,
       proposedCosts: msg.proposedCosts,
+      proposedQuotes: msg.proposedQuotes,
       role: msg.role,
     }));
     localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(trimmed));
@@ -338,26 +349,33 @@ async function sendChat() {
     }));
     const res = await chatWithAi(payload, true);
     const proposedCosts = res.proposedCosts ?? [];
+    const proposedQuotes = res.proposedQuotes ?? [];
     messages.value.push({
       citedCosts: res.citedCosts ?? [],
       content: res.reply,
       proposedCosts,
+      proposedQuotes,
       role: 'assistant',
     });
-    const proposal = proposedCosts.find(
-      (p) => p.type === 'road' || p.type === 'sea' || p.type === 'fumigation',
-    );
-    if (proposal) {
-      void openCostForm(
-        proposal,
-        messages.value.length - 1,
-        proposedCosts.indexOf(proposal),
-      );
+    const quoteProposal = proposedQuotes[0];
+    if (quoteProposal) {
+      void openQuoteCreate(quoteProposal, messages.value.length - 1, 0);
     } else {
-      const pages = res.openPages ?? [];
-      const target = pages[pages.length - 1];
-      if (target?.routeName) {
-        void openSystemPage(target);
+      const proposal = proposedCosts.find(
+        (p) => p.type === 'road' || p.type === 'sea' || p.type === 'fumigation',
+      );
+      if (proposal) {
+        void openCostForm(
+          proposal,
+          messages.value.length - 1,
+          proposedCosts.indexOf(proposal),
+        );
+      } else {
+        const pages = res.openPages ?? [];
+        const target = pages[pages.length - 1];
+        if (target?.routeName) {
+          void openSystemPage(target);
+        }
       }
     }
   } catch (error: any) {
@@ -436,6 +454,34 @@ async function onParseUpload(options: {
   } finally {
     parseLoading.value = false;
   }
+}
+
+async function openQuoteCreate(
+  proposal: AiApi.ProposedQuote,
+  messageIndex: number,
+  proposalIndex: number,
+) {
+  if (!hasAccessByCodes(['quote:create'])) {
+    message.warning($t('page.ai.proposeQuoteNoPermission'));
+    return;
+  }
+  stashAiQuotePrefill(proposal.payload ?? {}, {
+    matched: proposal.matched,
+    summary: proposal.summary,
+    title: proposal.title,
+    warnings: proposal.warnings,
+  });
+  const msg = messages.value[messageIndex];
+  if (msg?.proposedQuotes?.[proposalIndex]) {
+    msg.proposedQuotes[proposalIndex].status = 'opened';
+  }
+  message.success($t('page.ai.proposeQuoteOpenForm'));
+  open.value = false;
+  if (router.currentRoute.value.name === AI_QUOTE_ROUTE_NAME) {
+    notifyAiQuotePrefill();
+    return;
+  }
+  await router.push({ name: AI_QUOTE_ROUTE_NAME }).catch(() => undefined);
 }
 
 async function openCostForm(
@@ -644,6 +690,35 @@ onUnmounted(() => {
                     >
                       {{ $t('page.ai.applyToQuote') }}
                     </Button>
+                  </Card>
+                </div>
+                <div v-if="msg.proposedQuotes?.length" class="ai-cites">
+                  <Card
+                    v-for="(proposal, pIdx) in msg.proposedQuotes"
+                    :key="`propose-quote-${idx}-${pIdx}`"
+                    size="small"
+                    class="ai-cite-card ai-propose-card"
+                  >
+                    <div class="ai-cite-title">{{ proposal.title }}</div>
+                    <div class="ai-cite-summary">{{ proposal.summary }}</div>
+                    <div
+                      v-if="proposal.warnings?.length"
+                      class="ai-propose-warn"
+                    >
+                      {{ proposal.warnings.join('；') }}
+                    </div>
+                    <Button
+                      v-if="!proposal.status"
+                      type="primary"
+                      size="small"
+                      class="mt-1"
+                      @click="openQuoteCreate(proposal, idx, pIdx)"
+                    >
+                      {{ $t('page.ai.proposeQuoteReview') }}
+                    </Button>
+                    <span v-else class="ai-propose-status">
+                      {{ $t('page.ai.proposeOpened') }}
+                    </span>
                   </Card>
                 </div>
                 <div v-if="msg.proposedCosts?.length" class="ai-cites">

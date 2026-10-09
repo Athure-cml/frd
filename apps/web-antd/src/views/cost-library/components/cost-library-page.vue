@@ -51,7 +51,10 @@ import { $t } from '#/locales';
 import { stashRoadQuoteIntroduce } from '../../quote/shared/road-quote-introduce';
 import { buildListExportParams } from '../../shared/export-params';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
-import { normalizeRoadCitySearchParam } from '../road/data';
+import {
+  normalizeRoadCitySearchParam,
+  normalizeRoadSupplierSearchParam,
+} from '../road/data';
 import { createTemplateColumnBgStyleHandlers } from '../shared/column-bg-style';
 import {
   adaptCostColumnsForViewport,
@@ -758,6 +761,14 @@ function normalizeListParams(formValues?: Record<string, unknown>) {
       params.city = normalizedCity;
     } else {
       delete params.city;
+    }
+    const normalizedSupplier = normalizeRoadSupplierSearchParam(
+      params.supplier,
+    );
+    if (normalizedSupplier) {
+      params.supplier = normalizedSupplier;
+    } else {
+      delete params.supplier;
     }
   }
   return params;

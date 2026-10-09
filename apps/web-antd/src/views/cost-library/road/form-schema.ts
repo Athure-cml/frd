@@ -1,5 +1,3 @@
-import type { SupplierAllInFormulas } from './formula-eval';
-
 import type { VbenFormSchema } from '#/adapter/form';
 import type { RoadCostRecord, RoadCostSave } from '#/api/cost';
 import type { GlobalPortApi } from '#/api/master-data/global-port';
@@ -15,7 +13,6 @@ import {
   searchDestCityNameOptions,
 } from '#/api/master-data/us-state-zip';
 import { lookupQuoteZip } from '#/api/quote';
-import { getSupplierList } from '#/api/supplier';
 import { $t } from '#/locales';
 
 import { createFumigationStationSelectProps } from '../fumigation/fumigation-supplier-cache';
@@ -26,6 +23,11 @@ import {
   formulaForAllInField,
   resolveAllInFromFormulas,
 } from './formula-eval';
+import {
+  createTruckSupplierFormSelectProps,
+  getTruckSupplierFormulas,
+  loadSupplierFormulaCache,
+} from './truck-supplier-cache';
 
 const t = (key: string) => $t(`page.costLibrary.roadFields.${key}`);
 
@@ -33,7 +35,8 @@ type ZipLookupRow = Awaited<ReturnType<typeof lookupQuoteZip>>[number];
 
 const zipLookupCache = new Map<string, ZipLookupRow>();
 const stateIdByCode = new Map<string, number>();
-const supplierFormulaCache = new Map<string, SupplierAllInFormulas>();
+
+export { loadSupplierFormulaCache };
 
 const ALL_IN_TRIGGER_FIELDS = [
   'supplier',
@@ -59,11 +62,8 @@ const amountField = (fieldName: string, titleKey: string): VbenFormSchema => ({
   label: t(titleKey),
 });
 
-function getSupplierFormulas(name: unknown): SupplierAllInFormulas | undefined {
-  if (typeof name !== 'string' || !name.trim()) {
-    return undefined;
-  }
-  return supplierFormulaCache.get(name.trim());
+function getSupplierFormulas(name: unknown) {
+  return getTruckSupplierFormulas(name);
 }
 
 function allInFieldSchema(
@@ -297,39 +297,6 @@ async function applyZipLookup(
   setFieldValue('state', row.stateCode);
 }
 
-export async function loadSupplierFormulaCache() {
-  const result = await getSupplierList({
-    category: 'TRUCK',
-    page: 1,
-    pageSize: 200,
-    status: 1,
-  });
-  supplierFormulaCache.clear();
-  for (const item of result.items) {
-    supplierFormulaCache.set(item.name.trim(), {
-      fumigationNonOakPackageFormula: item.fumigationNonOakPackageFormula,
-      fumigationOakPackageFormula: item.fumigationOakPackageFormula,
-      nonFumigationPackageFormula: item.nonFumigationPackageFormula,
-    });
-  }
-  return result.items;
-}
-
-function supplierSelectProps() {
-  return {
-    allowClear: true,
-    api: async () => {
-      const items = await loadSupplierFormulaCache();
-      return items.map((item) => ({
-        label: item.name,
-        value: item.name,
-      }));
-    },
-    class: 'w-full',
-    showSearch: true,
-  };
-}
-
 const PORT_TYPES: GlobalPortApi.PortType[] = ['SEAPORT', 'RAIL', 'INLAND'];
 
 export function useRoadFormSchema(): VbenFormSchema[] {
@@ -401,7 +368,7 @@ export function useRoadFormSchema(): VbenFormSchema[] {
     },
     {
       component: 'ApiSelect',
-      componentProps: supplierSelectProps(),
+      componentProps: createTruckSupplierFormSelectProps(),
       fieldName: 'supplier',
       label: t('supplier'),
       rules: 'required',

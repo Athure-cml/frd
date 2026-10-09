@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { NotificationItem } from '@vben/layouts';
 
-import { computed, ref, watch } from 'vue';
+import { computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { AuthenticationLoginExpiredModal } from '@vben/common-ui';
@@ -15,36 +15,39 @@ import {
 import { preferences, usePreferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 
-import { message } from 'ant-design-vue';
-
-import {
-  dismissAllDashboardNotifications,
-  dismissDashboardNotification,
-  getDashboardNotifications,
-  markAllDashboardNotificationsRead,
-  markDashboardNotificationRead,
-} from '#/api/dashboard';
 import ActivityTickerBar from '#/components/activity-ticker/activity-ticker-bar.vue';
 import { useActivityTicker } from '#/components/activity-ticker/use-activity-ticker';
 import AiAssistantFab from '#/components/ai-assistant/ai-assistant-fab.vue';
 import SystemAnnouncementHost from '#/components/system-announcement/announcement-host.vue';
-import { FRD_QUOTE_LOGO_SRC } from '#/constants/brand';
 import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 import LoginForm from '#/views/_core/authentication/login.vue';
 import { resolveAvatarUrl } from '#/views/_core/profile/profile-utils';
 import { WORKSPACE_ILLUSTRATIONS } from '#/views/dashboard/workspace/illustrations';
-import { mapDashboardNotification } from '#/views/dashboard/workspace/map-workspace';
 
 import NotificationDrawer from './notification-drawer.vue';
+import RoutesDrawer from './routes-drawer.vue';
 import TodoDrawer from './todo-drawer.vue';
 import TodoTrigger from './todo-trigger.vue';
+import { useNotificationDrawer } from './use-notification-drawer';
+import { useRoutesDrawer } from './use-routes-drawer';
 import { useTodoDrawer } from './use-todo-drawer';
 
-const notifications = ref<NotificationItem[]>([]);
-const noticeDrawerOpen = ref(false);
-const noticeActing = ref(false);
-const NOTICE_AVATAR = FRD_QUOTE_LOGO_SRC;
+const {
+  acting: noticeActing,
+  avatarSrc: noticeAvatarSrc,
+  clearNotifications,
+  loadNotifications,
+  markAllRead,
+  markRead,
+  notifications,
+  open: noticeDrawerOpen,
+  openNoticeDrawer,
+  remove,
+  resetNotifications,
+  showDot,
+  unreadCount: unreadNoticeCount,
+} = useNotificationDrawer();
 
 const {
   filter: todoFilter,
@@ -57,18 +60,19 @@ const {
   resetTodoDrawer,
 } = useTodoDrawer();
 
+const {
+  items: routeDrawerItems,
+  loading: routesLoading,
+  open: routesDrawerOpen,
+  resetRoutesDrawer,
+} = useRoutesDrawer();
+
 const router = useRouter();
 const userStore = useUserStore();
 const authStore = useAuthStore();
 const accessStore = useAccessStore();
 const { destroyWatermark, updateWatermark } = useWatermark();
 const { isDark } = usePreferences();
-const showDot = computed(() =>
-  notifications.value.some((item) => !item.isRead),
-);
-const unreadNoticeCount = computed(
-  () => notifications.value.filter((item) => !item.isRead).length,
-);
 
 const showActivityTicker = computed(
   () =>
@@ -101,90 +105,6 @@ async function handleLogout() {
   await authStore.logout(false);
 }
 
-async function loadNotifications() {
-  if (!accessStore.accessToken) {
-    notifications.value = [];
-    return;
-  }
-  try {
-    const items = await getDashboardNotifications();
-    notifications.value = items.map((item) => ({
-      ...mapDashboardNotification(item),
-      avatar: NOTICE_AVATAR,
-    }));
-  } catch {
-    notifications.value = [];
-  }
-}
-
-async function handleNoticeClear() {
-  if (noticeActing.value) {
-    return;
-  }
-  noticeActing.value = true;
-  try {
-    await dismissAllDashboardNotifications();
-    notifications.value = [];
-  } catch {
-    message.error($t('page.notifications.actionFailed'));
-  } finally {
-    noticeActing.value = false;
-  }
-}
-
-async function markRead(item: NotificationItem) {
-  if (!item.id || noticeActing.value) {
-    return;
-  }
-  noticeActing.value = true;
-  try {
-    await markDashboardNotificationRead(String(item.id));
-    item.isRead = true;
-  } catch {
-    message.error($t('page.notifications.actionFailed'));
-  } finally {
-    noticeActing.value = false;
-  }
-}
-
-async function remove(item: NotificationItem) {
-  if (!item.id || noticeActing.value) {
-    return;
-  }
-  noticeActing.value = true;
-  try {
-    await dismissDashboardNotification(String(item.id));
-    notifications.value = notifications.value.filter(
-      (row) => row.id !== item.id,
-    );
-  } catch {
-    message.error($t('page.notifications.actionFailed'));
-  } finally {
-    noticeActing.value = false;
-  }
-}
-
-async function handleMakeAll() {
-  if (noticeActing.value) {
-    return;
-  }
-  noticeActing.value = true;
-  try {
-    await markAllDashboardNotificationsRead();
-    notifications.value.forEach((item) => {
-      item.isRead = true;
-    });
-  } catch {
-    message.error($t('page.notifications.actionFailed'));
-  } finally {
-    noticeActing.value = false;
-  }
-}
-
-function handleViewAll() {
-  noticeDrawerOpen.value = true;
-}
-
 function handleTodoItemClick(item: { href: string }) {
   if (item.href) {
     navigateTo(item.href);
@@ -199,12 +119,12 @@ watch(
   () => accessStore.accessToken,
   (token) => {
     if (token) {
-      loadNotifications().catch(() => undefined);
+      loadNotifications(true).catch(() => undefined);
       loadTodos(true).catch(() => undefined);
     } else {
-      notifications.value = [];
-      noticeDrawerOpen.value = false;
+      resetNotifications();
       resetTodoDrawer();
+      resetRoutesDrawer();
     }
   },
   { immediate: true },
@@ -296,12 +216,12 @@ watch(
         :empty-text="$t('page.notifications.empty')"
         :notifications="notifications"
         :show-view-all="true"
-        @clear="handleNoticeClear"
+        @clear="clearNotifications"
         @read="markRead"
         @remove="remove"
-        @make-all="handleMakeAll"
+        @make-all="markAllRead"
         @on-click="handleClick"
-        @view-all="handleViewAll"
+        @view-all="openNoticeDrawer"
       />
       <TodoDrawer
         v-model:open="todoDrawerOpen"
@@ -313,14 +233,19 @@ watch(
       />
       <NotificationDrawer
         v-model:open="noticeDrawerOpen"
-        :avatar-src="NOTICE_AVATAR"
+        :avatar-src="noticeAvatarSrc"
         :loading="noticeActing"
         :notifications="notifications"
-        @clear="handleNoticeClear"
-        @make-all="handleMakeAll"
+        @clear="clearNotifications"
+        @make-all="markAllRead"
         @on-click="handleClick"
         @read="markRead"
         @remove="remove"
+      />
+      <RoutesDrawer
+        v-model:open="routesDrawerOpen"
+        :items="routeDrawerItems"
+        :loading="routesLoading"
       />
     </template>
     <template v-if="showActivityTicker && hasActivityTickerItems" #content-top>

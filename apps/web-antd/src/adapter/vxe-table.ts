@@ -89,9 +89,12 @@ setupVbenVxeTable({
           | undefined;
 
         if (direction === 'quote-to-cost') {
-          return h(
-            'div',
-            { class: 'cost-relation-cell' },
+          const quoteCount = Number(row.quoteCount ?? 0);
+          const hasQuotes = quoteCount > 0;
+          const quoteLabel = hasQuotes
+            ? $t('page.costLibrary.relation.quoteReferenced', [quoteCount])
+            : $t('page.costLibrary.relation.quoteNotReferenced');
+          return h('div', { class: 'cost-relation-cell' }, [
             h(
               Button,
               {
@@ -105,7 +108,33 @@ setupVbenVxeTable({
               },
               { default: () => $t('page.costLibrary.actions.viewCost') },
             ),
-          );
+            h(
+              Tag,
+              {
+                bordered: false,
+                class: hasQuotes ? 'cost-relation-cell__tag--link' : undefined,
+                color: hasQuotes ? 'processing' : 'default',
+                ...(hasQuotes
+                  ? {
+                      role: 'link',
+                      tabindex: 0,
+                      onClick: (event: MouseEvent) => {
+                        event.stopPropagation();
+                        attrs?.onQuoteClick?.(row);
+                      },
+                      onKeydown: (event: KeyboardEvent) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          attrs?.onQuoteClick?.(row);
+                        }
+                      },
+                    }
+                  : {}),
+              },
+              { default: () => quoteLabel },
+            ),
+          ]);
         }
 
         const inQuoteLibrary = row.inQuoteLibrary === true;
