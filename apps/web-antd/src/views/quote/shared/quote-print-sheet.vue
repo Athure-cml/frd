@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { SslRemarkLookup } from './quote-sea-ssl-remark';
 
-import type { QuoteApi } from '#/api/quote';
+import type { QuoteApi, QuoteServiceType } from '#/api/quote';
 
 import { computed, onMounted, ref } from 'vue';
 
@@ -20,12 +20,14 @@ const props = withDefaults(
     costSnapshots?: QuoteApi.QuoteCostMatchItem[];
     customerName?: string;
     quoteDate?: string;
+    serviceTypes?: QuoteServiceType[];
     sheet: QuoteApi.QuoteSheetFields;
   }>(),
   {
     costSnapshots: () => [],
     customerName: '',
     quoteDate: '',
+    serviceTypes: undefined,
   },
 );
 
@@ -41,6 +43,7 @@ const feeRows = computed(() =>
     seaMatches.value,
     $t,
     sslRemarkByName.value,
+    props.serviceTypes,
   ),
 );
 

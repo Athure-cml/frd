@@ -24,8 +24,9 @@ const props = defineProps<{
 
 const SNAPSHOT_HEADER_ROW_HEIGHT = 44;
 const SNAPSHOT_ROW_HEIGHT = 40;
-const SNAPSHOT_SCROLLBAR_HEIGHT = 16;
-/** 无数据时表格主体最小高度 */
+/** 预留横向滚动条高度，避免被容器裁切 */
+const SNAPSHOT_SCROLLBAR_HEIGHT = 14;
+/** 无数据时表格主体最小高度（不含滚动条） */
 const SNAPSHOT_MIN_BODY_HEIGHT = 120;
 
 function resolveHeaderRowCount(
@@ -78,12 +79,11 @@ const headerHeight = computed(
 );
 
 const bodyHeight = computed(() => {
-  if (isEmpty.value) {
-    return SNAPSHOT_MIN_BODY_HEIGHT;
-  }
-  return (
-    tableData.value.length * SNAPSHOT_ROW_HEIGHT + SNAPSHOT_SCROLLBAR_HEIGHT + 2
-  );
+  const rowsHeight = isEmpty.value
+    ? SNAPSHOT_MIN_BODY_HEIGHT
+    : tableData.value.length * SNAPSHOT_ROW_HEIGHT;
+  // 空表也要留出滚动条，否则列溢出时底部条被裁掉
+  return rowsHeight + SNAPSHOT_SCROLLBAR_HEIGHT + 2;
 });
 
 const gridHeight = computed(() => headerHeight.value + bodyHeight.value);
@@ -129,6 +129,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
     scrollY: {
       enabled: false,
     },
+    showHeaderOverflow: true,
     showOverflow: true,
     stripe: true,
     toolbarConfig: {
@@ -159,36 +160,26 @@ watch(
 </script>
 
 <template>
-  <div class="quote-cost-snapshot-scroll">
-    <div class="quote-cost-snapshot-stack">
-      <div
-        class="quote-cost-snapshot"
-        :style="{ height: `${gridHeight}px`, minHeight: `${gridHeight}px` }"
-      >
-        <Grid />
-      </div>
-    </div>
+  <!-- 容器定宽 + VXE 内部横向滚动，才能让 SUPPLIER 等 fixed 列生效 -->
+  <div
+    class="quote-cost-snapshot"
+    :style="{ height: `${gridHeight}px`, minHeight: `${gridHeight}px` }"
+  >
+    <Grid />
   </div>
 </template>
 
 <style scoped>
-.quote-cost-snapshot-scroll {
-  width: 100%;
-  overflow: auto hidden;
-}
-
-.quote-cost-snapshot-stack {
-  width: max-content;
-  min-width: 100%;
-}
-
 .quote-cost-snapshot {
   flex: none;
   width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .quote-cost-snapshot
   :deep(.vxe-grid.cost-library-grid.quote-cost-snapshot-grid) {
+  width: 100%;
   height: 100% !important;
   min-height: 100% !important;
 }
@@ -208,7 +199,8 @@ watch(
 }
 
 .quote-cost-snapshot :deep(.vxe-table--empty-placeholder) {
-  padding: 24px 16px;
+  box-sizing: border-box;
+  padding: 24px 16px 30px;
   font-size: 13px;
   color: hsl(var(--muted-foreground));
 }

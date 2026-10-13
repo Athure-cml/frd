@@ -386,7 +386,11 @@
       "view": "View"
     },
     "confirm": {
-      "batchDelete": "Delete {0} selected record(s)? This cannot be undone."
+      "batchDelete": "Confirm delete {0} selected record(s)?",
+      "copy": "Confirm copy?",
+      "delete": "Confirm delete?",
+      "edit": "Confirm save changes?",
+      "renew": "Confirm renew?"
     },
     "hint": {
       "apiPending": "「Enter {0}」 will be available after the cost API is connected.",
@@ -923,8 +927,9 @@
       },
       "confirm": {
         "deleteTitle": "Remove from quote library",
-        "delete": "Remove \"{0}\" from the quote library? The linked cost will become editable again.",
-        "batchDelete": "Remove {0} selected row(s) from the quote library? Linked costs will become editable again."
+        "delete": "Confirm delete?",
+        "deleteNamed": "Confirm delete \"{0}\"?",
+        "batchDelete": "Confirm delete {0} selected row(s)?"
       }
     },
     "createTitle": "New Quote",
@@ -1098,6 +1103,7 @@
       "customerRequired": "Please select a customer",
       "serviceTypeRequired": "Please select a service type",
       "oakTypeRequired": "Please select OAK / NON-OAK",
+      "fumigationPointRequired": "Please select fumigation point",
       "porPolRequired": "Please select POR/POL",
       "porRequired": "Please select POR",
       "polRequired": "Please select POL",
@@ -1245,8 +1251,8 @@
       "selectOne": "Select one quote library record",
       "selectSea": "Select at least one ocean quote library record",
       "selectedCount": "{0} selected",
-      "confirmHint": "Click to select, double-click or press Confirm to import",
-      "confirmHintSea": "Multi-select up to {0}; matched/imported rows are pre-checked",
+      "confirmHint": "Click to select, double-click or press Confirm to import. Expired records are searchable but not importable.",
+      "confirmHintSea": "Multi-select up to {0}; matched/imported rows are pre-checked. Expired records are searchable but not importable.",
       "selectRows": "Select at least one quote library record",
       "addSelected": "Add selected ({0})",
       "selectedHint": "{0} quote library record(s) selected",
@@ -1452,6 +1458,7 @@
       "parentDept": "Parent",
       "roles": "Roles",
       "dataScope": "Data Scope",
+      "assignedUsers": "Assigned Users",
       "permissions": "Permissions",
       "password": "Password",
       "resetPassword": "Reset Password",
@@ -1465,6 +1472,7 @@
     "dataScope": {
       "ALL": "All Data",
       "DEPT": "Department",
+      "ASSIGNED": "Assigned Data",
       "SELF": "Self Only"
     },
     "status": {
@@ -1680,6 +1688,9 @@
     "approveModalTitle": "Approve",
     "rejectModalTitle": "Return",
     "rejectSuccess": "Returned and sent back to draft",
+    "submitModalTitle": "Submit for Approval",
+    "submitRemark": "Submission remark (optional)",
+    "submitRemarkPlaceholder": "Optional remark visible to approvers in the workflow",
     "withdrawModalTitle": "Withdraw Approval",
     "withdrawReason": "Withdrawal reason",
     "withdrawReasonRequired": "Please enter a withdrawal reason",

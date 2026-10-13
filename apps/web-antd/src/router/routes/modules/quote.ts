@@ -23,21 +23,21 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
-        name: 'QuoteLibraryRoad',
-        path: '/quotes/library/road',
-        component: () => import('#/views/quote/library/road/index.vue'),
-        meta: {
-          icon: 'lucide:truck',
-          title: $t('page.quote.library.road'),
-        },
-      },
-      {
         name: 'QuoteLibrarySea',
         path: '/quotes/library/sea',
         component: () => import('#/views/quote/library/sea/index.vue'),
         meta: {
           icon: 'lucide:ship',
           title: $t('page.quote.library.sea'),
+        },
+      },
+      {
+        name: 'QuoteLibraryRoad',
+        path: '/quotes/library/road',
+        component: () => import('#/views/quote/library/road/index.vue'),
+        meta: {
+          icon: 'lucide:truck',
+          title: $t('page.quote.library.road'),
         },
       },
       {

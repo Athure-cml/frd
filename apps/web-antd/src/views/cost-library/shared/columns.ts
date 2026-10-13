@@ -41,6 +41,8 @@ export function buildCostRelationColumn<T extends RelationLinkRow>(options: {
   direction: 'cost-to-quote' | 'quote-to-cost';
   onNavigate: (row: T) => void;
   onNavigateQuotes?: (row: T) => void;
+  /** 报价库→成本：无成本库查看权限时隐藏「查看成本」 */
+  showCostLink?: boolean;
 }) {
   const width =
     options.direction === 'quote-to-cost'
@@ -53,6 +55,7 @@ export function buildCostRelationColumn<T extends RelationLinkRow>(options: {
         direction: options.direction,
         onClick: options.onNavigate,
         onQuoteClick: options.onNavigateQuotes,
+        showCostLink: options.showCostLink !== false,
       },
       name: 'CellRelationLink',
     },
@@ -106,7 +109,7 @@ function disableCostDeleteWhenLocked(
   return row.quoteOrderLocked === true || row.inQuoteLibrary === true;
 }
 
-/** 报价库列表操作列：禁用已被报价单引用的行，删除确认由页面 Modal 处理 */
+/** 报价库列表操作列：删除走表格内 Popconfirm 气泡确认 */
 export function appendQuoteLibraryOperationColumn<T extends { id: number }>(
   columns: VxeTableGridOptions<T>['columns'],
   canEdit: boolean,
@@ -124,7 +127,8 @@ export function appendQuoteLibraryOperationColumn<T extends { id: number }>(
       },
       {
         code: 'delete',
-        confirm: false,
+        confirmDescription: false,
+        confirmTitle: $t('page.costLibrary.confirm.delete'),
         disabled: disableWhenQuoteOrderLocked,
       },
     ],
@@ -177,6 +181,8 @@ export function appendCostOperationColumn<T extends { id: number }>(
       },
       {
         code: 'delete',
+        confirmDescription: false,
+        confirmTitle: $t('page.costLibrary.confirm.delete'),
         disabled: disableCostDeleteWhenLocked,
       },
     ],
@@ -253,6 +259,7 @@ export function injectRelationColumn<T extends { id: number }>(
     direction: 'cost-to-quote' | 'quote-to-cost';
     onNavigate: (row: T) => void;
     onNavigateQuotes?: (row: T) => void;
+    showCostLink?: boolean;
   },
 ): VxeTableGridOptions<T>['columns'] {
   if (!columns?.length) {

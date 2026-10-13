@@ -6,7 +6,6 @@ import QuoteLibraryPage from '../components/quote-library-page.vue';
 <template>
   <QuoteLibraryPage
     description-key="page.quote.library.seaDesc"
-    edit-permission="cost:sea:edit"
     export-filename="海运报价库.xlsx"
     mode="sea"
     :search-schema="useSeaSearchSchema"

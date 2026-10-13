@@ -94,20 +94,27 @@ setupVbenVxeTable({
           const quoteLabel = hasQuotes
             ? $t('page.costLibrary.relation.quoteReferenced', [quoteCount])
             : $t('page.costLibrary.relation.quoteNotReferenced');
-          return h('div', { class: 'cost-relation-cell' }, [
-            h(
-              Button,
-              {
-                class: 'cost-relation-cell__link',
-                size: 'small',
-                type: 'link',
-                onClick: (event: MouseEvent) => {
-                  event.stopPropagation();
-                  attrs?.onClick?.(row);
+          /** 无成本库查看权限时不展示「查看成本」 */
+          const showCostLink = attrs?.showCostLink !== false;
+          const nodes = [];
+          if (showCostLink) {
+            nodes.push(
+              h(
+                Button,
+                {
+                  class: 'cost-relation-cell__link',
+                  size: 'small',
+                  type: 'link',
+                  onClick: (event: MouseEvent) => {
+                    event.stopPropagation();
+                    attrs?.onClick?.(row);
+                  },
                 },
-              },
-              { default: () => $t('page.costLibrary.actions.viewCost') },
-            ),
+                { default: () => $t('page.costLibrary.actions.viewCost') },
+              ),
+            );
+          }
+          nodes.push(
             h(
               Tag,
               {
@@ -134,7 +141,8 @@ setupVbenVxeTable({
               },
               { default: () => quoteLabel },
             ),
-          ]);
+          );
+          return h('div', { class: 'cost-relation-cell' }, nodes);
         }
 
         const inQuoteLibrary = row.inQuoteLibrary === true;
@@ -287,11 +295,19 @@ setupVbenVxeTable({
           .filter((opt) => opt.show !== false);
 
         function renderBtn(opt: Recordable<any>, listen = true) {
+          const {
+            code: _code,
+            confirm: _confirm,
+            confirmDescription: _confirmDescription,
+            confirmTitle: _confirmTitle,
+            text,
+            ...btnProps
+          } = opt;
           return h(
             Button,
             {
               ...props,
-              ...opt,
+              ...btnProps,
               onClick: listen
                 ? () =>
                     attrs?.onClick?.({
@@ -300,12 +316,21 @@ setupVbenVxeTable({
                     })
                 : undefined,
             },
-            { default: () => opt.text },
+            { default: () => text },
           );
         }
 
         function renderConfirm(opt: Recordable<any>) {
           let viewportWrapper: HTMLElement | null = null;
+          const confirmTitle =
+            opt.confirmTitle ??
+            attrs?.confirmTitle ??
+            $t('ui.actionTitle.delete', [
+              attrs?.nameTitle ?? $t('common.delete'),
+            ]);
+          const confirmDescription =
+            opt.confirmDescription ?? attrs?.confirmDescription;
+          const showDescription = confirmDescription !== false;
           return h(
             Popconfirm,
             {
@@ -314,9 +339,7 @@ setupVbenVxeTable({
                 return document.body;
               },
               placement: 'topLeft',
-              title: $t('ui.actionTitle.delete', [
-                attrs?.nameTitle ?? $t('common.delete'),
-              ]),
+              title: confirmTitle,
               onOpenChange: (open: boolean) => {
                 if (open) {
                   viewportWrapper?.style.setProperty('pointer-events', 'none');
@@ -333,12 +356,18 @@ setupVbenVxeTable({
             },
             {
               default: () => renderBtn({ ...opt }, false),
-              description: () =>
-                h('div', { class: 'truncate' }, [
-                  $t('ui.actionMessage.deleteConfirm', [
-                    row[attrs?.nameField || 'name'],
-                  ]),
-                ]),
+              ...(showDescription
+                ? {
+                    description: () =>
+                      h('div', { class: 'truncate' }, [
+                        typeof confirmDescription === 'string'
+                          ? confirmDescription
+                          : $t('ui.actionMessage.deleteConfirm', [
+                              row[attrs?.nameField || 'name'],
+                            ]),
+                      ]),
+                  }
+                : {}),
             },
           );
         }

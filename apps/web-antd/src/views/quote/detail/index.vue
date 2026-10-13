@@ -40,6 +40,7 @@ import { $t } from '#/locales';
 
 import { statusTagOptions } from '../list/data';
 import CostSourceTables from '../shared/cost-source-tables.vue';
+import { resolveCostSourceTypes } from '../shared/cost-source-types';
 import { stashQuoteCopySource } from '../shared/quote-copy';
 import { printQuoteSheet } from '../shared/quote-print';
 import QuotePrintSheet from '../shared/quote-print-sheet.vue';
@@ -66,6 +67,9 @@ const followUpById = ref<number>();
 const userOptions = ref<Array<{ label: string; value: number }>>([]);
 const logsTabKey = ref('follow');
 const printPreviewOpen = ref(false);
+const submitOpen = ref(false);
+const submitSubmitting = ref(false);
+const submitComment = ref('');
 
 const quoteId = computed(() => Number(route.params.id));
 
@@ -189,6 +193,10 @@ const followUpColumns = [
   },
 ];
 
+const costSourceTypes = computed(() =>
+  resolveCostSourceTypes(detail.value?.serviceTypes),
+);
+
 const displayCostMatches = computed(() => {
   const items = detail.value?.costSnapshots ?? [];
   const map = new Map<QuoteCostType, QuoteApi.QuoteCostMatchItem>();
@@ -258,9 +266,20 @@ async function loadDetail() {
   }
 }
 
-async function onSubmit() {
-  detail.value = await submitQuote(quoteId.value);
-  message.success($t('page.quote.message.submitSuccess'));
+function onSubmit() {
+  submitComment.value = '';
+  submitOpen.value = true;
+}
+
+async function onSubmitOk() {
+  submitSubmitting.value = true;
+  try {
+    detail.value = await submitQuote(quoteId.value, submitComment.value);
+    message.success($t('page.quote.message.submitSuccess'));
+    submitOpen.value = false;
+  } finally {
+    submitSubmitting.value = false;
+  }
 }
 
 async function onFollow() {
@@ -540,14 +559,21 @@ onMounted(async () => {
             </div>
           </section>
 
-          <section class="quote-editor-section">
+          <section
+            v-if="costSourceTypes.length > 0"
+            class="quote-editor-section"
+          >
             <div class="quote-editor-section__head">
               <span class="quote-editor-section__title">
                 {{ $t('page.quote.sections.dataSource') }}
               </span>
             </div>
             <div class="quote-editor-section__body">
-              <CostSourceTables :matches="displayCostMatches" />
+              <CostSourceTables
+                :key="costSourceTypes.join('-')"
+                :cost-types="costSourceTypes"
+                :matches="displayCostMatches"
+              />
             </div>
           </section>
 
@@ -683,6 +709,26 @@ onMounted(async () => {
         </div>
       </Card>
       <Modal
+        v-model:open="submitOpen"
+        centered
+        :confirm-loading="submitSubmitting"
+        :title="$t('page.approval.submitModalTitle')"
+        width="560px"
+        @ok="onSubmitOk"
+      >
+        <Form layout="vertical">
+          <Form.Item :label="$t('page.approval.submitRemark')">
+            <Input.TextArea
+              v-model:value="submitComment"
+              :maxlength="500"
+              :placeholder="$t('page.approval.submitRemarkPlaceholder')"
+              :rows="4"
+              show-count
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+      <Modal
         v-if="detail"
         v-model:open="printPreviewOpen"
         class="quote-print-modal"
@@ -693,6 +739,7 @@ onMounted(async () => {
           :cost-snapshots="detail.costSnapshots"
           :customer-name="detail.customerName"
           :quote-date="detail.createdAt"
+          :service-types="detail.serviceTypes"
           :sheet="detail.sheet"
         />
         <template #footer>

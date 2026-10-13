@@ -13,7 +13,6 @@ onMounted(() => {
 <template>
   <QuoteLibraryPage
     description-key="page.quote.library.fumigationDesc"
-    edit-permission="cost:fumigation:edit"
     export-filename="熏蒸报价库.xlsx"
     mode="fumigation"
     :search-schema="useFumigationSearchSchema"

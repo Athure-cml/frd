@@ -2,6 +2,9 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemRoleApi } from '#/api/system/role';
 
+import { useUserStore } from '@vben/stores';
+
+import { getUserList } from '#/api/system/user';
 import { $t } from '#/locales';
 
 import { buildOperationColumn, buildStatusColumn } from '../shared/columns';
@@ -12,6 +15,32 @@ import {
 import { dataScopeTagOptions } from '../shared/tags';
 
 const t = (key: string) => $t(`page.system.${key}`);
+
+function currentUserId(): number | undefined {
+  const raw = useUserStore().userInfo?.userId;
+  if (raw === null || raw === undefined || raw === '') {
+    return undefined;
+  }
+  const id = Number(raw);
+  return Number.isFinite(id) && id > 0 ? id : undefined;
+}
+
+/** 当前登录用户默认勾选且不可取消 */
+function withLockedSelf(ids?: null | number[]) {
+  const selfId = currentUserId();
+  const others = (ids ?? []).filter(
+    (id) =>
+      id !== null &&
+      id !== undefined &&
+      id > 0 &&
+      (selfId === undefined || id !== selfId),
+  );
+  return selfId === undefined ? others : [selfId, ...others];
+}
+
+function normalizeAssignedUserIds(ids?: null | number[]) {
+  return withLockedSelf(ids);
+}
 
 export function useRoleFormSchema(isBuiltin: boolean): VbenFormSchema[] {
   return [
@@ -37,12 +66,67 @@ export function useRoleFormSchema(isBuiltin: boolean): VbenFormSchema[] {
         options: [
           { label: t('dataScope.ALL'), value: 'ALL' },
           { label: t('dataScope.DEPT'), value: 'DEPT' },
+          { label: t('dataScope.ASSIGNED'), value: 'ASSIGNED' },
           { label: t('dataScope.SELF'), value: 'SELF' },
         ],
       },
       fieldName: 'dataScope',
       label: t('fields.dataScope'),
       rules: 'selectRequired',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: (_values, formApi) => ({
+        allowClear: false,
+        api: async () => {
+          const lockedId = currentUserId();
+          const result = await getUserList({
+            page: 1,
+            pageSize: 500,
+            status: 1,
+          });
+          return result.items.map((user) => ({
+            disabled: lockedId !== undefined && user.id === lockedId,
+            label: `${user.realName}（${user.username}）`,
+            value: user.id,
+          }));
+        },
+        class: 'w-full',
+        mode: 'multiple',
+        optionFilterProp: 'label',
+        showSearch: true,
+        onChange(value: number[]) {
+          formApi?.setFieldValue?.(
+            'assignedUserIds',
+            withLockedSelf(Array.isArray(value) ? value : []),
+          );
+        },
+      }),
+      defaultValue: withLockedSelf([]),
+      dependencies: {
+        required(values) {
+          return values?.dataScope === 'ASSIGNED';
+        },
+        rules(values) {
+          return values?.dataScope === 'ASSIGNED' ? 'selectRequired' : null;
+        },
+        show(values) {
+          return values?.dataScope === 'ASSIGNED';
+        },
+        trigger(values, _actions, formApi) {
+          if (values?.dataScope !== 'ASSIGNED') {
+            return;
+          }
+          formApi?.setFieldValue?.(
+            'assignedUserIds',
+            withLockedSelf(values.assignedUserIds),
+          );
+        },
+        triggerFields: ['dataScope'],
+      },
+      fieldName: 'assignedUserIds',
+      formItemClass: 'col-span-full',
+      label: t('fields.assignedUsers'),
     },
     {
       component: 'RadioGroup',
@@ -126,7 +210,7 @@ export function useRoleColumns(
       align: 'center',
       cellRender: { name: 'CellTag', options: dataScopeTagOptions() },
       field: 'dataScope',
-      width: 112,
+      width: 120,
       title: t('fields.dataScope'),
     },
     buildStatusColumn<SystemRoleApi.SystemRole>(
@@ -195,13 +279,18 @@ export function filterRoles(
 export function toRoleSavePayload(
   values: Record<string, any>,
 ): SystemRoleApi.RoleSave {
+  const dataScope = values.dataScope;
   return {
     code: values.code,
     name: values.name,
-    dataScope: values.dataScope,
+    dataScope,
     status: values.status ?? 1,
     remark: values.remark,
     permissionCodes: values.permissionCodes ?? [],
+    assignedUserIds:
+      dataScope === 'ASSIGNED'
+        ? normalizeAssignedUserIds(values.assignedUserIds)
+        : [],
   };
 }
 
@@ -213,5 +302,9 @@ export function rowToRoleFormValues(row: SystemRoleApi.SystemRole) {
     status: row.status,
     remark: row.remark,
     permissionCodes: row.permissions,
+    assignedUserIds:
+      row.dataScope === 'ASSIGNED'
+        ? withLockedSelf(row.assignedUserIds)
+        : withLockedSelf([]),
   };
 }

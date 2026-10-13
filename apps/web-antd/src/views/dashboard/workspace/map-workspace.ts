@@ -30,6 +30,7 @@ export interface WorkspacePipelineView {
   amountLabel: string;
   customerName: string;
   id: string;
+  operatorName: string;
   progress: number;
   quoteNo: string;
   serviceTypeLabel: string;
@@ -203,6 +204,7 @@ export function mapWorkspacePipeline(
     amountLabel: formatPipelineAmount(item.totalAmount, item.currency),
     customerName: item.customerName?.trim() || '—',
     id: String(item.id),
+    operatorName: item.operatorName?.trim() || '—',
     progress: item.progress,
     quoteNo: item.quoteNo,
     serviceTypeLabel: serviceTypeLabel(item.serviceTypes) || '—',

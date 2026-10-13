@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { ActionConfirmKind } from '../../shared/action-confirm-button.vue';
+
 import type { CostTableTemplate, FumigationCostRecord } from '#/api/cost';
 
 import { computed, ref } from 'vue';
@@ -11,6 +13,7 @@ import { useVbenForm } from '#/adapter/form';
 import { fumigationCostApi } from '#/api/cost';
 import { $t } from '#/locales';
 
+import ActionConfirmButton from '../../shared/action-confirm-button.vue';
 import {
   buildTemplateFormSchema,
   extractExtraFields,
@@ -36,6 +39,16 @@ const [Form, formApi] = useVbenForm({
   schema: useFumigationFormSchema(),
   showDefaultActions: false,
   wrapperClass: 'grid-cols-1 sm:grid-cols-2',
+});
+
+const confirmAction = computed<ActionConfirmKind | null>(() => {
+  if (recordId.value) {
+    return 'edit';
+  }
+  if (isCopy.value) {
+    return 'copy';
+  }
+  return null;
 });
 
 const getTitle = computed(() => {
@@ -139,10 +152,19 @@ const [Drawer, drawerApi] = useVbenDrawer({
     formApi.setValues({ extraFields: {} });
   },
 });
+
+const drawerSubmitting = drawerApi.useStore((state) => state.submitting);
 </script>
 
 <template>
-  <Drawer :title="getTitle">
+  <Drawer :show-confirm-button="!confirmAction" :title="getTitle">
     <Form class="cost-drawer-form px-1" />
+    <template v-if="confirmAction" #append-footer>
+      <ActionConfirmButton
+        :action="confirmAction"
+        :loading="drawerSubmitting"
+        @confirm="drawerApi.onConfirm()"
+      />
+    </template>
   </Drawer>
 </template>

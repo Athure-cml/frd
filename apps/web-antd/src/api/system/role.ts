@@ -2,6 +2,7 @@ import { requestClient } from '#/api/request';
 
 export namespace SystemRoleApi {
   export interface SystemRole {
+    assignedUserIds?: number[];
     code: string;
     dataScope: string;
     id: number;
@@ -12,6 +13,7 @@ export namespace SystemRoleApi {
   }
 
   export interface RoleSave {
+    assignedUserIds?: number[];
     code: string;
     dataScope: string;
     name: string;

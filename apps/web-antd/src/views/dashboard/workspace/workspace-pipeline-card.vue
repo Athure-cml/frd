@@ -45,6 +45,10 @@ const emit = defineEmits<{
             <div class="workspace-pipeline-summary">
               <span class="workspace-pipeline-name">{{ item.quoteNo }}</span>
               <span class="workspace-pipeline-dot" aria-hidden="true">·</span>
+              <span class="workspace-pipeline-operator">{{
+                item.operatorName
+              }}</span>
+              <span class="workspace-pipeline-dot" aria-hidden="true">·</span>
               <span>{{ item.serviceTypeLabel }}</span>
               <span class="workspace-pipeline-dot" aria-hidden="true">·</span>
               <span>{{ item.customerName }}</span>

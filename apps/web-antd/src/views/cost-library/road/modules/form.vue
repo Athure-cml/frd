@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { ActionConfirmKind } from '../../shared/action-confirm-button.vue';
+
 import type { CostTableTemplate, RoadCostRecord } from '#/api/cost';
 
 import { computed, ref } from 'vue';
@@ -11,6 +13,7 @@ import { useVbenForm } from '#/adapter/form';
 import { createRoadCost, renewRoadCost, updateRoadCost } from '#/api/cost';
 import { $t } from '#/locales';
 
+import ActionConfirmButton from '../../shared/action-confirm-button.vue';
 import {
   buildTemplateFormSchema,
   extractExtraFields,
@@ -44,6 +47,19 @@ const [Form, formApi] = useVbenForm({
   schema: useRoadFormSchema(),
   showDefaultActions: false,
   wrapperClass: 'grid-cols-1 sm:grid-cols-2',
+});
+
+const confirmAction = computed<ActionConfirmKind | null>(() => {
+  if (recordId.value) {
+    return 'edit';
+  }
+  if (isRenew.value) {
+    return 'renew';
+  }
+  if (isCopy.value) {
+    return 'copy';
+  }
+  return null;
 });
 
 const getTitle = computed(() => {
@@ -200,10 +216,12 @@ const [Drawer, drawerApi] = useVbenDrawer({
     });
   },
 });
+
+const drawerSubmitting = drawerApi.useStore((state) => state.submitting);
 </script>
 
 <template>
-  <Drawer :title="getTitle">
+  <Drawer :show-confirm-button="!confirmAction" :title="getTitle">
     <p
       v-if="isRenew"
       class="text-muted-foreground mb-3 text-sm leading-relaxed"
@@ -211,5 +229,12 @@ const [Drawer, drawerApi] = useVbenDrawer({
       {{ $t('page.costLibrary.hint.renewDesc') }}
     </p>
     <Form class="cost-drawer-form px-1" />
+    <template v-if="confirmAction" #append-footer>
+      <ActionConfirmButton
+        :action="confirmAction"
+        :loading="drawerSubmitting"
+        @confirm="drawerApi.onConfirm()"
+      />
+    </template>
   </Drawer>
 </template>

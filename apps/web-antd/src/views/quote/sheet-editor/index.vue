@@ -8,6 +8,7 @@ import type {
 import type { OceanFreightEntry } from '../shared/sheet-ocean-freight';
 
 import type { FreightCostRecord, RoadCostRecord } from '#/api/cost';
+import type { CustomerApi } from '#/api/customer';
 import type { GlobalPortNameOption } from '#/api/master-data/global-port';
 import type {
   QuoteApi,
@@ -54,7 +55,7 @@ import dayjs from 'dayjs';
 
 import { fumigationCostApi, getRoadCost, seaCostApi } from '#/api/cost';
 import { getEnabledCurrencyOptions } from '#/api/currency';
-import { getCustomerList } from '#/api/customer';
+import { getCustomer, getCustomerList } from '#/api/customer';
 import { searchGlobalPortNameOptions } from '#/api/master-data/global-port';
 import {
   applyQuoteCostImport,
@@ -82,6 +83,7 @@ import { $t } from '#/locales';
 import { getServiceTypeOptions, resolveQuoteStatusTag } from '../list/data';
 import CostLibraryPickerModal from '../shared/cost-library-picker-modal.vue';
 import CostSourceTables from '../shared/cost-source-tables.vue';
+import { resolveCostSourceTypes } from '../shared/cost-source-types';
 import { formatQuoteCostRiskHint } from '../shared/format-cost-risk-hint';
 import QuoteAuditLogs from '../shared/quote-audit-logs.vue';
 import QuoteCitySelect from '../shared/quote-city-select.vue';
@@ -202,6 +204,9 @@ const ruleHintMap = computed(() =>
 );
 const oceanFreightEntries = ref<OceanFreightEntry[]>([]);
 const sheetPreviewOpen = ref(false);
+const submitOpen = ref(false);
+const submitSubmitting = ref(false);
+const submitComment = ref('');
 const withdrawOpen = ref(false);
 const withdrawSubmitting = ref(false);
 const withdrawComment = ref('');
@@ -386,10 +391,22 @@ const matchKeys = computed(() => ({
   fumigationPoint: sheet.fumigationPoint,
 }));
 
-const fumigationEnabled = computed(
-  () =>
-    Boolean(sheet.fumigationPoint?.trim()) || sheet.fumigationEnabled === true,
+function hasServiceType(type: QuoteServiceType) {
+  return serviceTypes.value.includes(type);
+}
+
+/** 费用区 / 引入按钮：按服务类型勾选显隐 */
+const showSeaFees = computed(() => hasServiceType('SEA'));
+const showTruckFees = computed(() => hasServiceType('TRUCK'));
+const showFumigationFees = computed(() => hasServiceType('FUMIGATION'));
+const showInsuranceFee = computed(() => hasServiceType('INSURANCE'));
+const showTradeAgentFee = computed(() => hasServiceType('TRADE'));
+const showServiceFeesSection = computed(
+  () => showSeaFees.value || showTruckFees.value,
 );
+
+/** 勾选熏蒸服务时启用熏蒸相关字段与匹配 */
+const fumigationEnabled = computed(() => showFumigationFees.value);
 
 const previewCustomerName = computed(() => {
   const customer = customerOptions.value.find(
@@ -402,11 +419,117 @@ const portSelectOptions = computed(() =>
   portOptions.value.map((opt) => ({ label: opt.label, value: opt.value })),
 );
 
-const importMenuItems = computed(() => [
-  { key: 'ROAD', label: $t('page.quote.actions.importCostRoad') },
-  { key: 'SEA', label: $t('page.quote.actions.importCostSea') },
-  { key: 'FUMIGATION', label: $t('page.quote.actions.importCostFumigation') },
-]);
+/** 卡车/海运/熏蒸任一勾选时，才显示匹配报价与引入报价库 */
+const showCostLibraryActions = computed(
+  () => showTruckFees.value || showSeaFees.value || showFumigationFees.value,
+);
+
+const importMenuItems = computed(() => {
+  const items: Array<{ key: string; label: string }> = [];
+  if (showSeaFees.value) {
+    items.push({
+      key: 'SEA',
+      label: $t('page.quote.actions.importCostSea'),
+    });
+  }
+  if (showTruckFees.value) {
+    items.push({
+      key: 'ROAD',
+      label: $t('page.quote.actions.importCostRoad'),
+    });
+  }
+  if (showFumigationFees.value) {
+    items.push({
+      key: 'FUMIGATION',
+      label: $t('page.quote.actions.importCostFumigation'),
+    });
+  }
+  return items;
+});
+
+/** 数据来源卡片展示的报价库类型（与服务类型对应） */
+const costSourceTypes = computed(() =>
+  resolveCostSourceTypes(serviceTypes.value),
+);
+
+function removeCostMatchesByType(costType: QuoteCostType) {
+  costMatches.value = costMatches.value.filter(
+    (item) => item.costType !== costType,
+  );
+}
+
+function clearSeaServiceFees() {
+  sheet.oceanFreight = '';
+  sheet.ofUsd = '';
+  sheet.ssl = '';
+  oceanFreightEntries.value = [{ rate: '', remark: '', ssl: '' }];
+  removeCostMatchesByType('SEA');
+}
+
+function clearTruckServiceFees() {
+  sheet.truckingFee = undefined;
+  sheet.truckingNonOakUsd = undefined;
+  sheet.truckingOakUsd = undefined;
+  sheet.nsLift = undefined;
+  sheet.chassis = undefined;
+  sheet.waiting = undefined;
+  sheet.redeliveryFee = undefined;
+  sheet.truckRemark = '';
+  sheet.supplier = '';
+  removeCostMatchesByType('ROAD');
+}
+
+function clearFumigationServiceFees() {
+  oakType.value = undefined;
+  sheet.fumigationPoint = '';
+  sheet.fmNonOak = undefined;
+  sheet.fmOak = undefined;
+  removeCostMatchesByType('FUMIGATION');
+  void refreshRoadTruckingFromMatch();
+}
+
+function clearInsuranceServiceFee() {
+  sheet.cargoInsurancePremium = '';
+}
+
+function clearTradeAgentServiceFee() {
+  sheet.cargoAgentFee = '';
+}
+
+/** 取消某服务类型勾选时，清空对应已填费用（避免打印模板仍带出旧值） */
+watch(
+  serviceTypes,
+  (next, prev) => {
+    const enabled = next.includes('FUMIGATION');
+    sheet.fumigationEnabled = enabled;
+    if (!enabled) {
+      oakType.value = undefined;
+    }
+    if (hydratingSheet.value || readOnly.value || !prev) {
+      return;
+    }
+    const prevSet = new Set(prev);
+    const nextSet = new Set(next);
+    const removed = (type: QuoteServiceType) =>
+      prevSet.has(type) && !nextSet.has(type);
+    if (removed('SEA')) {
+      clearSeaServiceFees();
+    }
+    if (removed('TRUCK')) {
+      clearTruckServiceFees();
+    }
+    if (removed('FUMIGATION')) {
+      clearFumigationServiceFees();
+    }
+    if (removed('INSURANCE')) {
+      clearInsuranceServiceFee();
+    }
+    if (removed('TRADE')) {
+      clearTradeAgentServiceFee();
+    }
+  },
+  { flush: 'sync' },
+);
 
 const loadPortOptions = useDebounceFn(async (keyword?: string) => {
   portOptions.value = await searchGlobalPortNameOptions({
@@ -441,17 +564,14 @@ async function loadQuoteRuleHints() {
 
 function onFumigationPointChange(value?: string) {
   sheet.fumigationPoint = value ?? '';
-  sheet.fumigationEnabled = Boolean(value?.trim());
+  // 熏蒸启用以服务类型为准；清空熏蒸点时去掉熏蒸匹配结果
   if (value?.trim()) {
     if (!oakType.value) {
       sheet.truckingFee = undefined;
     }
   } else {
-    oakType.value = undefined;
     sheet.fmNonOak = 0;
     sheet.fmOak = 0;
-    sheet.truckingNonOakUsd = undefined;
-    sheet.truckingOakUsd = undefined;
     costMatches.value = costMatches.value.filter(
       (item) => item.costType !== 'FUMIGATION',
     );
@@ -712,12 +832,67 @@ function mergeCostMatch(item: QuoteApi.QuoteCostMatchItem) {
   ];
 }
 
-async function loadCustomers() {
-  const result = await getCustomerList({ page: 1, pageSize: 200, status: 1 });
-  customerOptions.value = result.items.map((item) => ({
-    label: item.name,
+function mapCustomerOption(item: CustomerApi.Customer) {
+  const name = item.name?.trim() || '';
+  const shortName = item.shortName?.trim();
+  return {
+    label:
+      shortName && shortName.toUpperCase() !== name.toUpperCase()
+        ? `${name}（${shortName}）`
+        : name,
     value: item.id,
-  }));
+  };
+}
+
+function ensureCustomerOption(option: { label: string; value: number }) {
+  if (customerOptions.value.some((item) => item.value === option.value)) {
+    return;
+  }
+  customerOptions.value = [option, ...customerOptions.value];
+}
+
+const loadCustomers = useDebounceFn(async (keyword?: string) => {
+  const trimmed = keyword?.trim();
+  const result = await getCustomerList({
+    page: 1,
+    pageSize: 50,
+    status: 1,
+    ...(trimmed ? { name: trimmed } : {}),
+  });
+  const next = result.items.map((item) => mapCustomerOption(item));
+  const selectedId = customerId.value;
+  if (selectedId && !next.some((item) => item.value === selectedId)) {
+    const kept = customerOptions.value.find(
+      (item) => item.value === selectedId,
+    );
+    if (kept) {
+      next.unshift(kept);
+    } else if (customerName.value.trim()) {
+      next.unshift({ label: customerName.value.trim(), value: selectedId });
+    }
+  }
+  customerOptions.value = next;
+}, 280);
+
+async function ensureSelectedCustomerOption() {
+  const id = customerId.value;
+  if (!id) {
+    return;
+  }
+  if (customerOptions.value.some((item) => item.value === id)) {
+    return;
+  }
+  try {
+    const detail = await getCustomer(id);
+    ensureCustomerOption(mapCustomerOption(detail));
+    if (!customerName.value.trim()) {
+      customerName.value = detail.name;
+    }
+  } catch {
+    if (customerName.value.trim()) {
+      ensureCustomerOption({ label: customerName.value.trim(), value: id });
+    }
+  }
 }
 
 async function loadCurrencies() {
@@ -760,6 +935,7 @@ async function applyDetailToForm(
     }
     customerId.value = detail.customerId;
     customerName.value = detail.customerName;
+    await ensureSelectedCustomerOption();
     serviceTypes.value = [...(detail.serviceTypes ?? [])];
     oakType.value = detail.oakType;
     validUntil.value = detail.validUntil ? dayjs(detail.validUntil) : undefined;
@@ -1076,6 +1252,7 @@ function applyAiQuotePrefillPayload(form: Record<string, unknown>) {
   if (typeof form.customerName === 'string' && form.customerName.trim()) {
     customerName.value = form.customerName.trim();
   }
+  void ensureSelectedCustomerOption();
   if (typeof form.currency === 'string' && form.currency.trim()) {
     currency.value = form.currency.trim();
   }
@@ -1152,6 +1329,9 @@ function buildPayload(): QuoteApi.QuoteSave {
   const customer = customerOptions.value.find(
     (c) => c.value === customerId.value,
   );
+  if (showSeaFees.value) {
+    syncOceanFreightToSheet();
+  }
   const payload: QuoteApi.QuoteSave = {
     customerId: customerId.value,
     customerName: customer?.label ?? customerName.value,
@@ -1165,9 +1345,39 @@ function buildPayload(): QuoteApi.QuoteSave {
     ...sheet,
     fumigationEnabled: fumigationEnabled.value,
   };
+  // 未勾选服务类型时不落库对应费用，避免打印/导出带出旧值
+  if (!showSeaFees.value) {
+    payload.oceanFreight = '';
+    payload.ofUsd = '';
+    payload.ssl = '';
+  }
+  if (!showTruckFees.value) {
+    payload.truckingFee = undefined;
+    payload.truckingNonOakUsd = undefined;
+    payload.truckingOakUsd = undefined;
+    payload.nsLift = undefined;
+    payload.chassis = undefined;
+    payload.waiting = undefined;
+    payload.redeliveryFee = undefined;
+    payload.truckRemark = '';
+    payload.supplier = '';
+  }
+  if (!showFumigationFees.value) {
+    payload.fumigationPoint = '';
+    payload.fmNonOak = undefined;
+    payload.fmOak = undefined;
+  }
+  if (!showInsuranceFee.value) {
+    payload.cargoInsurancePremium = '';
+  }
+  if (!showTradeAgentFee.value) {
+    payload.cargoAgentFee = '';
+  }
   if (canUseCostLibrary.value) {
-    syncOceanFreightToSheet();
-    payload.costMatches = costMatches.value;
+    const allowed = new Set(costSourceTypes.value);
+    payload.costMatches = costMatches.value.filter((item) =>
+      allowed.has(item.costType),
+    );
   }
   return payload;
 }
@@ -1283,13 +1493,28 @@ function validateRouteFields(): boolean {
   return true;
 }
 
+/** 勾选熏蒸服务时：匹配/保存均需熏蒸点 + OAK/NON-OAK */
+function validateFumigationMatchFields(): boolean {
+  if (!fumigationEnabled.value) {
+    return true;
+  }
+  if (!sheet.fumigationPoint?.trim()) {
+    message.error($t('page.quote.validation.fumigationPointRequired'));
+    return false;
+  }
+  if (!oakType.value) {
+    message.error($t('page.quote.validation.oakTypeRequired'));
+    return false;
+  }
+  return true;
+}
+
 function validateBasicSheetFields(): boolean {
   if (serviceTypes.value.length === 0) {
     message.error($t('page.quote.validation.serviceTypeRequired'));
     return false;
   }
-  if (fumigationEnabled.value && !oakType.value) {
-    message.error($t('page.quote.validation.oakTypeRequired'));
+  if (!validateFumigationMatchFields()) {
     return false;
   }
   return validateRouteFields();
@@ -1302,7 +1527,7 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
   if (!canUseCostLibrary.value) {
     return;
   }
-  if (!validateRouteFields()) {
+  if (!validateRouteFields() || !validateFumigationMatchFields()) {
     return;
   }
 
@@ -1413,16 +1638,22 @@ function onSubmit() {
     });
     return;
   }
-  Modal.confirm({
-    centered: true,
-    title: $t('page.quote.actions.submit'),
-    content: $t('page.quote.confirm.submit', [quoteNo.value]),
-    onOk: async () => {
-      await submitQuote(id);
-      message.success($t('page.quote.message.submitSuccess'));
-      await loadDetail();
-    },
-  });
+  submitComment.value = '';
+  submitOpen.value = true;
+}
+
+async function onSubmitOk() {
+  const id = quoteId.value;
+  if (!id) return;
+  submitSubmitting.value = true;
+  try {
+    await submitQuote(id, submitComment.value);
+    message.success($t('page.quote.message.submitSuccess'));
+    submitOpen.value = false;
+    await loadDetail();
+  } finally {
+    submitSubmitting.value = false;
+  }
 }
 
 function onRollback() {
@@ -1735,7 +1966,7 @@ onUnmounted(() => {
                 {{ $t('page.quote.actions.copy') }}
               </Button>
               <Button
-                v-if="canUseCostLibrary"
+                v-if="canUseCostLibrary && showCostLibraryActions"
                 class="quote-action-btn quote-action-btn--generate"
                 :loading="generating"
                 @click="onGenerateSheet"
@@ -1746,7 +1977,10 @@ onUnmounted(() => {
                 />
                 {{ $t('page.quote.actions.matchQuote') }}
               </Button>
-              <Dropdown v-if="canUseCostLibrary" :trigger="['click']">
+              <Dropdown
+                v-if="canUseCostLibrary && importMenuItems.length > 0"
+                :trigger="['click']"
+              >
                 <Button class="quote-action-btn quote-action-btn--import">
                   <IconifyIcon class="mr-1 size-4" icon="lucide:database" />
                   {{ $t('page.quote.actions.importQuote') }}
@@ -1934,6 +2168,7 @@ onUnmounted(() => {
                       <Select
                         v-model:value="customerId"
                         :disabled="readOnly"
+                        :filter-option="false"
                         :options="customerOptions"
                         :placeholder="
                           readOnly
@@ -1943,6 +2178,7 @@ onUnmounted(() => {
                         allow-clear
                         class="w-full"
                         show-search
+                        @search="loadCustomers"
                       />
                     </Form.Item>
                     <Form.Item :label="$t('page.quote.sheet.date')">
@@ -2045,7 +2281,11 @@ onUnmounted(() => {
                         :disabled="readOnly"
                       />
                     </Form.Item>
-                    <Form.Item :label="$t('page.quote.sheet.fumigationPoint')">
+                    <Form.Item
+                      v-if="showFumigationFees"
+                      :label="$t('page.quote.sheet.fumigationPoint')"
+                      required
+                    >
                       <QuoteFumigationStationSelect
                         :disabled="readOnly"
                         :model-value="sheet.fumigationPoint"
@@ -2055,7 +2295,7 @@ onUnmounted(() => {
                       />
                     </Form.Item>
                     <Form.Item
-                      v-if="fumigationEnabled"
+                      v-if="showFumigationFees"
                       :label="$t('page.quote.sheet.oakType')"
                       required
                     >
@@ -2090,8 +2330,8 @@ onUnmounted(() => {
             </div>
           </section>
 
-          <!-- 2. SERVICE FEES — 主费用列表 -->
-          <section class="quote-editor-section">
+          <!-- 2. SERVICE FEES — 主费用列表（海运 / 卡车） -->
+          <section v-if="showServiceFeesSection" class="quote-editor-section">
             <div class="quote-editor-section__head">
               <span class="quote-editor-section__title">{{
                 $t('page.quote.sections.serviceFees')
@@ -2100,50 +2340,56 @@ onUnmounted(() => {
             <div class="quote-editor-section__body">
               <Form layout="vertical">
                 <div class="quote-sheet-fields">
-                  <div
-                    v-for="(entry, index) in oceanFreightEntries"
-                    :key="`ocean-freight-${index}`"
-                    class="quote-sheet-sea-row"
-                  >
-                    <Form.Item>
-                      <template #label>
-                        <QuoteRuleLabel
-                          v-if="index === 0"
-                          :hint="ruleHint('oceanFreight')"
-                          :label="oceanFreightLabel(index)"
+                  <template v-if="showSeaFees">
+                    <div
+                      v-for="(entry, index) in oceanFreightEntries"
+                      :key="`ocean-freight-${index}`"
+                      class="quote-sheet-sea-row"
+                    >
+                      <Form.Item>
+                        <template #label>
+                          <QuoteRuleLabel
+                            v-if="index === 0"
+                            :hint="ruleHint('oceanFreight')"
+                            :label="oceanFreightLabel(index)"
+                          />
+                          <span v-else>{{ oceanFreightLabel(index) }}</span>
+                        </template>
+                        <Input
+                          :disabled="readOnly"
+                          class="w-full"
+                          :value="entry.rate"
+                          @update:value="
+                            (value) =>
+                              updateOceanFreightEntry(
+                                index,
+                                'rate',
+                                String(value),
+                              )
+                          "
                         />
-                        <span v-else>{{ oceanFreightLabel(index) }}</span>
-                      </template>
-                      <Input
-                        :disabled="readOnly"
-                        class="w-full"
-                        :value="entry.rate"
-                        @update:value="
-                          (value) =>
-                            updateOceanFreightEntry(
-                              index,
-                              'rate',
-                              String(value),
-                            )
-                        "
-                      />
-                    </Form.Item>
-                    <Form.Item :label="$t('page.quote.sheet.seaSsl')">
-                      <Input
-                        :disabled="readOnly"
-                        class="w-full"
-                        :value="entry.ssl"
-                        @update:value="
-                          (value) =>
-                            updateOceanFreightEntry(index, 'ssl', String(value))
-                        "
-                      />
-                    </Form.Item>
-                    <Form.Item :label="$t('page.quote.sheet.seaRemark')">
-                      <Input class="w-full" readonly :value="entry.remark" />
-                    </Form.Item>
-                  </div>
-                  <Form.Item>
+                      </Form.Item>
+                      <Form.Item :label="$t('page.quote.sheet.seaSsl')">
+                        <Input
+                          :disabled="readOnly"
+                          class="w-full"
+                          :value="entry.ssl"
+                          @update:value="
+                            (value) =>
+                              updateOceanFreightEntry(
+                                index,
+                                'ssl',
+                                String(value),
+                              )
+                          "
+                        />
+                      </Form.Item>
+                      <Form.Item :label="$t('page.quote.sheet.seaRemark')">
+                        <Input class="w-full" readonly :value="entry.remark" />
+                      </Form.Item>
+                    </div>
+                  </template>
+                  <Form.Item v-if="showTruckFees">
                     <template #label>
                       <QuoteRuleLabel
                         :hint="ruleHint('truckingFee')"
@@ -2164,7 +2410,7 @@ onUnmounted(() => {
           </section>
 
           <!-- 3. 卡车额外费用 -->
-          <section class="quote-editor-section">
+          <section v-if="showTruckFees" class="quote-editor-section">
             <div class="quote-editor-section__head">
               <span class="quote-editor-section__title">{{
                 $t('page.quote.sections.truckExtras')
@@ -2226,7 +2472,7 @@ onUnmounted(() => {
           </section>
 
           <!-- 4. 熏蒸费 -->
-          <section v-if="fumigationEnabled" class="quote-editor-section">
+          <section v-if="showFumigationFees" class="quote-editor-section">
             <div class="quote-editor-section__head">
               <span class="quote-editor-section__title">{{
                 $t('page.quote.sections.fumigation')
@@ -2270,7 +2516,7 @@ onUnmounted(() => {
             </div>
           </section>
 
-          <!-- 5. 单证、保险、代理费用 -->
+          <!-- 5. 单证、保险、代理费用（单证常显；保险/贸易代理按服务类型） -->
           <section class="quote-editor-section">
             <div class="quote-editor-section__head">
               <span class="quote-editor-section__title">{{
@@ -2293,7 +2539,7 @@ onUnmounted(() => {
                       :disabled="readOnly"
                     />
                   </Form.Item>
-                  <Form.Item>
+                  <Form.Item v-if="showInsuranceFee">
                     <template #label>
                       <QuoteRuleLabel
                         :hint="ruleHint('cargoInsurancePremium')"
@@ -2313,7 +2559,7 @@ onUnmounted(() => {
                       "
                     />
                   </Form.Item>
-                  <Form.Item>
+                  <Form.Item v-if="showTradeAgentFee">
                     <template #label>
                       <QuoteRuleLabel
                         :hint="ruleHint('cargoAgentFee')"
@@ -2364,7 +2610,10 @@ onUnmounted(() => {
             </div>
           </section>
 
-          <section class="quote-editor-section">
+          <section
+            v-if="costSourceTypes.length > 0"
+            class="quote-editor-section"
+          >
             <div class="quote-editor-section__head">
               <span class="quote-editor-section__title">{{
                 $t('page.quote.sections.dataSource')
@@ -2372,7 +2621,9 @@ onUnmounted(() => {
             </div>
             <div class="quote-editor-section__body">
               <CostSourceTables
+                :key="costSourceTypes.join('-')"
                 :can-import="canUseCostLibrary"
+                :cost-types="costSourceTypes"
                 :matches="costMatches"
                 @import="openCostImport"
               />
@@ -2382,6 +2633,26 @@ onUnmounted(() => {
         </div>
       </Card>
       <CostLibraryPickerModal ref="costPickerRef" @confirm="onCostsConfirmed" />
+      <Modal
+        v-model:open="submitOpen"
+        centered
+        :confirm-loading="submitSubmitting"
+        :title="$t('page.approval.submitModalTitle')"
+        width="560px"
+        @ok="onSubmitOk"
+      >
+        <Form layout="vertical">
+          <Form.Item :label="$t('page.approval.submitRemark')">
+            <Input.TextArea
+              v-model:value="submitComment"
+              :maxlength="500"
+              :placeholder="$t('page.approval.submitRemarkPlaceholder')"
+              :rows="4"
+              show-count
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
       <Modal
         v-model:open="withdrawOpen"
         centered
@@ -2413,6 +2684,7 @@ onUnmounted(() => {
           :cost-snapshots="costMatches"
           :customer-name="previewCustomerName"
           :quote-date="quoteDate.format('YYYY-MM-DD')"
+          :service-types="serviceTypes"
           :sheet="sheet"
         />
         <template #footer>

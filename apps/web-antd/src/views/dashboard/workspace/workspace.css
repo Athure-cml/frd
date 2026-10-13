@@ -471,11 +471,16 @@ html.dark .workspace-hero .workspace-kpi-icon--destructive {
 }
 
 .workspace-pipeline-summary > span:nth-child(3),
-.workspace-pipeline-summary > span:nth-child(5) {
+.workspace-pipeline-summary > span:nth-child(5),
+.workspace-pipeline-summary > span:nth-child(7) {
   flex-shrink: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.workspace-pipeline-operator {
+  color: var(--ws-text, #0f172a);
 }
 
 .workspace-pipeline-dot {

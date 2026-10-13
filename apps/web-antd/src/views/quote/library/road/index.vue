@@ -6,7 +6,6 @@ import QuoteLibraryPage from '../components/quote-library-page.vue';
 <template>
   <QuoteLibraryPage
     description-key="page.quote.library.roadDesc"
-    edit-permission="cost:road:edit"
     export-filename="卡车报价库.xlsx"
     mode="road"
     :search-schema="useRoadSearchSchema"

@@ -24,26 +24,44 @@ export interface QuoteMatchKeys {
   zipCode?: string;
 }
 
+/** 引入报价库弹窗默认筛选：生效中 + 未生效（可改筛已过期仅查看，仍不可引入） */
+const PICKER_DEFAULT_STATUS = ['active', 'pending'] as const;
+
+function putTrimmed(
+  target: Record<string, string | string[]>,
+  field: string,
+  value?: string,
+  asArray = false,
+) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return;
+  }
+  target[field] = asArray ? [trimmed] : trimmed;
+}
+
 export function getInitialSearchValues(
   type: QuoteCostType,
   keys: QuoteMatchKeys,
-): Record<string, string> {
+): Record<string, string | string[]> {
+  const status = [...PICKER_DEFAULT_STATUS];
   if (type === 'ROAD') {
-    return {
-      city: keys.city ?? '',
-      state: keys.state ?? '',
-    };
+    // city 为多选：未填时不要写入 ''，否则会出现空的已选 tag
+    const values: Record<string, string | string[]> = { status };
+    putTrimmed(values, 'city', keys.city, true);
+    putTrimmed(values, 'state', keys.state);
+    return values;
   }
   if (type === 'SEA') {
-    return {
-      por: keys.por ?? '',
-      pol: keys.pol ?? '',
-      pod: keys.pod ?? '',
-    };
+    const values: Record<string, string | string[]> = { status };
+    putTrimmed(values, 'por', keys.por);
+    putTrimmed(values, 'pol', keys.pol);
+    putTrimmed(values, 'pod', keys.pod);
+    return values;
   }
-  return {
-    station: keys.fumigationPoint ?? '',
-  };
+  const values: Record<string, string | string[]> = { status };
+  putTrimmed(values, 'station', keys.fumigationPoint);
+  return values;
 }
 
 const ROAD_REMARK_FIELD = 'cf_road_remark';
@@ -323,18 +341,53 @@ export function pickRoadSheetFields(
   return picked;
 }
 
+/** 取首个非空文本；全空则 undefined（避免空串覆盖已填字段） */
+function firstNonBlankText(
+  ...values: Array<null | number | string | undefined>
+): string | undefined {
+  for (const value of values) {
+    if (value === null || value === undefined) {
+      continue;
+    }
+    const text = String(value).trim();
+    if (text) {
+      return text;
+    }
+  }
+  return undefined;
+}
+
+function assignSheetTextIfPresent(
+  sheet: QuoteApi.QuoteSheetFields,
+  key:
+    | 'city'
+    | 'pod'
+    | 'pol'
+    | 'por'
+    | 'ssl'
+    | 'state'
+    | 'supplier'
+    | 'zipCode',
+  ...candidates: Array<null | number | string | undefined>
+) {
+  const next = firstNonBlankText(...candidates);
+  if (next !== undefined) {
+    sheet[key] = next;
+  }
+}
+
 export function mergeRoadCostImport(
   sheet: QuoteApi.QuoteSheetFields,
   fields: QuoteApi.QuoteSheetFields,
   fumigationEnabled: boolean,
   record: RoadCostRecord,
 ) {
-  sheet.por = fields.por ?? record.por ?? sheet.por;
-  sheet.pol = fields.pol ?? record.pol ?? sheet.pol;
-  sheet.zipCode = fields.zipCode ?? record.zipCode ?? sheet.zipCode;
-  sheet.city = fields.city ?? record.city ?? sheet.city;
-  sheet.state = fields.state ?? record.state ?? sheet.state;
-  sheet.supplier = fields.supplier ?? record.supplier ?? sheet.supplier;
+  assignSheetTextIfPresent(sheet, 'por', fields.por, record.por);
+  assignSheetTextIfPresent(sheet, 'pol', fields.pol, record.pol);
+  assignSheetTextIfPresent(sheet, 'zipCode', fields.zipCode, record.zipCode);
+  assignSheetTextIfPresent(sheet, 'city', fields.city, record.city);
+  assignSheetTextIfPresent(sheet, 'state', fields.state, record.state);
+  assignSheetTextIfPresent(sheet, 'supplier', fields.supplier, record.supplier);
   sheet.pickUpAddress =
     fields.pickUpAddress ||
     record.logYardNameAddress ||
@@ -365,10 +418,11 @@ export function mergeSeaCostImport(
   fields: QuoteApi.QuoteSheetFields,
   record: FreightCostRecord,
 ) {
-  sheet.ssl = fields.ssl ?? record.ssl ?? sheet.ssl;
-  sheet.pod = fields.pod ?? record.pod ?? sheet.pod;
-  sheet.pol = fields.pol ?? record.pol ?? sheet.pol;
-  sheet.por = fields.por ?? record.por ?? sheet.por;
+  // 报价库空 POR/POL/POD/SSL 不得覆盖基础信息已填值
+  assignSheetTextIfPresent(sheet, 'ssl', fields.ssl, record.ssl);
+  assignSheetTextIfPresent(sheet, 'pod', fields.pod, record.pod);
+  assignSheetTextIfPresent(sheet, 'pol', fields.pol, record.pol);
+  assignSheetTextIfPresent(sheet, 'por', fields.por, record.por);
 }
 
 export function mergeFumigationCostImport(

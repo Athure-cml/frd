@@ -15,6 +15,7 @@ import {
 } from '#/api/quote/library';
 import { $t } from '#/locales';
 
+import ActionConfirmButton from '../../../cost-library/shared/action-confirm-button.vue';
 import {
   buildQuoteLibraryFeeSchema,
   normalizeQuoteLibraryFeeValues,
@@ -46,7 +47,10 @@ const [Drawer, drawerApi] = useVbenDrawer({
       formApi.resetForm();
     }
   },
+  showConfirmButton: false,
 });
+
+const drawerSubmitting = drawerApi.useStore((state) => state.submitting);
 
 async function applyEditContext(
   context: Awaited<ReturnType<typeof getQuoteLibraryEditContext>>,
@@ -127,6 +131,13 @@ defineExpose({ open });
       <Button :disabled="submitting" :loading="resetting" @click="onReset">
         {{ $t('common.reset') }}
       </Button>
+    </template>
+    <template #append-footer>
+      <ActionConfirmButton
+        action="edit"
+        :loading="submitting || drawerSubmitting"
+        @confirm="drawerApi.onConfirm()"
+      />
     </template>
   </Drawer>
 </template>

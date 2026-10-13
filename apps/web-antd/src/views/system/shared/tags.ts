@@ -10,5 +10,6 @@ export const statusTagOptions = () => [
 export const dataScopeTagOptions = () => [
   { color: 'purple', label: t('dataScope.ALL'), value: 'ALL' },
   { color: 'processing', label: t('dataScope.DEPT'), value: 'DEPT' },
+  { color: 'cyan', label: t('dataScope.ASSIGNED'), value: 'ASSIGNED' },
   { color: 'default', label: t('dataScope.SELF'), value: 'SELF' },
 ];

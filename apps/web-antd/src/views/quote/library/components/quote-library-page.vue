@@ -17,7 +17,7 @@ import { Page } from '@vben/common-ui';
 import { Download } from '@vben/icons';
 import { usePreferences } from '@vben/preferences';
 
-import { Button, message, Modal } from 'ant-design-vue';
+import { Button, message } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { downloadCostExport } from '#/api/cost';
@@ -31,6 +31,7 @@ import {
 import { $t } from '#/locales';
 
 import { normalizeRoadCitySearchParam } from '../../../cost-library/road/data';
+import ActionConfirmButton from '../../../cost-library/shared/action-confirm-button.vue';
 import { createTemplateColumnBgStyleHandlers } from '../../../cost-library/shared/column-bg-style';
 import {
   adaptCostColumnsForViewport,
@@ -43,6 +44,7 @@ import {
 } from '../../../cost-library/shared/cost-quote-relation';
 import { getDefaultTemplate } from '../../../cost-library/shared/default-templates';
 import { createCostRowHighlightStyleHandlers } from '../../../cost-library/shared/row-highlight-style';
+import { normalizeCostStatusSearchParam } from '../../../cost-library/shared/status-search';
 import {
   loadTableTemplates,
   resolveActiveTemplate,
@@ -66,7 +68,6 @@ import '../../shared/quote.css';
 
 const props = defineProps<{
   descriptionKey: string;
-  editPermission: string;
   exportFilename: string;
   mode: QuoteLibraryMode;
   searchSchema: () => VbenFormSchema[];
@@ -78,21 +79,12 @@ const { hasAccessByCodes } = useAccess();
 const { isMobile } = usePreferences();
 const fetchList = getQuoteLibraryListApi(props.mode);
 
-const libraryEditPermission = computed(
-  () => `quote:library:${props.mode}:edit`,
-);
-const libraryDeletePermission = computed(
-  () => `quote:library:${props.mode}:delete`,
-);
-const canEdit = hasAccessByCodes([
-  libraryEditPermission.value,
-  props.editPermission,
-]);
-const canDelete = hasAccessByCodes([
-  libraryDeletePermission.value,
-  props.editPermission,
-]);
+/** 报价库权限与成本库独立，不再回落到 cost:*:edit */
+const canEdit = hasAccessByCodes([`quote:library:${props.mode}:edit`]);
+const canDelete = hasAccessByCodes([`quote:library:${props.mode}:delete`]);
 const canManage = canEdit || canDelete;
+/** 「查看成本」需对应成本库查看权限 */
+const canViewCost = hasAccessByCodes([`cost:${props.mode}:view`]);
 
 const searchFormOptions = useI18nFormOptions(() => ({
   collapsed: true,
@@ -147,6 +139,7 @@ const gridColumns = computed(() => {
         navigateToCostLibrary(router, props.mode as CostMode, row.id),
       onNavigateQuotes: (row) =>
         navigateToQuoteListByLibrary(router, props.mode as CostMode, row.id),
+      showCostLink: canViewCost,
     },
   );
 });
@@ -214,7 +207,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
             pageSize: page.pageSize,
             sortField: sort.field,
             sortOrder: sort.order,
-            ...formValues,
+            ...normalizeListParams(formValues),
           });
           lastPageItems = result.items ?? [];
           return result;
@@ -343,7 +336,7 @@ function getRowName(row: QuoteLibraryRow) {
   return [region, station].filter(Boolean).join(' / ') || String(row.id ?? '');
 }
 
-function onDelete(row: QuoteLibraryRow) {
+async function onDelete(row: QuoteLibraryRow) {
   if (!canDelete || typeof row.id !== 'number') {
     return;
   }
@@ -352,16 +345,10 @@ function onDelete(row: QuoteLibraryRow) {
     return;
   }
   const name = getRowName(row);
-  Modal.confirm({
-    content: $t('page.quote.library.confirm.delete', [name]),
-    onOk: async () => {
-      await deleteQuoteLibraryRecord(props.mode, row.id as number);
-      message.success($t('ui.actionMessage.deleteSuccess', [name]));
-      clearSelection();
-      onRefresh();
-    },
-    title: $t('page.quote.library.confirm.deleteTitle'),
-  });
+  await deleteQuoteLibraryRecord(props.mode, row.id as number);
+  message.success($t('ui.actionMessage.deleteSuccess', [name]));
+  clearSelection();
+  onRefresh();
 }
 
 function findRowById(id: number) {
@@ -385,7 +372,7 @@ function onBatchEdit() {
   batchModalRef.value?.open(ids);
 }
 
-function onBatchDelete() {
+async function onBatchDelete() {
   const ids = getEditableSelectedIds();
   if (ids.length === 0) {
     if (getSelectedIds().length > 0) {
@@ -395,16 +382,10 @@ function onBatchDelete() {
     message.warning($t('page.costLibrary.hint.selectRows'));
     return;
   }
-  Modal.confirm({
-    content: $t('page.quote.library.confirm.batchDelete', [ids.length]),
-    onOk: async () => {
-      await batchDeleteQuoteLibrary(props.mode, ids);
-      message.success($t('ui.actionMessage.operationSuccess'));
-      clearSelection();
-      onRefresh();
-    },
-    title: $t('page.quote.library.confirm.deleteTitle'),
-  });
+  await batchDeleteQuoteLibrary(props.mode, ids);
+  message.success($t('ui.actionMessage.operationSuccess'));
+  clearSelection();
+  onRefresh();
 }
 
 function onBatchSuccess() {
@@ -413,11 +394,15 @@ function onBatchSuccess() {
 }
 
 function normalizeListParams(formValues?: null | Record<string, unknown>) {
-  const params = { ...formValues };
+  const params = { ...formValues } as Record<string, unknown>;
+  const normalizedStatus = normalizeCostStatusSearchParam(params.status);
+  if (normalizedStatus) {
+    params.status = normalizedStatus;
+  } else {
+    delete params.status;
+  }
   if (props.mode === 'road') {
-    const normalizedCity = normalizeRoadCitySearchParam(
-      params.city as string | undefined,
-    );
+    const normalizedCity = normalizeRoadCitySearchParam(params.city);
     if (normalizedCity) {
       params.city = normalizedCity;
     } else {
@@ -510,14 +495,18 @@ onActivated(() => {
             >
               {{ $t('page.costLibrary.actions.batchEdit') }}
             </Button>
-            <Button
+            <ActionConfirmButton
               v-if="canDelete"
-              :disabled="selectedCount === 0"
+              action="delete"
               danger
-              @click="onBatchDelete"
-            >
-              {{ $t('page.costLibrary.actions.batchDelete') }}
-            </Button>
+              :disabled="selectedCount === 0"
+              :label="$t('page.costLibrary.actions.batchDelete')"
+              :title="
+                $t('page.quote.library.confirm.batchDelete', [selectedCount])
+              "
+              type="default"
+              @confirm="onBatchDelete"
+            />
             <span
               v-if="selectedCount > 0"
               class="text-sm text-muted-foreground"

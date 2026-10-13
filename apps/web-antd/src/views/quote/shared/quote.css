@@ -1044,15 +1044,11 @@
   opacity: 0.45;
 }
 
-/* 报价页成本快照：外层按行数定高，覆盖列表页 min-height:360px */
+/* 报价页成本快照：外层按行数定高，覆盖列表页 min-height:360px；横向滚动交给 VXE 以支持 fixed 列 */
 :root .quote-cost-snapshot .vxe-grid.cost-library-grid.quote-cost-snapshot-grid {
   flex: none;
+  width: 100%;
   min-height: 0 !important;
-}
-
-:root .quote-cost-snapshot-scroll .vxe-table--header-wrapper,
-:root .quote-cost-snapshot-scroll .vxe-table--body-wrapper {
-  overflow: auto hidden !important;
 }
 
 .quote-cost-picker__footer {

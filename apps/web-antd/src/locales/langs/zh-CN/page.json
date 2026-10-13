@@ -386,7 +386,11 @@
       "view": "查看"
     },
     "confirm": {
-      "batchDelete": "确认删除选中的 {0} 条记录？此操作不可恢复。"
+      "batchDelete": "是否确认删除选中的 {0} 条记录？",
+      "copy": "是否确认复制？",
+      "delete": "是否确认删除？",
+      "edit": "是否确认修改？",
+      "renew": "是否确认续期？"
     },
     "hint": {
       "apiPending": "「录入{0}」功能将在接入后端 API 后开放",
@@ -922,8 +926,9 @@
       },
       "confirm": {
         "deleteTitle": "从报价库删除",
-        "delete": "确认从报价库删除「{0}」？删除后对应成本可再次编辑。",
-        "batchDelete": "确认从报价库删除选中的 {0} 条？删除后对应成本可再次编辑。"
+        "delete": "是否确认删除？",
+        "deleteNamed": "是否确认删除「{0}」？",
+        "batchDelete": "是否确认删除选中的 {0} 条？"
       }
     },
     "createTitle": "新建报价单",
@@ -1097,6 +1102,7 @@
       "customerRequired": "请选择客户",
       "serviceTypeRequired": "请选择服务类型",
       "oakTypeRequired": "请选择 OAK / NON-OAK",
+      "fumigationPointRequired": "请选择熏蒸点",
       "porPolRequired": "请选择 POR/POL",
       "porRequired": "请选择 POR",
       "polRequired": "请选择 POL",
@@ -1244,8 +1250,8 @@
       "selectOne": "请选择一条报价库记录",
       "selectSea": "请至少选择一条海运报价库记录",
       "selectedCount": "已选 {0} 条",
-      "confirmHint": "单击选中一行，双击或点「确认」引入",
-      "confirmHintSea": "可多选，最多 {0} 条；已匹配/已引入的记录会自动勾选",
+      "confirmHint": "单击选中一行，双击或点「确认」引入；已过期可搜索查看，不可引入",
+      "confirmHintSea": "可多选，最多 {0} 条；已匹配/已引入的记录会自动勾选；已过期可搜索查看，不可引入",
       "selectRows": "请先选择报价库记录",
       "addSelected": "添加已选（{0}）",
       "selectedHint": "已选 {0} 条报价库记录",
@@ -1451,6 +1457,7 @@
       "parentDept": "上级部门",
       "roles": "角色",
       "dataScope": "数据权限",
+      "assignedUsers": "指定用户",
       "permissions": "权限码",
       "password": "初始密码",
       "resetPassword": "重置密码",
@@ -1464,6 +1471,7 @@
     "dataScope": {
       "ALL": "全部数据",
       "DEPT": "本部门",
+      "ASSIGNED": "指定数据",
       "SELF": "仅本人"
     },
     "status": {
@@ -1679,6 +1687,9 @@
     "approveModalTitle": "审批通过",
     "rejectModalTitle": "审批驳回",
     "rejectSuccess": "已驳回并退回草稿",
+    "submitModalTitle": "提交审批",
+    "submitRemark": "提交备注（选填）",
+    "submitRemarkPlaceholder": "可填写备注，审批人可在审批流程中查看",
     "withdrawModalTitle": "撤回审批",
     "withdrawReason": "撤回原因",
     "withdrawReasonRequired": "请填写撤回原因",

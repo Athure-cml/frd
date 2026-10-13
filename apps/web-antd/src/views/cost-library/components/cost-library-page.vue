@@ -70,6 +70,7 @@ import { toCopyDrawerData, toRenewDrawerData } from '../shared/drawer-data';
 import { createHighlightOnlySearchField } from '../shared/highlight-only-search';
 import { createInQuoteLibrarySearchField } from '../shared/in-quote-library-search';
 import { createCostRowHighlightStyleHandlers } from '../shared/row-highlight-style';
+import { normalizeCostStatusSearchParam } from '../shared/status-search';
 import {
   getGridStorageId,
   getTemplateLayoutSignature,
@@ -687,7 +688,7 @@ function onBatchDelete() {
       message.success($t('ui.actionMessage.operationSuccess'));
       onBatchSuccess();
     },
-    title: $t('common.prompt'),
+    title: $t('page.costLibrary.confirm.delete'),
   });
 }
 
@@ -754,6 +755,12 @@ function normalizeListParams(formValues?: Record<string, unknown>) {
   }
   if (params.inQuoteLibrary !== true && params.inQuoteLibrary !== false) {
     delete params.inQuoteLibrary;
+  }
+  const normalizedStatus = normalizeCostStatusSearchParam(params.status);
+  if (normalizedStatus) {
+    params.status = normalizedStatus;
+  } else {
+    delete params.status;
   }
   if (props.mode === 'road') {
     const normalizedCity = normalizeRoadCitySearchParam(params.city);

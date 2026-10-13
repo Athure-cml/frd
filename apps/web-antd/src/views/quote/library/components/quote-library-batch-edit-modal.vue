@@ -11,6 +11,7 @@ import { useVbenForm } from '#/adapter/form';
 import { batchUpdateQuoteLibrary } from '#/api/quote/library';
 import { $t } from '#/locales';
 
+import ActionConfirmButton from '../../../cost-library/shared/action-confirm-button.vue';
 import {
   buildQuoteLibraryBatchFeeSchema,
   normalizeQuoteLibraryFeeValues,
@@ -95,9 +96,11 @@ defineExpose({ open });
       <Button :disabled="submitting" @click="modalApi.close()">
         {{ $t('common.cancel') }}
       </Button>
-      <Button :loading="submitting" type="primary" @click="onConfirm">
-        {{ $t('common.confirm') }}
-      </Button>
+      <ActionConfirmButton
+        action="edit"
+        :loading="submitting"
+        @confirm="onConfirm"
+      />
     </div>
   </Modal>
 </template>

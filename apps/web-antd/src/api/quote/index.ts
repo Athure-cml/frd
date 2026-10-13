@@ -319,8 +319,11 @@ export async function applyQuoteCostImport(
   );
 }
 
-export async function submitQuote(id: number) {
-  return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/submit`);
+export async function submitQuote(id: number, comment?: string) {
+  const trimmed = comment?.trim();
+  return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/submit`, {
+    comment: trimmed || undefined,
+  });
 }
 
 export async function cancelQuoteApproval(id: number, comment: string) {

@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { QuoteApi, QuoteCostType } from '#/api/quote';
 
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 
 import { IconifyIcon } from '@vben/icons';
 
@@ -10,14 +10,18 @@ import { Button, Tabs, Tag } from 'ant-design-vue';
 import { $t } from '#/locales';
 
 import CostSnapshotGrid from './cost-snapshot-grid.vue';
+import { orderCostSourceTypes } from './cost-source-types';
 
 const props = withDefaults(
   defineProps<{
     canImport?: boolean;
+    /** 按服务类型过滤展示的报价库 Tab；不传则展示全部三类 */
+    costTypes?: QuoteCostType[];
     matches: QuoteApi.QuoteCostMatchItem[];
   }>(),
   {
     canImport: false,
+    costTypes: undefined,
   },
 );
 
@@ -25,8 +29,33 @@ const emit = defineEmits<{
   import: [type: QuoteCostType];
 }>();
 
-const COST_TYPES: QuoteCostType[] = ['ROAD', 'SEA', 'FUMIGATION'];
-const activeTab = ref<QuoteCostType>('ROAD');
+const visibleCostTypes = computed(() => {
+  if (props.costTypes === undefined || props.costTypes === null) {
+    return orderCostSourceTypes(['SEA', 'ROAD', 'FUMIGATION']);
+  }
+  return orderCostSourceTypes(props.costTypes);
+});
+
+const tabsKey = computed(() => visibleCostTypes.value.join('-') || 'none');
+
+/** 始终指向当前可见 Tab，避免切换服务类型后 activeKey 失效导致内容空白 */
+const activeTab = ref<QuoteCostType>(visibleCostTypes.value[0] ?? 'SEA');
+
+async function syncActiveTab(preferFirst = false) {
+  const types = visibleCostTypes.value;
+  const first = types[0];
+  if (!first) {
+    return;
+  }
+  const next =
+    !preferFirst && types.includes(activeTab.value) ? activeTab.value : first;
+  activeTab.value = next;
+  // Tabs 重挂载后再写一次，确保面板被选中
+  await nextTick();
+  if (visibleCostTypes.value.includes(next)) {
+    activeTab.value = next;
+  }
+}
 
 function tabLabel(type: QuoteCostType) {
   return $t(
@@ -43,7 +72,7 @@ function listByType(type: QuoteCostType) {
 }
 
 const sections = computed(() =>
-  COST_TYPES.map((type) => {
+  visibleCostTypes.value.map((type) => {
     if (type === 'SEA') {
       const seaMatches = listByType('SEA');
       return {
@@ -61,14 +90,26 @@ const sections = computed(() =>
   }),
 );
 
+watch(
+  tabsKey,
+  () => {
+    void syncActiveTab(true);
+  },
+  { immediate: true, flush: 'sync' },
+);
+
 function onImport(type: QuoteCostType) {
   emit('import', type);
 }
 </script>
 
 <template>
-  <div class="quote-cost-source">
-    <Tabs v-model:active-key="activeTab">
+  <div v-if="sections.length > 0" class="quote-cost-source">
+    <Tabs
+      :key="tabsKey"
+      v-model:active-key="activeTab"
+      destroy-inactive-tab-pane
+    >
       <Tabs.TabPane
         v-for="section in sections"
         :key="section.type"
@@ -112,7 +153,8 @@ function onImport(type: QuoteCostType) {
 }
 
 .quote-cost-source__pane {
-  overflow: auto visible;
+  /* 横向滚动交给内部 VXE，避免外层滚动导致 fixed 列失效 */
+  overflow: hidden;
   border: 1px solid hsl(var(--border));
   border-top: 0;
   border-radius: 0 0 calc(var(--radius) + 2px) calc(var(--radius) + 2px);

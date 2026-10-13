@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { ActionConfirmKind } from './action-confirm-button.vue';
+
 import type { CostTableTemplate, FreightCostRecord } from '#/api/cost';
 
 import { computed, nextTick, ref } from 'vue';
@@ -11,11 +13,14 @@ import { useVbenForm } from '#/adapter/form';
 import { renewSeaCost, seaCostApi } from '#/api/cost';
 import { $t } from '#/locales';
 
+import ActionConfirmButton from './action-confirm-button.vue';
 import {
   buildTemplateFormSchema,
   extractExtraFields,
   mergeRecordWithExtraFields,
-} from '../shared/build-template-form-schema';
+} from './build-template-form-schema';
+import { getDefaultTemplate } from './default-templates';
+import { isCostCopyPayload, isCostRenewPayload } from './drawer-data';
 import {
   computeSeaAllIn,
   parsePortNames,
@@ -24,9 +29,7 @@ import {
   rowToFreightFormValues,
   toFreightSavePayload,
   useFreightFormSchema,
-} from '../shared/freight-schema';
-import { getDefaultTemplate } from './default-templates';
-import { isCostCopyPayload, isCostRenewPayload } from './drawer-data';
+} from './freight-schema';
 
 const props = defineProps<{
   mode: 'sea';
@@ -47,6 +50,19 @@ const renewFromId = ref<number>();
 const hydrating = ref(false);
 const api = seaCostApi;
 const activeTemplate = ref<CostTableTemplate>(getDefaultTemplate(props.mode));
+
+const confirmAction = computed<ActionConfirmKind | null>(() => {
+  if (recordId.value) {
+    return 'edit';
+  }
+  if (isRenew.value) {
+    return 'renew';
+  }
+  if (isCopy.value) {
+    return 'copy';
+  }
+  return null;
+});
 
 const SEA_ALL_IN_TRIGGER_FIELDS = new Set([
   'buc',
@@ -300,10 +316,12 @@ const [Drawer, drawerApi] = useVbenDrawer({
     })();
   },
 });
+
+const drawerSubmitting = drawerApi.useStore((state) => state.submitting);
 </script>
 
 <template>
-  <Drawer :title="getTitle">
+  <Drawer :show-confirm-button="!confirmAction" :title="getTitle">
     <p
       v-if="isRenew"
       class="text-muted-foreground mb-3 text-sm leading-relaxed"
@@ -311,5 +329,12 @@ const [Drawer, drawerApi] = useVbenDrawer({
       {{ $t('page.costLibrary.hint.renewSeaDesc') }}
     </p>
     <Form class="cost-drawer-form px-1" />
+    <template v-if="confirmAction" #append-footer>
+      <ActionConfirmButton
+        :action="confirmAction"
+        :loading="drawerSubmitting"
+        @confirm="drawerApi.onConfirm()"
+      />
+    </template>
   </Drawer>
 </template>

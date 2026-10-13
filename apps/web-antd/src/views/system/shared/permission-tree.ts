@@ -75,15 +75,15 @@ const MENU_SCHEMA: MenuModuleDef[] = [
       },
       {
         kind: 'group',
-        segment: 'library_road',
-        titleKey: 'page.quote.library.road',
-        match: (code) => code.startsWith('quote:library:road:'),
-      },
-      {
-        kind: 'group',
         segment: 'library_sea',
         titleKey: 'page.quote.library.sea',
         match: (code) => code.startsWith('quote:library:sea:'),
+      },
+      {
+        kind: 'group',
+        segment: 'library_road',
+        titleKey: 'page.quote.library.road',
+        match: (code) => code.startsWith('quote:library:road:'),
       },
       {
         kind: 'group',
@@ -99,15 +99,15 @@ const MENU_SCHEMA: MenuModuleDef[] = [
     children: [
       {
         kind: 'group',
-        segment: 'road',
-        titleKey: 'page.costLibrary.road',
-        match: (code) => /^cost:road:(?!template)/.test(code),
-      },
-      {
-        kind: 'group',
         segment: 'sea',
         titleKey: 'page.costLibrary.sea',
         match: (code) => /^cost:sea:(?!template)/.test(code),
+      },
+      {
+        kind: 'group',
+        segment: 'road',
+        titleKey: 'page.costLibrary.road',
+        match: (code) => /^cost:road:(?!template)/.test(code),
       },
       {
         kind: 'group',
@@ -122,15 +122,15 @@ const MENU_SCHEMA: MenuModuleDef[] = [
         children: [
           {
             kind: 'group',
-            segment: 'road',
-            titleKey: 'page.costLibrary.template.roadMenu',
-            match: (code) => code.startsWith('cost:road:template:'),
-          },
-          {
-            kind: 'group',
             segment: 'sea',
             titleKey: 'page.costLibrary.template.seaMenu',
             match: (code) => code.startsWith('cost:sea:template:'),
+          },
+          {
+            kind: 'group',
+            segment: 'road',
+            titleKey: 'page.costLibrary.template.roadMenu',
+            match: (code) => code.startsWith('cost:road:template:'),
           },
           {
             kind: 'group',

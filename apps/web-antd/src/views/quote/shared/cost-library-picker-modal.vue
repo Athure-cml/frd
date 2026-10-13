@@ -22,6 +22,7 @@ import {
   getCostSearchSchema,
 } from '../../cost-library/shared/cost-search-schema';
 import { createCostRowHighlightStyleHandlers } from '../../cost-library/shared/row-highlight-style';
+import { normalizeCostStatusSearchParam } from '../../cost-library/shared/status-search';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import {
   buildQuoteCostPickerColumns,
@@ -69,6 +70,13 @@ const footerHint = computed(() =>
     ? $t('page.quote.costPicker.confirmHintSea', [MAX_OCEAN_FREIGHT_LINES])
     : $t('page.quote.costPicker.confirmHint'),
 );
+
+function canImportRow(row: CostLibraryRecord) {
+  return isActiveCostRecord(
+    costType.value,
+    row as unknown as Record<string, unknown>,
+  );
+}
 
 function buildPickerSearchFormOptions(type: QuoteCostType = costType.value) {
   return withCostSearchFormLayout({
@@ -129,6 +137,9 @@ function applySelectMode() {
     gridApi.setGridOptions({
       checkboxConfig: {
         checkMethod: ({ row }: { row: CostLibraryRecord }) => {
+          if (!canImportRow(row)) {
+            return false;
+          }
           const selected = getSelectedRows();
           return (
             selected.some((item) => item.id === row.id) ||
@@ -150,6 +161,7 @@ function applySelectMode() {
       enabled: false,
     },
     radioConfig: {
+      checkMethod: ({ row }: { row: CostLibraryRecord }) => canImportRow(row),
       highlight: true,
       trigger: 'row',
     },
@@ -180,9 +192,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
   gridClass: pickerGridClass.value,
   gridEvents: {
     cellClick: ({ row }: { row: CostLibraryRecord }) => {
-      if (!isSeaMulti.value) {
-        selectedRow.value = row;
+      if (isSeaMulti.value) {
+        return;
       }
+      if (!canImportRow(row)) {
+        selectedRow.value = null;
+        message.warning($t('page.quote.message.costExpired'));
+        return;
+      }
+      selectedRow.value = row;
     },
     cellDblclick: ({ row }: { row: CostLibraryRecord }) => {
       if (isSeaMulti.value) {
@@ -193,6 +211,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     checkboxAll: syncSelection,
     checkboxChange: syncSelection,
     radioChange: ({ row }: { row: CostLibraryRecord }) => {
+      if (!canImportRow(row)) {
+        selectedRow.value = null;
+        message.warning($t('page.quote.message.costExpired'));
+        return;
+      }
       selectedRow.value = row;
     },
   },
@@ -206,6 +229,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
         query: async ({ page, sort }, formValues) => {
           const api = getQuoteLibraryListApi(pickerMode.value);
           const params = { ...formValues } as Record<string, unknown>;
+          // 可搜已过期（默认仍是生效中+未生效）；引入时再拦截已过期
+          const normalizedStatus = normalizeCostStatusSearchParam(
+            params.status,
+          );
+          if (normalizedStatus) {
+            params.status = normalizedStatus;
+          } else {
+            delete params.status;
+          }
           if (pickerMode.value === 'road') {
             const normalizedCity = normalizeRoadCitySearchParam(params.city);
             if (normalizedCity) {
@@ -230,6 +262,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       sort: true,
     },
     radioConfig: {
+      checkMethod: ({ row }: { row: CostLibraryRecord }) => canImportRow(row),
       highlight: true,
       trigger: 'row',
     },

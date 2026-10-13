@@ -45,13 +45,36 @@ const loadPortOptions = useDebounceFn(async (keyword?: string) => {
   });
 }, 280);
 
-async function loadCustomers() {
-  const result = await getCustomerList({ page: 1, pageSize: 200, status: 1 });
-  customerOptions.value = result.items.map((item) => ({
-    label: item.name,
-    value: item.id,
-  }));
-}
+const loadCustomers = useDebounceFn(async (keyword?: string) => {
+  const trimmed = keyword?.trim();
+  const result = await getCustomerList({
+    page: 1,
+    pageSize: 50,
+    status: 1,
+    ...(trimmed ? { name: trimmed } : {}),
+  });
+  const next = result.items.map((item) => {
+    const name = item.name?.trim() || '';
+    const shortName = item.shortName?.trim();
+    return {
+      label:
+        shortName && shortName.toUpperCase() !== name.toUpperCase()
+          ? `${name}（${shortName}）`
+          : name,
+      value: item.id,
+    };
+  });
+  const selectedId = props.customerId;
+  if (selectedId && !next.some((item) => item.value === selectedId)) {
+    const kept = customerOptions.value.find(
+      (item) => item.value === selectedId,
+    );
+    if (kept) {
+      next.unshift(kept);
+    }
+  }
+  customerOptions.value = next;
+}, 280);
 
 onMounted(async () => {
   await Promise.all([loadCustomers(), loadPortOptions()]);
@@ -205,12 +228,14 @@ defineExpose({ fmSelection, quoteDate });
           <td>
             <Select
               :disabled="readOnly"
+              :filter-option="false"
               :options="customerOptions"
               :value="customerId"
               allow-clear
               class="frd-quote-sheet__input"
               :placeholder="$t('page.quote.placeholders.customer')"
               show-search
+              @search="loadCustomers"
               @update:value="
                 emit('update:customerId', $event as number | undefined)
               "

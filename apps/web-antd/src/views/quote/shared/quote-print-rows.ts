@@ -1,7 +1,7 @@
 import type { SslRemarkLookup } from './quote-sea-ssl-remark';
 import type { OceanFreightEntry } from './sheet-ocean-freight';
 
-import type { QuoteApi } from '#/api/quote';
+import type { QuoteApi, QuoteServiceType } from '#/api/quote';
 
 import { parseUsdNumber } from './quote-sheet-format';
 import { resolveOceanFreightEntries } from './sheet-ocean-freight';
@@ -97,59 +97,81 @@ function isFumigationEnabled(sheet: QuoteApi.QuoteSheetFields): boolean {
   );
 }
 
+function hasPrintServiceType(
+  serviceTypes: QuoteServiceType[] | undefined,
+  type: QuoteServiceType,
+): boolean {
+  // 未传入服务类型时保持旧行为（按费用字段展示）
+  if (!serviceTypes) {
+    return true;
+  }
+  return serviceTypes.includes(type);
+}
+
 export function buildQuotePrintFeeRows(
   sheet: QuoteApi.QuoteSheetFields,
   seaMatches: QuoteApi.QuoteCostMatchItem[],
   t: TranslateFn,
   sslRemarkByName?: SslRemarkLookup,
+  serviceTypes?: QuoteServiceType[],
 ): QuotePrintFeeRow[] {
   const rows: QuotePrintFeeRow[] = [];
   const unitContainer = t('page.quote.sheet.unitPerContainer');
-  const fumigation = isFumigationEnabled(sheet);
+  const showSea = hasPrintServiceType(serviceTypes, 'SEA');
+  const showTruck = hasPrintServiceType(serviceTypes, 'TRUCK');
+  const showFumigation = serviceTypes
+    ? serviceTypes.includes('FUMIGATION')
+    : isFumigationEnabled(sheet);
+  const showInsurance = hasPrintServiceType(serviceTypes, 'INSURANCE');
+  const showTrade = hasPrintServiceType(serviceTypes, 'TRADE');
 
   rows.push({ type: 'group', label: t('page.quote.print.serviceFees') });
 
-  const oceanEntries: OceanFreightEntry[] = resolveOceanFreightEntries(
-    sheet,
-    seaMatches,
-    sslRemarkByName,
-  );
-  for (const [index, entry] of oceanEntries.entries()) {
-    if (!entry.rate.trim() && oceanEntries.length === 1) {
+  if (showSea) {
+    const oceanEntries: OceanFreightEntry[] = resolveOceanFreightEntries(
+      sheet,
+      seaMatches,
+      sslRemarkByName,
+    );
+    for (const [index, entry] of oceanEntries.entries()) {
+      if (!entry.rate.trim() && oceanEntries.length === 1) {
+        pushFeeRow(
+          rows,
+          oceanFreightLabel(index, oceanEntries.length, t),
+          '',
+          unitContainer,
+          entry.ssl,
+          entry.remark,
+        );
+        continue;
+      }
+      if (!entry.rate.trim()) {
+        continue;
+      }
       pushFeeRow(
         rows,
         oceanFreightLabel(index, oceanEntries.length, t),
-        '',
+        entry.rate,
         unitContainer,
         entry.ssl,
         entry.remark,
       );
-      continue;
     }
-    if (!entry.rate.trim()) {
-      continue;
-    }
+  }
+
+  if (showTruck) {
     pushFeeRow(
       rows,
-      oceanFreightLabel(index, oceanEntries.length, t),
-      entry.rate,
+      t('page.quote.sheet.truckingFee'),
+      sheet.truckingFee,
       unitContainer,
-      entry.ssl,
-      entry.remark,
+      '',
+      '',
+      true,
     );
   }
 
-  pushFeeRow(
-    rows,
-    t('page.quote.sheet.truckingFee'),
-    sheet.truckingFee,
-    unitContainer,
-    '',
-    '',
-    true,
-  );
-
-  if (fumigation) {
+  if (showFumigation) {
     pushFeeRow(
       rows,
       t('page.quote.sheet.fmNonOak'),
@@ -179,7 +201,7 @@ export function buildQuotePrintFeeRows(
     '',
     true,
   );
-  if (sheet.cargoInsurancePremium?.trim()) {
+  if (showInsurance && sheet.cargoInsurancePremium?.trim()) {
     pushFeeRow(
       rows,
       t('page.quote.sheet.cargoInsurance'),
@@ -190,7 +212,7 @@ export function buildQuotePrintFeeRows(
       true,
     );
   }
-  if (sheet.cargoAgentFee?.trim()) {
+  if (showTrade && sheet.cargoAgentFee?.trim()) {
     pushFeeRow(
       rows,
       t('page.quote.sheet.cargoAgent'),
@@ -202,54 +224,56 @@ export function buildQuotePrintFeeRows(
     );
   }
 
-  rows.push({ type: 'group', label: t('page.quote.print.truckExtras') });
-  pushFeeRow(
-    rows,
-    t('page.quote.sheet.nsLift'),
-    sheet.nsLift,
-    unitContainer,
-    '',
-    '',
-    true,
-  );
-  pushFeeRow(
-    rows,
-    t('page.quote.sheet.chassis'),
-    sheet.chassis,
-    t('page.quote.sheet.unitChassis'),
-    '',
-    '',
-    true,
-  );
-  pushFeeRow(
-    rows,
-    t('page.quote.sheet.waiting'),
-    sheet.waiting,
-    t('page.quote.sheet.unitWaiting'),
-    '',
-    '',
-    true,
-  );
-  pushFeeRow(
-    rows,
-    t('page.quote.sheet.redelivery'),
-    sheet.redeliveryFee,
-    unitContainer,
-    '',
-    '',
-    true,
-  );
+  if (showTruck) {
+    rows.push({ type: 'group', label: t('page.quote.print.truckExtras') });
+    pushFeeRow(
+      rows,
+      t('page.quote.sheet.nsLift'),
+      sheet.nsLift,
+      unitContainer,
+      '',
+      '',
+      true,
+    );
+    pushFeeRow(
+      rows,
+      t('page.quote.sheet.chassis'),
+      sheet.chassis,
+      t('page.quote.sheet.unitChassis'),
+      '',
+      '',
+      true,
+    );
+    pushFeeRow(
+      rows,
+      t('page.quote.sheet.waiting'),
+      sheet.waiting,
+      t('page.quote.sheet.unitWaiting'),
+      '',
+      '',
+      true,
+    );
+    pushFeeRow(
+      rows,
+      t('page.quote.sheet.redelivery'),
+      sheet.redeliveryFee,
+      unitContainer,
+      '',
+      '',
+      true,
+    );
 
-  if (sheet.truckRemark?.trim()) {
-    rows.push({
-      type: 'fee',
-      item: t('page.quote.sheet.truckRemark'),
-      rate: sheet.truckRemark.trim(),
-      unit: '',
-      ssl: '',
-      remark: '',
-      mergeRateMeta: true,
-    });
+    if (sheet.truckRemark?.trim()) {
+      rows.push({
+        type: 'fee',
+        item: t('page.quote.sheet.truckRemark'),
+        rate: sheet.truckRemark.trim(),
+        unit: '',
+        ssl: '',
+        remark: '',
+        mergeRateMeta: true,
+      });
+    }
   }
 
   return rows;

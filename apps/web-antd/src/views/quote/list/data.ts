@@ -10,6 +10,7 @@ import { getCustomerList } from '#/api/customer';
 import { getUsStateList } from '#/api/master-data/us-state';
 import { searchDestCityNameOptions } from '#/api/master-data/us-state-zip';
 import { getFumigationStationList, lookupQuoteZip } from '#/api/quote';
+import { getUserList } from '#/api/system/user';
 import { $t } from '#/locales';
 
 import { createPortSelectProps } from '../../cost-library/shared/freight-schema';
@@ -323,6 +324,28 @@ export function useQuoteSearchSchema(): VbenFormSchema[] {
       fieldName: 'status',
       label: t('fields.status'),
     },
+    {
+      component: 'ApiSelect',
+      componentProps: {
+        allowClear: true,
+        api: async () => {
+          const result = await getUserList({
+            page: 1,
+            pageSize: 500,
+            status: 1,
+          });
+          return result.items.map((user) => ({
+            label: user.realName,
+            value: user.id,
+          }));
+        },
+        class: 'w-full',
+        optionFilterProp: 'label',
+        showSearch: true,
+      },
+      fieldName: 'createdBy',
+      label: t('fields.operator'),
+    },
   ];
 }
 
@@ -423,6 +446,13 @@ export function useQuoteColumns(
       minWidth: 130,
       slots: { default: 'quoteNo' },
       title: 'QUOTE NO',
+    },
+    {
+      field: 'createdByName',
+      fixed: 'left',
+      minWidth: 100,
+      showOverflow: true,
+      title: t('fields.operator'),
     },
     {
       field: 'serviceTypes',

@@ -90,19 +90,19 @@ const costLibraryMenus = [
     path: '/cost-library',
     children: [
       {
-        name: 'CostLibraryRoad',
-        path: '/cost-library/road',
-        meta: {
-          icon: 'lucide:truck',
-          title: 'page.costLibrary.road',
-        },
-      },
-      {
         name: 'CostLibrarySea',
         path: '/cost-library/sea',
         meta: {
           icon: 'lucide:ship',
           title: 'page.costLibrary.sea',
+        },
+      },
+      {
+        name: 'CostLibraryRoad',
+        path: '/cost-library/road',
+        meta: {
+          icon: 'lucide:truck',
+          title: 'page.costLibrary.road',
         },
       },
       {
@@ -125,19 +125,19 @@ const costLibraryMenus = [
     path: '/cost-library/templates',
     children: [
       {
-        name: 'CostTemplateRoad',
-        path: '/cost-library/templates/road',
-        meta: {
-          icon: 'lucide:truck',
-          title: 'page.costLibrary.template.roadMenu',
-        },
-      },
-      {
         name: 'CostTemplateSea',
         path: '/cost-library/templates/sea',
         meta: {
           icon: 'lucide:ship',
           title: 'page.costLibrary.template.seaMenu',
+        },
+      },
+      {
+        name: 'CostTemplateRoad',
+        path: '/cost-library/templates/road',
+        meta: {
+          icon: 'lucide:truck',
+          title: 'page.costLibrary.template.roadMenu',
         },
       },
       {

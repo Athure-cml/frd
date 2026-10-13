@@ -3,6 +3,7 @@ import type { TableColumnsType } from 'ant-design-vue';
 
 import type { RoadRenewPreviewJob } from '../road/road-batch-renew';
 import type { SeaRenewPreviewJob } from '../sea/sea-batch-renew';
+import type { ActionConfirmKind } from '../shared/action-confirm-button.vue';
 
 import type {
   CostMode,
@@ -30,6 +31,7 @@ import {
 } from '#/api/cost';
 import { $t } from '#/locales';
 
+import ActionConfirmButton from '../shared/action-confirm-button.vue';
 import { buildPreviewAntColumns } from '../shared/build-columns';
 import { formatStatus } from '../shared/formatters';
 import { costStatusTagOptions } from '../shared/tags';
@@ -106,6 +108,16 @@ const confirmLabel = computed(() => {
     return $t('page.costLibrary.actions.batchUpdateConfirm');
   }
   return $t('page.costLibrary.actions.batchCopyConfirm');
+});
+
+const confirmAction = computed<ActionConfirmKind>(() => {
+  if (operation.value === 'renew') {
+    return 'renew';
+  }
+  if (operation.value === 'update') {
+    return 'edit';
+  }
+  return 'copy';
 });
 
 const statusColorMap = computed(() => {
@@ -321,9 +333,13 @@ defineExpose({ close, open });
       <Button :disabled="confirming" @click="modalApi.close()">
         {{ $t('common.cancel') }}
       </Button>
-      <Button :loading="confirming" type="primary" @click="handleConfirm">
-        {{ confirmLabel }}
-      </Button>
+      <ActionConfirmButton
+        :action="confirmAction"
+        :disabled="confirming"
+        :label="confirmLabel"
+        :loading="confirming"
+        @confirm="handleConfirm"
+      />
     </div>
   </Modal>
 </template>

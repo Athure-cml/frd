@@ -21,6 +21,7 @@ export namespace DashboardApi {
     currency?: string;
     customerName?: string;
     id: number;
+    operatorName?: string;
     progress: number;
     quoteNo: string;
     serviceTypes?: string[];

@@ -11,17 +11,8 @@ const routes: RouteRecordRaw[] = [
     },
     name: 'CostLibrary',
     path: '/cost-library',
-    redirect: '/cost-library/road',
+    redirect: '/cost-library/sea',
     children: [
-      {
-        name: 'CostLibraryRoad',
-        path: '/cost-library/road',
-        component: () => import('#/views/cost-library/road/index.vue'),
-        meta: {
-          icon: 'lucide:truck',
-          title: $t('page.costLibrary.road'),
-        },
-      },
       {
         name: 'CostLibrarySea',
         path: '/cost-library/sea',
@@ -29,6 +20,15 @@ const routes: RouteRecordRaw[] = [
         meta: {
           icon: 'lucide:ship',
           title: $t('page.costLibrary.sea'),
+        },
+      },
+      {
+        name: 'CostLibraryRoad',
+        path: '/cost-library/road',
+        component: () => import('#/views/cost-library/road/index.vue'),
+        meta: {
+          icon: 'lucide:truck',
+          title: $t('page.costLibrary.road'),
         },
       },
       {
