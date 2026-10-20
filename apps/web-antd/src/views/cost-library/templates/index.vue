@@ -4,6 +4,7 @@ import type {
   VxeTableGridOptions,
 } from '#/adapter/vxe-table';
 import type { CostMode, CostTableTemplate } from '#/api/cost';
+import type { TemplateLibrary } from '#/api/cost/templates';
 
 import { computed, onActivated, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -54,9 +55,17 @@ const activeMode = computed<CostMode>(() => {
   return mode && COST_MODES.has(mode) ? mode : 'road';
 });
 
-const pageTitle = computed(() => templatePageTitle(activeMode.value));
+const templateLibrary = computed<TemplateLibrary>(() =>
+  route.meta.templateLibrary === 'quote' ? 'quote' : 'cost',
+);
 
-const pageDesc = computed(() => templatePageDesc(activeMode.value));
+const pageTitle = computed(() =>
+  templatePageTitle(activeMode.value, templateLibrary.value),
+);
+
+const pageDesc = computed(() =>
+  templatePageDesc(activeMode.value, templateLibrary.value),
+);
 
 const activeTemplateId = ref<number>();
 
@@ -69,15 +78,20 @@ function syncActiveTemplateId(templates: CostTableTemplate[]) {
   activeTemplateId.value = resolveActiveTemplate(
     templates,
     activeMode.value,
+    templateLibrary.value,
   )?.id;
 }
 
 const canEdit = computed(() =>
-  hasAccessByCodes([templateEditPermissionForMode(activeMode.value)]),
+  hasAccessByCodes([
+    templateEditPermissionForMode(activeMode.value, templateLibrary.value),
+  ]),
 );
 
 const canView = computed(() =>
-  hasAccessByCodes([templateViewPermissionForMode(activeMode.value)]),
+  hasAccessByCodes([
+    templateViewPermissionForMode(activeMode.value, templateLibrary.value),
+  ]),
 );
 
 watch(
@@ -91,7 +105,9 @@ watch(
 );
 
 const canDelete = computed(() =>
-  hasAccessByCodes([templateDeletePermissionForMode(activeMode.value)]),
+  hasAccessByCodes([
+    templateDeletePermissionForMode(activeMode.value, templateLibrary.value),
+  ]),
 );
 
 function buildColumns() {
@@ -105,14 +121,20 @@ function buildColumns() {
 
 function onCreate() {
   router.push({
-    name: 'CostTemplateCreate',
+    name:
+      templateLibrary.value === 'quote'
+        ? 'QuoteTemplateCreate'
+        : 'CostTemplateCreate',
     params: { mode: activeMode.value },
   });
 }
 
 function onEdit(row: CostTableTemplate) {
   router.push({
-    name: 'CostTemplateEdit',
+    name:
+      templateLibrary.value === 'quote'
+        ? 'QuoteTemplateEdit'
+        : 'CostTemplateEdit',
     params: { id: String(row.id), mode: activeMode.value },
   });
 }
@@ -122,8 +144,8 @@ function onDelete(row: CostTableTemplate) {
   Modal.confirm({
     content: $t('page.costLibrary.template.confirmDelete', [name]),
     onOk: async () => {
-      await deleteCostTableTemplate(row.id);
-      invalidateTableTemplateCache(activeMode.value);
+      await deleteCostTableTemplate(row.id, templateLibrary.value);
+      invalidateTableTemplateCache(activeMode.value, templateLibrary.value);
       message.success($t('ui.actionMessage.deleteSuccess', [name]));
       gridApi.query();
     },
@@ -132,9 +154,9 @@ function onDelete(row: CostTableTemplate) {
 }
 
 async function onSetDefault(row: CostTableTemplate) {
-  await setDefaultCostTableTemplate(row.id);
-  saveTemplateId(activeMode.value, row.id);
-  invalidateTableTemplateCache(activeMode.value);
+  await setDefaultCostTableTemplate(row.id, templateLibrary.value);
+  saveTemplateId(activeMode.value, row.id, templateLibrary.value);
+  invalidateTableTemplateCache(activeMode.value, templateLibrary.value);
   activeTemplateId.value = row.id;
   message.success($t('ui.actionMessage.operationSuccess'));
   gridApi.query();
@@ -179,7 +201,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async (_ctx, formValues) => {
-          const list = await listCostTableTemplates(activeMode.value);
+          const list = await listCostTableTemplates(
+            activeMode.value,
+            templateLibrary.value,
+          );
           syncActiveTemplateId(list);
           const items = filterTemplates(list, formValues);
           return { items, total: items.length };

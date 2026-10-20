@@ -44,11 +44,12 @@ import Form from './modules/form.vue';
 import '../../customer/shared/customer.css';
 
 const { hasAccessByCodes } = useAccess();
-const { canViewPartyCode } = usePartyCodeVisibility('agent:edit');
+const { canViewPartyCode } = usePartyCodeVisibility('agent:import');
 const canCreate = hasAccessByCodes(['agent:create']);
+const canImport = hasAccessByCodes(['agent:import']);
+const canExport = hasAccessByCodes(['agent:export']);
 const canEdit = hasAccessByCodes(['agent:edit']);
 const canDelete = hasAccessByCodes(['agent:delete']);
-const canView = hasAccessByCodes(['agent:view']);
 
 const importModalRef = ref<InstanceType<typeof ImportModal>>();
 const exporting = ref(false);
@@ -275,12 +276,12 @@ function onRefresh() {
           <Plus class="size-4" />
           {{ $t('page.agent.actions.create') }}
         </Button>
-        <Button v-if="canCreate" class="mr-2" @click="importModalRef?.open()">
+        <Button v-if="canImport" class="mr-2" @click="importModalRef?.open()">
           <ArrowUpToLine class="size-4" />
           {{ $t('page.agent.actions.import') }}
         </Button>
         <Button
-          v-if="canView"
+          v-if="canExport"
           :loading="exporting"
           class="mr-2"
           @click="onExport"

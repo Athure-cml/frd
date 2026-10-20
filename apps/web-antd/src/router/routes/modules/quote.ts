@@ -50,6 +50,26 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: 'QuoteTemplateCreate',
+        path: '/quotes/library/templates/:mode/create',
+        component: () => import('#/views/cost-library/templates/editor.vue'),
+        meta: {
+          hideInMenu: true,
+          templateLibrary: 'quote',
+          title: $t('page.quote.library.template.createTitle'),
+        },
+      },
+      {
+        name: 'QuoteTemplateEdit',
+        path: '/quotes/library/templates/:mode/edit/:id',
+        component: () => import('#/views/cost-library/templates/editor.vue'),
+        meta: {
+          hideInMenu: true,
+          templateLibrary: 'quote',
+          title: $t('page.quote.library.template.editTitle'),
+        },
+      },
+      {
         name: 'QuoteCreate',
         path: '/quotes/create',
         component: () => import('#/views/quote/sheet-editor/index.vue'),

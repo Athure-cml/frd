@@ -913,6 +913,19 @@
       "seaDesc": "Only costs promoted from the cost library; fees follow quote rules and can be adjusted above the cost floor.",
       "fumigation": "Fumigation Quote Library",
       "fumigationDesc": "Only costs promoted from the cost library; fees follow quote rules and can be adjusted above the cost floor.",
+      "template": {
+        "menuTitle": "View templates",
+        "manage": "View templates",
+        "defaultName": "Standard",
+        "createTitle": "New quote library view",
+        "editTitle": "Edit quote library view",
+        "roadMenu": "Truck quote templates",
+        "seaMenu": "Ocean quote templates",
+        "fumigationMenu": "Fumigation quote templates",
+        "roadPageDesc": "Column layout for the truck quote library. Separate from cost library templates.",
+        "seaPageDesc": "Column layout for the ocean quote library. Separate from cost library templates.",
+        "fumigationPageDesc": "Column layout for the fumigation quote library. Separate from cost library templates."
+      },
       "editTitle": "Edit quote library fees",
       "batchEditTitle": "Batch edit quote library fees",
       "feeFloorHint": "Cost floor: {0}",
@@ -1175,6 +1188,7 @@
       "nonOak": "NON-OAK",
       "client": "Client",
       "pickUpAddress": "PICK UP ADDRESS",
+      "zipCode": "ZIP CODE",
       "city": "CITY",
       "state": "STATE",
       "porPol": "POR/POL",
@@ -1473,7 +1487,8 @@
       "ALL": "All Data",
       "DEPT": "Department",
       "ASSIGNED": "Assigned Data",
-      "SELF": "Self Only"
+      "SELF": "Self Only",
+      "selfLocked": "Self"
     },
     "status": {
       "enabled": "Enabled",

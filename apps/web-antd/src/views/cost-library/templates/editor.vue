@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { CostMode, CostTableTemplateLayout } from '#/api/cost';
+import type { TemplateLibrary } from '#/api/cost/templates';
 
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -69,7 +70,17 @@ const mode = computed<CostMode>(() => {
   return COST_MODES.has(value) ? value : 'road';
 });
 
-const isCreate = computed(() => route.name === 'CostTemplateCreate');
+const templateLibrary = computed<TemplateLibrary>(() =>
+  route.meta.templateLibrary === 'quote' ||
+  String(route.name ?? '').startsWith('QuoteTemplate')
+    ? 'quote'
+    : 'cost',
+);
+
+const isCreate = computed(
+  () =>
+    route.name === 'CostTemplateCreate' || route.name === 'QuoteTemplateCreate',
+);
 
 const pageTitle = computed(() =>
   isCreate.value
@@ -125,11 +136,15 @@ function applySnapshot(snapshot: EditorSnapshot) {
 }
 
 function goBack() {
-  router.push(`/cost-library/templates/${mode.value}`);
+  const prefix =
+    templateLibrary.value === 'quote'
+      ? '/quotes/library/templates'
+      : '/cost-library/templates';
+  router.push(`${prefix}/${mode.value}`);
 }
 
 async function loadTemplate(id: number) {
-  const detail = await getCostTableTemplate(id);
+  const detail = await getCostTableTemplate(id, templateLibrary.value);
   templateId.value = detail.id;
   rawTemplateName.value = detail.name;
   code.value = detail.code;
@@ -140,7 +155,11 @@ async function loadTemplate(id: number) {
 }
 
 async function initEditor() {
-  if (!hasAccessByCodes([templateEditPermissionForMode(mode.value)])) {
+  if (
+    !hasAccessByCodes([
+      templateEditPermissionForMode(mode.value, templateLibrary.value),
+    ])
+  ) {
     await router.replace({ name: 'FallbackForbidden' });
     return;
   }
@@ -189,14 +208,19 @@ async function onExport() {
   try {
     const payload = buildSavePayload();
     const blob = templateId.value
-      ? await exportCostTableTemplate(templateId.value)
-      : await exportCostTableTemplatePreview(payload);
+      ? await exportCostTableTemplate(templateId.value, templateLibrary.value)
+      : await exportCostTableTemplatePreview(payload, templateLibrary.value);
     const modeFilenameMap: Record<string, string> = {
-      fumigation: '熏蒸成本模板',
-      road: '卡车成本模板',
-      sea: '海运成本模板',
+      fumigation:
+        templateLibrary.value === 'quote' ? '熏蒸报价库模板' : '熏蒸成本模板',
+      road:
+        templateLibrary.value === 'quote' ? '卡车报价库模板' : '卡车成本模板',
+      sea:
+        templateLibrary.value === 'quote' ? '海运报价库模板' : '海运成本模板',
     };
-    const baseName = modeFilenameMap[mode.value] || `${mode.value}成本模板`;
+    const baseName =
+      modeFilenameMap[mode.value] ||
+      `${mode.value}${templateLibrary.value === 'quote' ? '报价库' : '成本'}模板`;
     downloadFileFromBlob({
       fileName: templateId.value ? `${baseName}.xlsx` : `${baseName}预览.xlsx`,
       source: blob as Blob,
@@ -237,24 +261,34 @@ async function persistTemplate() {
     const payload = buildSavePayload();
     let savedId = templateId.value;
     if (templateId.value) {
-      const result = await updateCostTableTemplate(templateId.value, payload);
+      const result = await updateCostTableTemplate(
+        templateId.value,
+        payload,
+        templateLibrary.value,
+      );
       savedId = result.id;
       rawTemplateName.value = result.name;
     } else {
-      const result = await createCostTableTemplate(payload);
+      const result = await createCostTableTemplate(
+        payload,
+        templateLibrary.value,
+      );
       savedId = result.id;
       templateId.value = result.id;
       code.value = result.code;
       rawTemplateName.value = result.name;
       await router.replace({
-        name: 'CostTemplateEdit',
+        name:
+          templateLibrary.value === 'quote'
+            ? 'QuoteTemplateEdit'
+            : 'CostTemplateEdit',
         params: { id: String(result.id), mode: mode.value },
       });
     }
     if (payload.isDefault && savedId) {
-      saveTemplateId(mode.value, savedId);
+      saveTemplateId(mode.value, savedId, templateLibrary.value);
     }
-    invalidateTableTemplateCache(mode.value);
+    invalidateTableTemplateCache(mode.value, templateLibrary.value);
     initialSnapshot = takeSnapshot();
     return true;
   } catch (error) {
@@ -279,9 +313,9 @@ async function applyTemplateAsDefault() {
   }
   applying.value = true;
   try {
-    await setDefaultCostTableTemplate(templateId.value);
-    saveTemplateId(mode.value, templateId.value);
-    invalidateTableTemplateCache(mode.value);
+    await setDefaultCostTableTemplate(templateId.value, templateLibrary.value);
+    saveTemplateId(mode.value, templateId.value, templateLibrary.value);
+    invalidateTableTemplateCache(mode.value, templateLibrary.value);
     isDefault.value = true;
     if (initialSnapshot) {
       initialSnapshot = { ...initialSnapshot, isDefault: true };

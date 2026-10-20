@@ -9,12 +9,12 @@ import type {
 } from '#/adapter/vxe-table';
 import type { CostMode, CostTableTemplate } from '#/api/cost';
 
-import { computed, onActivated, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onActivated, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
 import { Page } from '@vben/common-ui';
-import { Download } from '@vben/icons';
+import { Download, Settings } from '@vben/icons';
 import { usePreferences } from '@vben/preferences';
 
 import { Button, message } from 'ant-design-vue';
@@ -46,6 +46,9 @@ import { getDefaultTemplate } from '../../../cost-library/shared/default-templat
 import { createCostRowHighlightStyleHandlers } from '../../../cost-library/shared/row-highlight-style';
 import { normalizeCostStatusSearchParam } from '../../../cost-library/shared/status-search';
 import {
+  getGridStorageId,
+  getTemplateLayoutSignature,
+  invalidateTableTemplateCache,
   loadTableTemplates,
   resolveActiveTemplate,
 } from '../../../cost-library/shared/use-table-templates';
@@ -53,7 +56,7 @@ import { buildListExportParams } from '../../../shared/export-params';
 import { useI18nFormOptions } from '../../../shared/use-i18n-form-options';
 import { buildQuoteLibraryRuleHintMap } from '../../shared/quote-rule-hints';
 import {
-  quoteLibraryGridId,
+  settleQuoteLibraryFixedColumns,
   useQuoteLibraryColumns,
 } from '../shared/quote-library-columns';
 import {
@@ -85,6 +88,9 @@ const canDelete = hasAccessByCodes([`quote:library:${props.mode}:delete`]);
 const canManage = canEdit || canDelete;
 /** 「查看成本」需对应成本库查看权限 */
 const canViewCost = hasAccessByCodes([`cost:${props.mode}:view`]);
+const canViewTemplates = hasAccessByCodes([
+  `quote:library:${props.mode}:template:view`,
+]);
 
 const searchFormOptions = useI18nFormOptions(() => ({
   collapsed: true,
@@ -107,6 +113,7 @@ const selectedIds = ref<number[]>([]);
 const activeTemplate = ref<CostTableTemplate>(
   getDefaultTemplate(props.mode as CostMode),
 );
+let appliedLayoutSignature = '';
 
 const editDrawerRef = ref<InstanceType<typeof QuoteLibraryEditDrawer>>();
 const batchModalRef = ref<InstanceType<typeof QuoteLibraryBatchEditModal>>();
@@ -123,35 +130,42 @@ function onActionClick(params: OnActionClickParams<QuoteLibraryRow>) {
 
 const gridColumns = computed(() => {
   void isMobile.value;
-  return injectRelationColumn(
-    adaptCostColumnsForViewport(
-      useQuoteLibraryColumns(
-        props.mode,
-        ruleHintMap.value,
-        onActionClick,
-        canManage,
-        activeTemplate.value,
+  return settleQuoteLibraryFixedColumns(
+    injectRelationColumn(
+      adaptCostColumnsForViewport(
+        useQuoteLibraryColumns(
+          props.mode,
+          ruleHintMap.value,
+          onActionClick,
+          canManage,
+          activeTemplate.value,
+        ),
       ),
+      {
+        direction: 'quote-to-cost',
+        onNavigate: (row) =>
+          navigateToCostLibrary(router, props.mode as CostMode, row.id),
+        onNavigateQuotes: (row) =>
+          navigateToQuoteListByLibrary(router, props.mode as CostMode, row.id),
+        showCostLink: canViewCost,
+      },
     ),
-    {
-      direction: 'quote-to-cost',
-      onNavigate: (row) =>
-        navigateToCostLibrary(router, props.mode as CostMode, row.id),
-      onNavigateQuotes: (row) =>
-        navigateToQuoteListByLibrary(router, props.mode as CostMode, row.id),
-      showCostLink: canViewCost,
-    },
   );
 });
 
 async function refreshTemplates(options?: { force?: boolean }) {
   try {
-    const loaded = await loadTableTemplates(props.mode as CostMode, options);
+    const loaded = await loadTableTemplates(props.mode as CostMode, {
+      ...options,
+      library: 'quote',
+    });
     activeTemplate.value =
-      resolveActiveTemplate(loaded, props.mode as CostMode) ??
+      resolveActiveTemplate(loaded, props.mode as CostMode, 'quote') ??
       getDefaultTemplate(props.mode as CostMode);
+    applyTemplateColumns();
   } catch {
     activeTemplate.value = getDefaultTemplate(props.mode as CostMode);
+    applyTemplateColumns(true);
   }
 }
 
@@ -195,7 +209,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
     checkboxConfig: {
       reserve: true,
     },
-    id: quoteLibraryGridId(props.mode),
+    id: getGridStorageId(
+      props.mode as CostMode,
+      activeTemplate.value.id,
+      activeTemplate.value.layout,
+      'quote',
+    ),
     height: 'auto',
     pagerConfig: {},
     proxyConfig: {
@@ -241,8 +260,34 @@ watch(isMobile, (mobile) => {
   });
 });
 
-watch(gridColumns, (columns) => {
-  gridApi.setGridOptions({ columns });
+function applyTemplateColumns(force = false) {
+  const signature = getTemplateLayoutSignature(activeTemplate.value);
+  if (!force && signature && signature === appliedLayoutSignature) {
+    return;
+  }
+  const columns = gridColumns.value;
+  gridApi.setGridOptions({
+    columns,
+    id: getGridStorageId(
+      props.mode as CostMode,
+      activeTemplate.value.id,
+      activeTemplate.value.layout,
+      'quote',
+    ),
+  });
+  void nextTick(() => {
+    const $grid = gridApi.grid as null | {
+      loadColumn?: (cols: typeof columns) => void;
+      recalculate?: (refull?: boolean) => void;
+    };
+    $grid?.loadColumn?.(columns);
+    $grid?.recalculate?.(true);
+    appliedLayoutSignature = signature;
+  });
+}
+
+watch(gridColumns, () => {
+  applyTemplateColumns();
 });
 
 function syncSelection() {
@@ -482,6 +527,16 @@ onActivated(() => {
     <Grid :form-options="searchFormOptions" :grid-class="gridClass">
       <template #toolbar-tools>
         <div class="quote-library-toolbar">
+          <Button
+            v-if="canViewTemplates"
+            @click="
+              invalidateTableTemplateCache(props.mode as CostMode, 'quote');
+              router.push(`/quotes/library/templates/${props.mode}`);
+            "
+          >
+            <Settings class="size-3.5" />
+            {{ $t('page.quote.library.template.manage') }}
+          </Button>
           <Button :loading="exporting" @click="onExport">
             <Download class="size-3.5" />
             {{ $t('page.costLibrary.actions.export') }}

@@ -6,11 +6,12 @@ import type { WorkspaceTodoView } from '#/views/dashboard/workspace/map-workspac
 import { computed } from 'vue';
 
 import { IconifyIcon } from '@vben/icons';
+import { usePreferences } from '@vben/preferences';
 
 import { Drawer, Spin } from 'ant-design-vue';
 
 import { $t } from '#/locales';
-import { WORKSPACE_ILLUSTRATIONS } from '#/views/dashboard/workspace/illustrations';
+import { resolveWorkspaceIllustration } from '#/views/dashboard/workspace/illustrations';
 
 const props = withDefaults(
   defineProps<{
@@ -26,11 +27,14 @@ const props = withDefaults(
     pendingCount: 0,
   },
 );
-
 const emit = defineEmits<{
   itemClick: [WorkspaceTodoView];
   'update:filter': [TodoDrawerFilter];
 }>();
+const { isDark } = usePreferences();
+const emptyTodosSrc = computed(() =>
+  resolveWorkspaceIllustration('emptyTodos', isDark.value),
+);
 
 const open = defineModel<boolean>('open', { default: false });
 
@@ -137,11 +141,7 @@ function onItemClick(item: WorkspaceTodoView) {
         </div>
 
         <div v-else-if="items.length === 0" class="todo-drawer__empty">
-          <img
-            :src="WORKSPACE_ILLUSTRATIONS.emptyTodos"
-            alt=""
-            class="todo-drawer__empty-img"
-          />
+          <img :src="emptyTodosSrc" alt="" class="todo-drawer__empty-img" />
           <p class="todo-drawer__empty-text">
             {{ $t('page.workspace.todos.empty') }}
           </p>
@@ -354,6 +354,10 @@ function onItemClick(item: WorkspaceTodoView) {
   border-radius: 16px;
 }
 
+:global(html.dark) .todo-drawer__empty-img {
+  background: hsl(var(--card));
+}
+
 .todo-drawer__empty-text {
   max-width: 28ch;
   margin: 0;
@@ -519,5 +523,106 @@ function onItemClick(item: WorkspaceTodoView) {
 .todo-drawer-root .ant-drawer-body {
   height: 100%;
   padding: 0 !important;
+}
+
+.todo-drawer-root.ant-drawer-content,
+.todo-drawer-root .ant-drawer-content,
+.todo-drawer-root .ant-drawer-content-wrapper,
+.todo-drawer-root .ant-drawer-body {
+  background: #f7f8fa !important;
+}
+
+html.dark .todo-drawer-root.ant-drawer-content,
+html.dark .todo-drawer-root .ant-drawer-content,
+html.dark .todo-drawer-root .ant-drawer-content-wrapper,
+html.dark .todo-drawer-root .ant-drawer-body {
+  color: hsl(var(--foreground));
+  background: hsl(var(--background)) !important;
+}
+
+html.dark .todo-drawer-root .todo-drawer {
+  background: hsl(var(--background));
+}
+
+html.dark .todo-drawer-root .todo-drawer__header {
+  background: hsl(var(--card));
+  border-bottom-color: hsl(var(--border));
+}
+
+html.dark .todo-drawer-root .todo-drawer__icon-wrap {
+  color: hsl(var(--primary));
+  background: hsl(var(--accent));
+}
+
+html.dark .todo-drawer-root .todo-drawer__title {
+  color: hsl(var(--foreground));
+}
+
+html.dark .todo-drawer-root .todo-drawer__subtitle,
+html.dark .todo-drawer-root .todo-drawer__empty-text,
+html.dark .todo-drawer-root .todo-drawer__meta,
+html.dark .todo-drawer-root .todo-drawer__time {
+  color: hsl(var(--muted-foreground));
+}
+
+html.dark .todo-drawer-root .todo-drawer__close {
+  color: hsl(var(--muted-foreground));
+}
+
+html.dark .todo-drawer-root .todo-drawer__close:hover {
+  color: hsl(var(--foreground));
+  background: hsl(var(--accent));
+}
+
+html.dark .todo-drawer-root .todo-drawer__tab {
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted));
+}
+
+html.dark .todo-drawer-root .todo-drawer__tab--active {
+  color: #fff;
+  background: hsl(var(--primary));
+}
+
+html.dark .todo-drawer-root .todo-drawer__empty-img {
+  background: hsl(var(--card));
+}
+
+html.dark .todo-drawer-root .todo-drawer__item {
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+html.dark .todo-drawer-root .todo-drawer__item:hover {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 45%, transparent);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 25%);
+}
+
+html.dark .todo-drawer-root .todo-drawer__item--urgent {
+  background: rgb(250 81 81 / 10%);
+  border-color: rgb(250 81 81 / 18%);
+}
+
+html.dark .todo-drawer-root .todo-drawer__name {
+  color: hsl(var(--foreground));
+}
+
+html.dark .todo-drawer-root .todo-drawer__priority--urgent {
+  color: #ff8b8b;
+  background: rgb(250 81 81 / 16%);
+}
+
+html.dark .todo-drawer-root .todo-drawer__priority--high {
+  color: #ffb36b;
+  background: rgb(255 143 31 / 16%);
+}
+
+html.dark .todo-drawer-root .todo-drawer__priority--medium {
+  color: #8ab4ff;
+  background: rgb(51 112 255 / 18%);
+}
+
+html.dark .todo-drawer-root .todo-drawer__action {
+  color: hsl(var(--primary));
 }
 </style>

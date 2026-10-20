@@ -73,12 +73,19 @@ const permPrefix = computed(() => `supplier:${category.value.toLowerCase()}`);
 const canCreate = computed(() =>
   hasAccessByCodes([`${permPrefix.value}:create`]),
 );
+const canImport = computed(() =>
+  hasAccessByCodes([`${permPrefix.value}:import`]),
+);
+const canExport = computed(() =>
+  hasAccessByCodes([`${permPrefix.value}:export`]),
+);
 const canEdit = computed(() => hasAccessByCodes([`${permPrefix.value}:edit`]));
-const canViewPartyCode = canEdit;
+const canViewPartyCode = computed(() =>
+  hasAccessByCodes([`${permPrefix.value}:import`]),
+);
 const canDelete = computed(() =>
   hasAccessByCodes([`${permPrefix.value}:delete`]),
 );
-const canView = computed(() => hasAccessByCodes([`${permPrefix.value}:view`]));
 
 const pageTitle = computed(() =>
   $t(`page.supplier.${categoryTitleKey(category.value)}`),
@@ -387,12 +394,12 @@ async function importFn(file: File, options?: { dryRun?: boolean }) {
         >
           {{ $t('page.supplier.type.manage') }}
         </Button>
-        <Button v-if="canCreate" class="mr-2" @click="importModalRef?.open()">
+        <Button v-if="canImport" class="mr-2" @click="importModalRef?.open()">
           <ArrowUpToLine class="size-4" />
           {{ $t('page.supplier.actions.import') }}
         </Button>
         <Button
-          v-if="canView"
+          v-if="canExport"
           :loading="exporting"
           class="mr-2"
           @click="onExport"

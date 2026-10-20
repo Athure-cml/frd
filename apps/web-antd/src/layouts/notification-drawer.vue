@@ -4,11 +4,12 @@ import type { NotificationItem } from '@vben/layouts';
 import { computed } from 'vue';
 
 import { IconifyIcon } from '@vben/icons';
+import { usePreferences } from '@vben/preferences';
 
 import { Drawer, Tooltip } from 'ant-design-vue';
 
 import { $t } from '#/locales';
-import { WORKSPACE_ILLUSTRATIONS } from '#/views/dashboard/workspace/illustrations';
+import { resolveWorkspaceIllustration } from '#/views/dashboard/workspace/illustrations';
 
 const props = withDefaults(
   defineProps<{
@@ -22,7 +23,6 @@ const props = withDefaults(
     notifications: () => [],
   },
 );
-
 const emit = defineEmits<{
   clear: [];
   makeAll: [];
@@ -30,6 +30,10 @@ const emit = defineEmits<{
   read: [NotificationItem];
   remove: [NotificationItem];
 }>();
+const { isDark } = usePreferences();
+const emptyNoticesSrc = computed(() =>
+  resolveWorkspaceIllustration('emptyNotices', isDark.value),
+);
 
 const open = defineModel<boolean>('open', { default: false });
 
@@ -106,11 +110,7 @@ function onItemClick(item: NotificationItem) {
       </header>
 
       <div v-if="notifications.length === 0" class="qq-notice__empty">
-        <img
-          :src="WORKSPACE_ILLUSTRATIONS.emptyNotices"
-          alt=""
-          class="qq-notice__empty-img"
-        />
+        <img :src="emptyNoticesSrc" alt="" class="qq-notice__empty-img" />
         <p class="qq-notice__empty-text">
           {{ $t('page.notifications.empty') }}
         </p>
@@ -312,6 +312,10 @@ function onItemClick(item: NotificationItem) {
   border-radius: 16px;
 }
 
+:global(html.dark) .qq-notice__empty-img {
+  background: hsl(var(--card));
+}
+
 .qq-notice__empty-text {
   max-width: 28ch;
   margin: 0;
@@ -505,5 +509,86 @@ function onItemClick(item: NotificationItem) {
 .qq-notice-drawer.ant-drawer-content,
 .qq-notice-drawer .ant-drawer-content {
   overflow: hidden;
+  background: #fff !important;
+}
+
+.qq-notice-drawer .ant-drawer-content-wrapper,
+.qq-notice-drawer .ant-drawer-body {
+  background: #fff !important;
+}
+
+html.dark .qq-notice-drawer.ant-drawer-content,
+html.dark .qq-notice-drawer .ant-drawer-content,
+html.dark .qq-notice-drawer .ant-drawer-content-wrapper,
+html.dark .qq-notice-drawer .ant-drawer-body {
+  color: hsl(var(--foreground));
+  background: hsl(var(--card)) !important;
+}
+
+html.dark .qq-notice-drawer .qq-notice,
+html.dark .qq-notice-drawer .qq-notice__header,
+html.dark .qq-notice-drawer .qq-notice__empty,
+html.dark .qq-notice-drawer .qq-notice__list {
+  background: hsl(var(--card));
+}
+
+html.dark .qq-notice-drawer .qq-notice__header {
+  border-bottom-color: hsl(var(--border));
+}
+
+html.dark .qq-notice-drawer .qq-notice__title,
+html.dark .qq-notice-drawer .qq-notice__name {
+  color: hsl(var(--foreground));
+}
+
+html.dark .qq-notice-drawer .qq-notice__close,
+html.dark .qq-notice-drawer .qq-notice__empty-text,
+html.dark .qq-notice-drawer .qq-notice__time,
+html.dark .qq-notice-drawer .qq-notice__preview,
+html.dark .qq-notice-drawer .qq-notice__icon-btn {
+  color: hsl(var(--muted-foreground));
+}
+
+html.dark .qq-notice-drawer .qq-notice__close:hover {
+  color: hsl(var(--foreground));
+  background: hsl(var(--accent));
+}
+
+html.dark .qq-notice-drawer .qq-notice__text-btn {
+  color: hsl(var(--primary));
+}
+
+html.dark .qq-notice-drawer .qq-notice__text-btn:disabled {
+  color: hsl(var(--muted-foreground));
+}
+
+html.dark .qq-notice-drawer .qq-notice__sep {
+  color: hsl(var(--border));
+}
+
+html.dark .qq-notice-drawer .qq-notice__empty-img {
+  background: hsl(var(--card));
+}
+
+html.dark .qq-notice-drawer .qq-notice__item:hover {
+  background: hsl(var(--accent));
+}
+
+html.dark .qq-notice-drawer .qq-notice__avatar {
+  background: hsl(var(--muted));
+}
+
+html.dark .qq-notice-drawer .qq-notice__dot {
+  border-color: hsl(var(--card));
+}
+
+html.dark .qq-notice-drawer .qq-notice__icon-btn:hover {
+  color: hsl(var(--primary));
+  background: hsl(var(--accent));
+}
+
+html.dark .qq-notice-drawer .qq-notice__icon-btn--danger:hover {
+  color: #ff8b8b;
+  background: rgb(250 81 81 / 16%);
 }
 </style>

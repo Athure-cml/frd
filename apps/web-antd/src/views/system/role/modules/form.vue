@@ -168,7 +168,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
     roleId.value = data?.id;
     isBuiltin.value = data?.code === 'super_admin';
     formApi.setState({
-      schema: useRoleFormSchema(isBuiltin.value),
+      schema: useRoleFormSchema(isBuiltin.value, data?.code),
     });
     formApi.resetForm();
     await loadPermissions();

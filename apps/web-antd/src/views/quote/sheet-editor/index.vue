@@ -137,6 +137,7 @@ import {
   syncSeaMatchRemarks,
   syncSheetFromOceanFreightEntries,
 } from '../shared/sheet-ocean-freight';
+import ZipCodeFields from '../shared/zip-code-fields.vue';
 
 import '../shared/quote.css';
 
@@ -2263,12 +2264,15 @@ onUnmounted(() => {
                       />
                     </Form.Item>
                   </div>
-                  <div
-                    class="quote-sheet-location-row"
-                    :class="{
-                      'quote-sheet-location-row--4': fumigationEnabled,
-                    }"
-                  >
+                  <div class="quote-sheet-location-row">
+                    <Form.Item :label="$t('page.quote.sheet.zipCode')">
+                      <ZipCodeFields
+                        v-model:zip-code="sheet.zipCode"
+                        v-model:city="sheet.city"
+                        v-model:state="sheet.state"
+                        :disabled="readOnly"
+                      />
+                    </Form.Item>
                     <Form.Item :label="$t('page.quote.sheet.city')">
                       <QuoteCitySelect
                         v-model="sheet.city"
@@ -2281,8 +2285,12 @@ onUnmounted(() => {
                         :disabled="readOnly"
                       />
                     </Form.Item>
+                  </div>
+                  <div
+                    v-if="showFumigationFees"
+                    class="quote-sheet-location-row quote-sheet-location-row--2"
+                  >
                     <Form.Item
-                      v-if="showFumigationFees"
                       :label="$t('page.quote.sheet.fumigationPoint')"
                       required
                     >
@@ -2294,11 +2302,7 @@ onUnmounted(() => {
                         "
                       />
                     </Form.Item>
-                    <Form.Item
-                      v-if="showFumigationFees"
-                      :label="$t('page.quote.sheet.oakType')"
-                      required
-                    >
+                    <Form.Item :label="$t('page.quote.sheet.oakType')" required>
                       <Select
                         :disabled="readOnly"
                         :options="oakTypeOptions"

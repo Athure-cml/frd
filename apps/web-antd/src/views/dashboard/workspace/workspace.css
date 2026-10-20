@@ -206,8 +206,12 @@ html.dark .workspace-hero .workspace-kpi-icon--destructive {
   height: 120px;
   object-fit: cover;
   object-position: center;
-  background: #fff;
+  background: hsl(var(--background));
   border-radius: 16px;
+}
+
+html.dark .workspace-empty-illust {
+  background: hsl(var(--card-background, var(--background)));
 }
 
 .workspace-empty-text {

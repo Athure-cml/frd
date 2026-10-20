@@ -237,20 +237,21 @@ export function useShippingLineColumns(
       title: t('fields.remark'),
     },
     {
+      field: 'updatedAt',
+      formatter: ({ cellValue }: { cellValue?: string }) => cellValue || '—',
+      title: t('fields.updatedAt'),
+      width: 168,
+    },
+    {
       align: 'center',
       cellRender: {
         name: 'CellTag',
         options: statusTagOptions(),
       },
       field: 'status',
+      fixed: 'right',
       title: t('fields.status'),
       width: 96,
-    },
-    {
-      field: 'updatedAt',
-      formatter: ({ cellValue }: { cellValue?: string }) => cellValue || '—',
-      title: t('fields.updatedAt'),
-      width: 168,
     },
   );
 

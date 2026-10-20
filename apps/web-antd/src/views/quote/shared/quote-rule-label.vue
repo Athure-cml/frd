@@ -6,11 +6,13 @@ import { Tooltip } from 'ant-design-vue';
 defineProps<{
   hint?: string;
   label: string;
+  required?: boolean;
 }>();
 </script>
 
 <template>
   <span class="quote-rule-label">
+    <span v-if="required" class="col-required-mark">*</span>
     <span>{{ label }}</span>
     <Tooltip
       v-if="hint"

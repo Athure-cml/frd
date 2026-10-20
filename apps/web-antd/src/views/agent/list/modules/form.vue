@@ -16,7 +16,7 @@ import { toAgentSavePayload, useAgentFormSchema } from '../data';
 
 const emit = defineEmits<{ success: [] }>();
 
-const { canViewPartyCode } = usePartyCodeVisibility('agent:edit');
+const { canViewPartyCode } = usePartyCodeVisibility('agent:import');
 
 const agentId = ref<number>();
 const isEdit = computed(() => !!agentId.value);

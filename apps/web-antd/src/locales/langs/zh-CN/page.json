@@ -912,6 +912,19 @@
       "seaDesc": "仅展示已从成本库「入报价库」的数据；费用经规则处理后展示，可单独调整且不得低于成本原价。",
       "fumigation": "熏蒸报价库",
       "fumigationDesc": "仅展示已从成本库「入报价库」的数据；费用经规则处理后展示，可单独调整且不得低于成本原价。",
+      "template": {
+        "menuTitle": "视图模板",
+        "manage": "视图模板",
+        "defaultName": "标准视图",
+        "createTitle": "新建报价库视图模板",
+        "editTitle": "编辑报价库视图模板",
+        "roadMenu": "卡车报价库模板",
+        "seaMenu": "海运报价库模板",
+        "fumigationMenu": "熏蒸报价库模板",
+        "roadPageDesc": "管理卡车报价库的列布局。与成本库模板分开，互不影响。",
+        "seaPageDesc": "管理海运报价库的列布局。与成本库模板分开，互不影响。",
+        "fumigationPageDesc": "管理熏蒸报价库的列布局。与成本库模板分开，互不影响。"
+      },
       "editTitle": "修改报价库费用",
       "batchEditTitle": "批量修改报价库费用",
       "feeFloorHint": "成本原价下限：{0}",
@@ -1174,6 +1187,7 @@
       "nonOak": "NON-OAK",
       "client": "Client",
       "pickUpAddress": "PICK UP ADDRESS",
+      "zipCode": "ZIP CODE",
       "city": "CITY",
       "state": "STATE",
       "porPol": "POR/POL",
@@ -1472,7 +1486,8 @@
       "ALL": "全部数据",
       "DEPT": "本部门",
       "ASSIGNED": "指定数据",
-      "SELF": "仅本人"
+      "SELF": "仅本人",
+      "selfLocked": "本人"
     },
     "status": {
       "enabled": "启用",

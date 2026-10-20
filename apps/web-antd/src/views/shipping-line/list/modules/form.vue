@@ -16,7 +16,7 @@ import { toShippingLineSavePayload, useShippingLineFormSchema } from '../data';
 
 const emit = defineEmits<{ success: [] }>();
 
-const { canViewPartyCode } = usePartyCodeVisibility('shipping_line:edit');
+const { canViewPartyCode } = usePartyCodeVisibility('shipping_line:import');
 
 const shippingLineId = ref<number>();
 const isEdit = computed(() => !!shippingLineId.value);

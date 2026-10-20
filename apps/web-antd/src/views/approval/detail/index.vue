@@ -97,14 +97,9 @@ function openRejectModal() {
 }
 
 async function onApproveOk() {
-  const comment = approveComment.value.trim();
-  if (!comment) {
-    message.warning($t('page.approval.commentRequired'));
-    return;
-  }
   submitting.value = true;
   try {
-    await approveQuoteWithComment(quoteId.value, comment);
+    await approveQuoteWithComment(quoteId.value, approveComment.value.trim());
     message.success($t('page.quote.message.approveSuccess'));
     approveOpen.value = false;
     await router.push({ name: 'ApprovalList' });
@@ -215,7 +210,7 @@ loadDetail();
       @ok="onApproveOk"
     >
       <Form layout="vertical">
-        <Form.Item :label="$t('page.approval.fields.comment')" required>
+        <Form.Item :label="$t('page.approval.fields.comment')">
           <Input.TextArea
             v-model:value="approveComment"
             :maxlength="500"

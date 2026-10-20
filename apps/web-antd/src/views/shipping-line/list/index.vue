@@ -44,11 +44,12 @@ import Form from './modules/form.vue';
 import '../../customer/shared/customer.css';
 
 const { hasAccessByCodes } = useAccess();
-const { canViewPartyCode } = usePartyCodeVisibility('shipping_line:edit');
+const { canViewPartyCode } = usePartyCodeVisibility('shipping_line:import');
 const canCreate = hasAccessByCodes(['shipping_line:create']);
+const canImport = hasAccessByCodes(['shipping_line:import']);
+const canExport = hasAccessByCodes(['shipping_line:export']);
 const canEdit = hasAccessByCodes(['shipping_line:edit']);
 const canDelete = hasAccessByCodes(['shipping_line:delete']);
-const canView = hasAccessByCodes(['shipping_line:view']);
 
 const importModalRef = ref<InstanceType<typeof ImportModal>>();
 const exporting = ref(false);
@@ -278,12 +279,12 @@ function onRefresh() {
           <Plus class="size-4" />
           {{ $t('page.shippingLine.actions.create') }}
         </Button>
-        <Button v-if="canCreate" class="mr-2" @click="importModalRef?.open()">
+        <Button v-if="canImport" class="mr-2" @click="importModalRef?.open()">
           <ArrowUpToLine class="size-4" />
           {{ $t('page.shippingLine.actions.import') }}
         </Button>
         <Button
-          v-if="canView"
+          v-if="canExport"
           :loading="exporting"
           class="mr-2"
           @click="onExport"

@@ -77,19 +77,45 @@ const MENU_SCHEMA: MenuModuleDef[] = [
         kind: 'group',
         segment: 'library_sea',
         titleKey: 'page.quote.library.sea',
-        match: (code) => code.startsWith('quote:library:sea:'),
+        match: (code) => /^quote:library:sea:(?!template)/.test(code),
       },
       {
         kind: 'group',
         segment: 'library_road',
         titleKey: 'page.quote.library.road',
-        match: (code) => code.startsWith('quote:library:road:'),
+        match: (code) => /^quote:library:road:(?!template)/.test(code),
       },
       {
         kind: 'group',
         segment: 'library_fumigation',
         titleKey: 'page.quote.library.fumigation',
-        match: (code) => code.startsWith('quote:library:fumigation:'),
+        match: (code) => /^quote:library:fumigation:(?!template)/.test(code),
+      },
+      {
+        kind: 'folder',
+        segment: 'library_templates',
+        titleKey: 'page.quote.library.template.menuTitle',
+        children: [
+          {
+            kind: 'group',
+            segment: 'sea',
+            titleKey: 'page.quote.library.template.seaMenu',
+            match: (code) => code.startsWith('quote:library:sea:template:'),
+          },
+          {
+            kind: 'group',
+            segment: 'road',
+            titleKey: 'page.quote.library.template.roadMenu',
+            match: (code) => code.startsWith('quote:library:road:template:'),
+          },
+          {
+            kind: 'group',
+            segment: 'fumigation',
+            titleKey: 'page.quote.library.template.fumigationMenu',
+            match: (code) =>
+              code.startsWith('quote:library:fumigation:template:'),
+          },
+        ],
       },
     ],
   },
@@ -310,8 +336,33 @@ function leafKey(permissionCode: string, alias?: string) {
   return alias ? `${permissionCode}#${alias}` : permissionCode;
 }
 
+const ACTION_ORDER = [
+  'view',
+  'create',
+  'import',
+  'export',
+  'edit',
+  'delete',
+  'manage',
+  'submit',
+  'approve',
+  'use',
+] as const;
+
+function actionRank(code: string) {
+  const action = code.split(':').at(-1) ?? '';
+  const idx = ACTION_ORDER.indexOf(action as (typeof ACTION_ORDER)[number]);
+  return idx !== -1 ? idx : ACTION_ORDER.length;
+}
+
 function sortPermissions(items: PermissionItem[]) {
-  return [...items].toSorted((a, b) => a.code.localeCompare(b.code));
+  return [...items].toSorted((a, b) => {
+    const byAction = actionRank(a.code) - actionRank(b.code);
+    if (byAction !== 0) {
+      return byAction;
+    }
+    return a.code.localeCompare(b.code);
+  });
 }
 
 function buildGroupChildren(

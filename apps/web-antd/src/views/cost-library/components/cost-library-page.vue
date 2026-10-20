@@ -119,10 +119,7 @@ const router = useRouter();
 const { hasAccessByCodes } = useAccess();
 const { isMobile } = usePreferences();
 const canEdit = hasAccessByCodes([props.editPermission]);
-const canPromoteQuoteLibrary = hasAccessByCodes([
-  `quote:library:${props.mode}:edit`,
-  props.editPermission,
-]);
+const canPromoteQuoteLibrary = canEdit;
 const canIntroduceQuote = hasAccessByCodes(['quote:create']);
 const canViewTemplates = hasAccessByCodes([`cost:${props.mode}:template:view`]);
 const introduceQuoteEnabled = computed(

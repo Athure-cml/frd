@@ -221,7 +221,7 @@ const FUMIGATION_DEFAULT_LAYOUT: CostTableTemplateLayout = {
     {
       dataType: 'date',
       field: FUM_INDOOR_EFF,
-      required: true,
+      required: false,
       title: '生效期',
     },
   ],
@@ -240,13 +240,8 @@ const FUMIGATION_DEFAULT_LAYOUT: CostTableTemplateLayout = {
     'remark',
   ],
   fieldOverrides: {
-    address: { required: true },
     remark: { title: '备注' },
-    [FUM_INDOOR_EFF]: { required: true },
     [FUM_OUTDOOR_EFF]: { required: true },
-    indoorNonOak: { required: true },
-    indoorOak: { required: true },
-    indoorValidity: { required: true },
     outdoorNonOak: { required: true },
     outdoorOak: { required: true },
     outdoorValidity: { required: true },

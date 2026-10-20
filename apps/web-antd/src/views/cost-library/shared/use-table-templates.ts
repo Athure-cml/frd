@@ -3,21 +3,29 @@ import type {
   CostTableTemplate,
   CostTableTemplateLayout,
 } from '#/api/cost';
+import type { TemplateLibrary } from '#/api/cost/templates';
 
 import { listCostTableTemplates } from '#/api/cost/templates';
 
 import { getBuiltinTemplates } from './default-templates';
 
-const STORAGE_PREFIX = 'cost-library:active-template:';
 const TEMPLATE_CACHE_TTL_MS = 60_000;
 
 const templateCache = new Map<
-  CostMode,
+  string,
   { at: number; templates: CostTableTemplate[] }
 >();
 
-function storageKey(mode: CostMode) {
-  return `${STORAGE_PREFIX}${mode}`;
+function cacheKey(mode: CostMode, library: TemplateLibrary = 'cost') {
+  return `${library}:${mode}`;
+}
+
+function storageKey(mode: CostMode, library: TemplateLibrary = 'cost') {
+  const prefix =
+    library === 'quote'
+      ? 'quote-library:active-template:'
+      : 'cost-library:active-template:';
+  return `${prefix}${mode}`;
 }
 
 function hashLayoutColumns(layout?: CostTableTemplateLayout) {
@@ -50,20 +58,28 @@ export function getTemplateLayoutSignature(template: CostTableTemplate) {
   return `${template.id}|${template.createdAt ?? ''}|${order}|${overrides}`;
 }
 
-export function getSavedTemplateId(mode: CostMode) {
-  const raw = localStorage.getItem(storageKey(mode));
+export function getSavedTemplateId(
+  mode: CostMode,
+  library: TemplateLibrary = 'cost',
+) {
+  const raw = localStorage.getItem(storageKey(mode, library));
   if (!raw) return undefined;
   const id = Number(raw);
   return Number.isFinite(id) ? id : undefined;
 }
 
-export function saveTemplateId(mode: CostMode, id: number) {
-  localStorage.setItem(storageKey(mode), String(id));
+export function saveTemplateId(
+  mode: CostMode,
+  id: number,
+  library: TemplateLibrary = 'cost',
+) {
+  localStorage.setItem(storageKey(mode, library), String(id));
 }
 
 export function resolveActiveTemplate(
   templates: CostTableTemplate[],
   mode: CostMode,
+  library: TemplateLibrary = 'cost',
 ) {
   const scoped = templates.filter((item) => item.mode === mode);
   const pool = scoped.length > 0 ? scoped : templates;
@@ -71,7 +87,7 @@ export function resolveActiveTemplate(
   if (enabled) {
     return enabled;
   }
-  const savedId = getSavedTemplateId(mode);
+  const savedId = getSavedTemplateId(mode, library);
   if (savedId) {
     const saved = pool.find((item) => item.id === savedId);
     if (saved) return saved;
@@ -79,9 +95,12 @@ export function resolveActiveTemplate(
   return pool[0];
 }
 
-export function invalidateTableTemplateCache(mode?: CostMode) {
+export function invalidateTableTemplateCache(
+  mode?: CostMode,
+  library: TemplateLibrary = 'cost',
+) {
   if (mode) {
-    templateCache.delete(mode);
+    templateCache.delete(cacheKey(mode, library));
     return;
   }
   templateCache.clear();
@@ -89,10 +108,12 @@ export function invalidateTableTemplateCache(mode?: CostMode) {
 
 export async function loadTableTemplates(
   mode: CostMode,
-  options?: { force?: boolean },
+  options?: { force?: boolean; library?: TemplateLibrary },
 ): Promise<CostTableTemplate[]> {
   const force = options?.force === true;
-  const cached = templateCache.get(mode);
+  const library = options?.library ?? 'cost';
+  const key = cacheKey(mode, library);
+  const cached = templateCache.get(key);
   if (
     !force &&
     cached &&
@@ -103,17 +124,17 @@ export async function loadTableTemplates(
   }
 
   try {
-    const remote = await listCostTableTemplates(mode);
+    const remote = await listCostTableTemplates(mode, library);
     const scoped = remote?.filter((item) => item.mode === mode) ?? [];
     if (scoped.length > 0) {
-      templateCache.set(mode, { at: Date.now(), templates: scoped });
+      templateCache.set(key, { at: Date.now(), templates: scoped });
       return scoped;
     }
   } catch {
     // 后端未就绪时使用内置默认模板
   }
   const builtin = getBuiltinTemplates(mode);
-  templateCache.set(mode, { at: Date.now(), templates: builtin });
+  templateCache.set(key, { at: Date.now(), templates: builtin });
   return builtin;
 }
 
@@ -121,9 +142,11 @@ export function getGridStorageId(
   mode: CostMode,
   templateId: number,
   layout?: CostTableTemplateLayout,
+  library: TemplateLibrary = 'cost',
 ) {
   const layoutHash = hashLayoutColumns(layout);
+  const prefix = library === 'quote' ? 'quote-library' : 'cost-library';
   return layoutHash
-    ? `cost-library-${mode}-${templateId}-w12-${layoutHash}`
-    : `cost-library-${mode}-${templateId}-w12`;
+    ? `${prefix}-${mode}-${templateId}-w12-${layoutHash}`
+    : `${prefix}-${mode}-${templateId}-w12`;
 }

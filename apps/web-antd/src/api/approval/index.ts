@@ -86,9 +86,10 @@ export async function getQuoteApprovalDetail(id: number, cycle?: number) {
   });
 }
 
-export async function approveQuoteWithComment(id: number, comment: string) {
+export async function approveQuoteWithComment(id: number, comment?: string) {
+  const trimmed = comment?.trim();
   return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/send`, {
-    comment,
+    comment: trimmed || undefined,
   });
 }
 

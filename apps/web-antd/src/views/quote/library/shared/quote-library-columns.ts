@@ -5,30 +5,13 @@ import type { CostTableTemplate } from '#/api/cost';
 
 import { $t } from '#/locales';
 
-import { formatAmount } from '../../../cost-library/road/formatters';
+import { buildColumnsFromTemplate } from '../../../cost-library/shared/build-columns';
 import { buildFumigationColumnsFromLayout } from '../../../cost-library/shared/build-fumigation-columns';
-import {
-  applyColumnBgParams,
-  DEFAULT_TOTAL_COLUMN_BG,
-  resolveColumnBgColor,
-} from '../../../cost-library/shared/column-bg-style';
-import { buildColumnSortBy } from '../../../cost-library/shared/column-sort';
-import {
-  appendCostStatusColumn,
-  appendQuoteLibraryOperationColumn,
-  buildCostCheckboxColumn,
-} from '../../../cost-library/shared/columns';
+import { DEFAULT_TOTAL_COLUMN_BG } from '../../../cost-library/shared/column-bg-style';
+import { appendQuoteLibraryOperationColumn } from '../../../cost-library/shared/columns';
 import { getDefaultTemplate } from '../../../cost-library/shared/default-templates';
-import {
-  getFieldCatalog,
-  toFieldCatalogMap,
-} from '../../../cost-library/shared/field-catalog';
 import { ROAD_REMARK_FIELD } from '../../../cost-library/shared/field-catalog/road';
 import { formatDateYmd } from '../../../cost-library/shared/formatters';
-import {
-  customFieldColumnPath,
-  isCustomFieldKey,
-} from '../../../cost-library/shared/template-field-model';
 import { buildQuoteRuleHeaderSlot } from '../../shared/quote-rule-header';
 
 export type { QuoteLibraryMode };
@@ -50,14 +33,7 @@ const seaT = (key: string) => $t(`page.costLibrary.seaFields.${key}`);
 const ROAD_EFFECTIVE_FIELD = 'cf_road_eff';
 const SEA_FREIGHT_EFF_FIELD = 'cf_sea_freight_eff';
 
-const QUOTE_LIBRARY_SEQ_COLUMN = {
-  fixed: 'left' as const,
-  title: '#',
-  type: 'seq' as const,
-  width: 56,
-};
-
-/** 卡车报价库表头（顺序与业务 Excel 一致） */
+/** 卡车报价库导出兜底表头（列表列以已应用的视图模板为准） */
 export const QUOTE_LIBRARY_ROAD_COLUMNS: QuoteLibraryColumnDef[] = [
   { field: 'zipCode', title: 'ZIP CODE', width: 100 },
   { field: 'city', title: 'CITY', width: 110 },
@@ -130,39 +106,6 @@ export const QUOTE_LIBRARY_SEA_COLUMNS: QuoteLibraryColumnDef[] = [
   { field: 'enProductName', title: seaT('enProductName'), width: 140 },
 ];
 
-function readRowValue(row: QuoteLibraryRow, field: string): unknown {
-  const record = row as unknown as Record<string, unknown>;
-  if (Object.prototype.hasOwnProperty.call(record, field)) {
-    return record[field];
-  }
-  if (isCustomFieldKey(field)) {
-    const extra = record.extraFields;
-    if (extra && typeof extra === 'object' && !Array.isArray(extra)) {
-      return (extra as Record<string, unknown>)[field];
-    }
-  }
-  return undefined;
-}
-
-function formatCellValue(value: unknown, col: QuoteLibraryColumnDef) {
-  if (value === null || value === undefined || value === '') {
-    return '—';
-  }
-  if (col.format === 'amount') {
-    return formatAmount(typeof value === 'number' ? value : Number(value));
-  }
-  if (col.format === 'dateMd') {
-    // 报价库时间字段统一 yyyy-MM-dd，避免只显示 MM/DD 丢年份
-    const text = formatDateYmd(
-      typeof value === 'string' || typeof value === 'number'
-        ? value
-        : String(value),
-    );
-    return text || '—';
-  }
-  return String(value);
-}
-
 function resolveColumnFieldKey(field?: string) {
   if (!field) {
     return undefined;
@@ -186,11 +129,14 @@ function withRuleHintHeader(
   }
   const title =
     typeof column.title === 'string' ? column.title : String(fieldKey);
+  const required = String(column.headerClassName ?? '').includes(
+    'col-required',
+  );
   return {
     ...column,
     slots: {
       ...column.slots,
-      header: buildQuoteRuleHeaderSlot(title, hint),
+      header: buildQuoteRuleHeaderSlot(title, hint, required),
     },
   };
 }
@@ -218,108 +164,6 @@ function applyRuleHintHeaders(
   });
 }
 
-function stripColumnBg(column: Record<string, unknown>) {
-  const params = column.params as Record<string, unknown> | undefined;
-  if (params) {
-    delete params.bgColor;
-    if (Object.keys(params).length === 0) {
-      delete column.params;
-    }
-  }
-  column.className = String(column.className ?? '')
-    .replaceAll(/\bcol-tmpl-bg\b/g, '')
-    .trim();
-}
-
-/** 仅同步成本库视图中的「可排序」与「列背景色」，不改报价库表头字段与顺序 */
-function applyTemplateSortAndColor(
-  columns: VxeTableGridOptions<QuoteLibraryRow>['columns'],
-  mode: QuoteLibraryMode,
-  template?: CostTableTemplate,
-): VxeTableGridOptions<QuoteLibraryRow>['columns'] {
-  const fieldOverrides = template?.layout?.fieldOverrides;
-  if (!columns?.length || !fieldOverrides) {
-    return columns;
-  }
-
-  const catalogMap = toFieldCatalogMap(getFieldCatalog(mode));
-
-  const patchColumn = (
-    column: QuoteLibraryGridColumn,
-  ): QuoteLibraryGridColumn => {
-    if (!column || typeof column !== 'object') {
-      return column;
-    }
-    if (column.children?.length) {
-      return {
-        ...column,
-        children: column.children.map((child) => patchColumn(child)),
-      };
-    }
-
-    const fieldKey = resolveColumnFieldKey(column.field);
-    if (!fieldKey) {
-      return column;
-    }
-
-    const override = fieldOverrides[fieldKey];
-    if (!override) {
-      return column;
-    }
-
-    const next = { ...column } as Record<string, unknown>;
-
-    if (override.sortable === true) {
-      const entry = catalogMap.get(fieldKey);
-      if (entry) {
-        next.sortable = true;
-        next.sortBy = buildColumnSortBy(entry, mode, {
-          field: fieldKey,
-          title: typeof column.title === 'string' ? column.title : fieldKey,
-        });
-      }
-    }
-
-    if (Reflect.has(override, 'bgColor')) {
-      stripColumnBg(next);
-      const bgColor = resolveColumnBgColor(mode, fieldKey, override.bgColor);
-      if (bgColor) {
-        applyColumnBgParams(next, bgColor);
-      }
-    }
-
-    return next as QuoteLibraryGridColumn;
-  };
-
-  return columns.map((column) => patchColumn(column));
-}
-
-function buildFlatLibraryColumns(
-  cols: QuoteLibraryColumnDef[],
-  ruleHintMap: Record<string, string>,
-) {
-  return cols.map((col) => {
-    const column: QuoteLibraryGridColumn = {
-      field: isCustomFieldKey(col.field)
-        ? customFieldColumnPath(col.field)
-        : col.field,
-      formatter: ({ row }: { row: QuoteLibraryRow }) =>
-        formatCellValue(readRowValue(row, col.field), col),
-      minWidth: col.width ?? 100,
-      showOverflow: true,
-      title: col.title,
-    };
-    if (col.bgColor) {
-      applyColumnBgParams(column as Record<string, unknown>, col.bgColor);
-    }
-    return withRuleHintHeader(column, col.field, ruleHintMap);
-  });
-}
-
-function buildLeadingColumns() {
-  return [buildCostCheckboxColumn(), QUOTE_LIBRARY_SEQ_COLUMN];
-}
-
 function buildRoadOrSeaColumns(
   mode: 'road' | 'sea',
   ruleHintMap: Record<string, string>,
@@ -327,19 +171,23 @@ function buildRoadOrSeaColumns(
   canManage: boolean,
   template?: CostTableTemplate,
 ): VxeTableGridOptions<QuoteLibraryRow>['columns'] {
-  const dataCols = buildFlatLibraryColumns(
-    mode === 'road' ? QUOTE_LIBRARY_ROAD_COLUMNS : QUOTE_LIBRARY_SEA_COLUMNS,
-    ruleHintMap,
-  );
-  const columns: VxeTableGridOptions<QuoteLibraryRow>['columns'] = [
-    ...buildLeadingColumns(),
-    ...dataCols,
-  ];
-  appendCostStatusColumn(columns);
-  if (canManage) {
-    appendQuoteLibraryOperationColumn(columns, canManage, onActionClick);
+  const columns = buildColumnsFromTemplate<QuoteLibraryRow>({
+    canEdit: canManage,
+    dateStyle: 'ymd',
+    includeOperation: false,
+    mode,
+    nameField: 'id',
+    nameTitle: $t('page.quote.library.deleteNameTitle'),
+    onActionClick,
+    stationDisplayShort: mode === 'road',
+    supplierDisplayShort: mode === 'road',
+    template: template ?? getDefaultTemplate(mode),
+  });
+  const hinted = applyRuleHintHeaders(columns, ruleHintMap);
+  if (!canManage) {
+    return hinted;
   }
-  return applyTemplateSortAndColor(columns, mode, template);
+  return appendQuoteLibraryOperationColumn(hinted, canManage, onActionClick);
 }
 
 function buildFumigationColumns(
@@ -348,7 +196,7 @@ function buildFumigationColumns(
   canManage: boolean,
   template?: CostTableTemplate,
 ): VxeTableGridOptions<QuoteLibraryRow>['columns'] {
-  const layout = getDefaultTemplate('fumigation').layout;
+  const layout = (template ?? getDefaultTemplate('fumigation')).layout;
   const columns = buildFumigationColumnsFromLayout(layout, {
     canEdit: canManage,
     formatDateValue: formatDateYmd,
@@ -356,11 +204,115 @@ function buildFumigationColumns(
     includeOperation: canManage,
     onActionClick,
     quoteLibraryOperation: true,
-    showRequiredMark: false,
     stationDisplayShort: true,
   }) as VxeTableGridOptions<QuoteLibraryRow>['columns'];
-  const result = applyRuleHintHeaders(columns, ruleHintMap);
-  return applyTemplateSortAndColor(result, 'fumigation', template);
+  return applyRuleHintHeaders(columns, ruleHintMap);
+}
+
+const RIGHT_EDGE_FIELDS = new Set(['operation', 'relationLink', 'status']);
+
+function readColumnFixed(
+  column: QuoteLibraryGridColumn,
+): 'left' | 'right' | undefined {
+  const fixed = (column as { fixed?: string }).fixed;
+  return fixed === 'left' || fixed === 'right' ? fixed : undefined;
+}
+
+/** 分组里左右固定不一致时拆开，否则 vxe 钉不住组内列。 */
+function normalizeGroupedFixed(
+  columns: VxeTableGridOptions<QuoteLibraryRow>['columns'],
+): VxeTableGridOptions<QuoteLibraryRow>['columns'] {
+  if (!columns?.length) {
+    return columns;
+  }
+  const next: NonNullable<VxeTableGridOptions<QuoteLibraryRow>['columns']> = [];
+  for (const column of columns) {
+    const children = column.children as
+      | undefined
+      | VxeTableGridOptions<QuoteLibraryRow>['columns'];
+    if (!children?.length) {
+      next.push(column);
+      continue;
+    }
+    const normalizedChildren = normalizeGroupedFixed(children) ?? [];
+    const flags = normalizedChildren.map((child) => readColumnFixed(child));
+    if (new Set(flags).size <= 1) {
+      const fixed = flags[0];
+      next.push(
+        fixed
+          ? { ...column, children: normalizedChildren, fixed }
+          : { ...column, children: normalizedChildren },
+      );
+      continue;
+    }
+    let bucket: NonNullable<VxeTableGridOptions<QuoteLibraryRow>['columns']> =
+      [];
+    let bucketFixed: 'left' | 'right' | undefined;
+    const flush = () => {
+      if (bucket.length === 0) {
+        return;
+      }
+      if (bucketFixed) {
+        next.push(...bucket);
+      } else {
+        next.push({ ...column, children: [...bucket] });
+      }
+      bucket = [];
+      bucketFixed = undefined;
+    };
+    for (const child of normalizedChildren) {
+      const fixed = readColumnFixed(child);
+      if (bucket.length > 0 && fixed !== bucketFixed) {
+        flush();
+      }
+      bucketFixed = fixed;
+      bucket.push(child);
+    }
+    flush();
+  }
+  return next;
+}
+
+/**
+ * 勾选/序号留在最左，状态/关联/操作留在最右。
+ * 模板里标了左/右固定的列贴到这两侧，避免夹在普通列中间时钉不住。
+ */
+export function settleQuoteLibraryFixedColumns(
+  columns: VxeTableGridOptions<QuoteLibraryRow>['columns'],
+): VxeTableGridOptions<QuoteLibraryRow>['columns'] {
+  const normalized = normalizeGroupedFixed(columns);
+  if (!normalized?.length) {
+    return normalized;
+  }
+  const leftEdge: NonNullable<VxeTableGridOptions<QuoteLibraryRow>['columns']> =
+    [];
+  const rightEdge: NonNullable<
+    VxeTableGridOptions<QuoteLibraryRow>['columns']
+  > = [];
+  const left: NonNullable<VxeTableGridOptions<QuoteLibraryRow>['columns']> = [];
+  const middle: NonNullable<VxeTableGridOptions<QuoteLibraryRow>['columns']> =
+    [];
+  const right: NonNullable<VxeTableGridOptions<QuoteLibraryRow>['columns']> =
+    [];
+  for (const column of normalized) {
+    if (column.type === 'checkbox' || column.type === 'seq') {
+      leftEdge.push(column);
+      continue;
+    }
+    if (column.field && RIGHT_EDGE_FIELDS.has(String(column.field))) {
+      rightEdge.push(column);
+      continue;
+    }
+    const fixed = readColumnFixed(column);
+    if (fixed === 'left') {
+      left.push(column);
+    } else if (fixed === 'right') {
+      right.push(column);
+    } else {
+      middle.push(column);
+    }
+  }
+  return [...leftEdge, ...left, ...middle, ...right, ...rightEdge];
 }
 
 export function quoteLibraryGridId(mode: QuoteLibraryMode) {
@@ -411,19 +363,24 @@ export function buildQuoteLibrarySnapshotColumns(
       showRequiredMark: false,
       stationDisplayShort: true,
     }) as VxeTableGridOptions<QuoteLibraryRow>['columns'];
-    const dataCols = stripSnapshotGridColumns(columns);
-    return applyTemplateSortAndColor(dataCols, mode, template);
+    return stripSnapshotGridColumns(columns);
   }
 
-  const dataCols = buildFlatLibraryColumns(
-    mode === 'road' ? QUOTE_LIBRARY_ROAD_COLUMNS : QUOTE_LIBRARY_SEA_COLUMNS,
-    {},
-  );
-  return applyTemplateSortAndColor(
-    [{ fixed: 'left', title: '#', type: 'seq', width: 56 }, ...dataCols],
+  const columns = buildColumnsFromTemplate<QuoteLibraryRow>({
+    canEdit: false,
+    dateStyle: 'ymd',
+    includeCheckbox: false,
+    includeOperation: false,
     mode,
+    nameField: 'id',
+    nameTitle: $t('page.quote.library.deleteNameTitle'),
+    onActionClick: () => {},
+    showRequiredMark: false,
+    stationDisplayShort: mode === 'road',
+    supplierDisplayShort: mode === 'road',
     template,
-  );
+  });
+  return stripSnapshotGridColumns(columns);
 }
 
 export function useQuoteLibraryColumns(

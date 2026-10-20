@@ -784,8 +784,16 @@
   width: 100%;
 }
 
+.quote-editor-page .quote-sheet-location-row--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .quote-editor-page .quote-sheet-location-row--4 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.quote-editor-page .quote-sheet-location-row--5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .quote-editor-page .quote-sheet-sea-row {
@@ -808,7 +816,9 @@
   .quote-editor-page .quote-sheet-basic-row--3,
   .quote-editor-page .quote-sheet-basic-row--4,
   .quote-editor-page .quote-sheet-location-row,
-  .quote-editor-page .quote-sheet-location-row--4 {
+  .quote-editor-page .quote-sheet-location-row--2,
+  .quote-editor-page .quote-sheet-location-row--4,
+  .quote-editor-page .quote-sheet-location-row--5 {
     grid-template-columns: 1fr;
   }
 }

@@ -32,12 +32,40 @@ const TEMPLATE_PAGE_META: Record<
   },
 };
 
-export function templatePageTitle(mode: CostMode) {
-  return $t(TEMPLATE_PAGE_META[mode].titleKey);
+const QUOTE_TEMPLATE_PAGE_META: Record<
+  CostMode,
+  { descKey: string; titleKey: string }
+> = {
+  road: {
+    descKey: 'page.quote.library.template.roadPageDesc',
+    titleKey: 'page.quote.library.template.roadMenu',
+  },
+  sea: {
+    descKey: 'page.quote.library.template.seaPageDesc',
+    titleKey: 'page.quote.library.template.seaMenu',
+  },
+  fumigation: {
+    descKey: 'page.quote.library.template.fumigationPageDesc',
+    titleKey: 'page.quote.library.template.fumigationMenu',
+  },
+};
+
+export function templatePageTitle(
+  mode: CostMode,
+  library: 'cost' | 'quote' = 'cost',
+) {
+  const meta =
+    library === 'quote' ? QUOTE_TEMPLATE_PAGE_META : TEMPLATE_PAGE_META;
+  return $t(meta[mode].titleKey);
 }
 
-export function templatePageDesc(mode: CostMode) {
-  return $t(TEMPLATE_PAGE_META[mode].descKey);
+export function templatePageDesc(
+  mode: CostMode,
+  library: 'cost' | 'quote' = 'cost',
+) {
+  const meta =
+    library === 'quote' ? QUOTE_TEMPLATE_PAGE_META : TEMPLATE_PAGE_META;
+  return $t(meta[mode].descKey);
 }
 
 export function useTemplateColumns(
@@ -128,16 +156,31 @@ export function toTemplateSavePayload(
   };
 }
 
-export function templateViewPermissionForMode(mode: CostMode) {
-  return `cost:${mode}:template:view`;
+export function templateViewPermissionForMode(
+  mode: CostMode,
+  library: 'cost' | 'quote' = 'cost',
+) {
+  return library === 'quote'
+    ? `quote:library:${mode}:template:view`
+    : `cost:${mode}:template:view`;
 }
 
-export function templateEditPermissionForMode(mode: CostMode) {
-  return `cost:${mode}:template:edit`;
+export function templateEditPermissionForMode(
+  mode: CostMode,
+  library: 'cost' | 'quote' = 'cost',
+) {
+  return library === 'quote'
+    ? `quote:library:${mode}:template:edit`
+    : `cost:${mode}:template:edit`;
 }
 
-export function templateDeletePermissionForMode(mode: CostMode) {
-  return `cost:${mode}:template:delete`;
+export function templateDeletePermissionForMode(
+  mode: CostMode,
+  library: 'cost' | 'quote' = 'cost',
+) {
+  return library === 'quote'
+    ? `quote:library:${mode}:template:delete`
+    : `cost:${mode}:template:delete`;
 }
 
 export function buildTemplateSearchSchema(

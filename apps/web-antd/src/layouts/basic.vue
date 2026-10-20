@@ -23,7 +23,7 @@ import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 import LoginForm from '#/views/_core/authentication/login.vue';
 import { resolveAvatarUrl } from '#/views/_core/profile/profile-utils';
-import { WORKSPACE_ILLUSTRATIONS } from '#/views/dashboard/workspace/illustrations';
+import { resolveWorkspaceIllustration } from '#/views/dashboard/workspace/illustrations';
 
 import NotificationDrawer from './notification-drawer.vue';
 import RoutesDrawer from './routes-drawer.vue';
@@ -73,6 +73,9 @@ const authStore = useAuthStore();
 const accessStore = useAccessStore();
 const { destroyWatermark, updateWatermark } = useWatermark();
 const { isDark } = usePreferences();
+const emptyNoticesImage = computed(() =>
+  resolveWorkspaceIllustration('emptyNotices', isDark.value),
+);
 
 const showActivityTicker = computed(
   () =>
@@ -212,7 +215,7 @@ watch(
       <Notification
         :count="unreadNoticeCount"
         :dot="showDot"
-        :empty-image="WORKSPACE_ILLUSTRATIONS.emptyNotices"
+        :empty-image="emptyNoticesImage"
         :empty-text="$t('page.notifications.empty')"
         :notifications="notifications"
         :show-view-all="true"

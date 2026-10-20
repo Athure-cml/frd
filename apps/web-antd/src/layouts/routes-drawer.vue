@@ -4,11 +4,12 @@ import type { WorkspaceRouteView } from '#/views/dashboard/workspace/map-workspa
 import { computed } from 'vue';
 
 import { IconifyIcon } from '@vben/icons';
+import { usePreferences } from '@vben/preferences';
 
 import { Drawer, Spin } from 'ant-design-vue';
 
 import { $t } from '#/locales';
-import { WORKSPACE_ILLUSTRATIONS } from '#/views/dashboard/workspace/illustrations';
+import { resolveWorkspaceIllustration } from '#/views/dashboard/workspace/illustrations';
 
 const props = withDefaults(
   defineProps<{
@@ -19,6 +20,10 @@ const props = withDefaults(
     items: () => [],
     loading: false,
   },
+);
+const { isDark } = usePreferences();
+const emptyRoutesSrc = computed(() =>
+  resolveWorkspaceIllustration('emptyRoutes', isDark.value),
 );
 
 const open = defineModel<boolean>('open', { default: false });
@@ -83,11 +88,7 @@ function close() {
         </div>
 
         <div v-else-if="items.length === 0" class="routes-drawer__empty">
-          <img
-            :src="WORKSPACE_ILLUSTRATIONS.emptyRoutes"
-            alt=""
-            class="routes-drawer__empty-img"
-          />
+          <img :src="emptyRoutesSrc" alt="" class="routes-drawer__empty-img" />
           <p class="routes-drawer__empty-text">
             {{ $t('page.workspace.routesDrawer.empty') }}
           </p>
@@ -259,6 +260,10 @@ function close() {
   border-radius: 16px;
 }
 
+:global(html.dark) .routes-drawer__empty-img {
+  background: hsl(var(--card));
+}
+
 .routes-drawer__empty-text {
   max-width: 28ch;
   margin: 0;
@@ -373,5 +378,79 @@ function close() {
 .routes-drawer-root.ant-drawer-content,
 .routes-drawer-root .ant-drawer-content {
   overflow: hidden;
+  background: #f7f8fa !important;
+}
+
+.routes-drawer-root .ant-drawer-content-wrapper,
+.routes-drawer-root .ant-drawer-body {
+  background: #f7f8fa !important;
+}
+
+html.dark .routes-drawer-root.ant-drawer-content,
+html.dark .routes-drawer-root .ant-drawer-content,
+html.dark .routes-drawer-root .ant-drawer-content-wrapper,
+html.dark .routes-drawer-root .ant-drawer-body {
+  color: hsl(var(--foreground));
+  background: hsl(var(--background)) !important;
+}
+
+html.dark .routes-drawer-root .routes-drawer {
+  background: hsl(var(--background));
+}
+
+html.dark .routes-drawer-root .routes-drawer__header {
+  background: hsl(var(--card));
+  border-bottom-color: hsl(var(--border));
+}
+
+html.dark .routes-drawer-root .routes-drawer__body {
+  background: hsl(var(--card));
+}
+
+html.dark .routes-drawer-root .routes-drawer__icon-wrap {
+  color: hsl(var(--primary));
+  background: hsl(var(--accent));
+}
+
+html.dark .routes-drawer-root .routes-drawer__title,
+html.dark .routes-drawer-root .routes-drawer__name,
+html.dark .routes-drawer-root .routes-drawer__value {
+  color: hsl(var(--foreground));
+}
+
+html.dark .routes-drawer-root .routes-drawer__subtitle,
+html.dark .routes-drawer-root .routes-drawer__empty-text,
+html.dark .routes-drawer-root .routes-drawer__rank {
+  color: hsl(var(--muted-foreground));
+}
+
+html.dark .routes-drawer-root .routes-drawer__rank--top,
+html.dark .routes-drawer-root .routes-drawer__icon {
+  color: hsl(var(--primary));
+}
+
+html.dark .routes-drawer-root .routes-drawer__close {
+  color: hsl(var(--muted-foreground));
+}
+
+html.dark .routes-drawer-root .routes-drawer__close:hover {
+  color: hsl(var(--foreground));
+  background: hsl(var(--accent));
+}
+
+html.dark .routes-drawer-root .routes-drawer__empty-img {
+  background: hsl(var(--card));
+}
+
+html.dark .routes-drawer-root .routes-drawer__bar {
+  background: hsl(var(--muted));
+}
+
+html.dark .routes-drawer-root .routes-drawer__fill {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary)),
+    color-mix(in srgb, hsl(var(--primary)) 55%, black)
+  );
 }
 </style>

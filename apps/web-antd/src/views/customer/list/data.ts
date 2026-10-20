@@ -216,16 +216,6 @@ export function useCustomerColumns(
       title: t('fields.address'),
     },
     {
-      align: 'center',
-      cellRender: {
-        name: 'CellTag',
-        options: statusTagOptions(),
-      },
-      field: 'status',
-      title: t('fields.status'),
-      width: 96,
-    },
-    {
       field: 'createdByName',
       title: t('fields.createdBy'),
       width: 100,
@@ -235,6 +225,17 @@ export function useCustomerColumns(
       formatter: ({ cellValue }: { cellValue?: string }) => cellValue || '—',
       title: t('fields.updatedAt'),
       width: 168,
+    },
+    {
+      align: 'center',
+      cellRender: {
+        name: 'CellTag',
+        options: statusTagOptions(),
+      },
+      field: 'status',
+      fixed: 'right',
+      title: t('fields.status'),
+      width: 96,
     },
   );
 

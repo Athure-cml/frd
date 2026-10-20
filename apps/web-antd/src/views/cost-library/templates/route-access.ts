@@ -16,7 +16,7 @@ function resolveTemplateMode(
     return paramMode as CostMode;
   }
   const matched = route.path.match(
-    /\/cost-library\/templates\/(road|sea|fumigation)/,
+    /\/(?:cost-library|quotes\/library)\/templates\/(road|sea|fumigation)/,
   );
   if (matched?.[1] && COST_MODES.has(matched[1] as CostMode)) {
     return matched[1] as CostMode;
@@ -28,7 +28,8 @@ export function getTemplateRouteRequiredPermission(
   route: RouteLocationNormalized,
 ): null | string {
   const name = route.name?.toString() ?? '';
-  if (!name.startsWith('CostTemplate')) {
+  const quote = name.startsWith('QuoteTemplate');
+  if (!name.startsWith('CostTemplate') && !quote) {
     return null;
   }
 
@@ -37,11 +38,19 @@ export function getTemplateRouteRequiredPermission(
     return null;
   }
 
-  if (name === 'CostTemplateCreate' || name === 'CostTemplateEdit') {
-    return `cost:${mode}:template:edit`;
+  const prefix = quote
+    ? `quote:library:${mode}:template`
+    : `cost:${mode}:template`;
+  if (
+    name === 'CostTemplateCreate' ||
+    name === 'CostTemplateEdit' ||
+    name === 'QuoteTemplateCreate' ||
+    name === 'QuoteTemplateEdit'
+  ) {
+    return `${prefix}:edit`;
   }
 
-  return `cost:${mode}:template:view`;
+  return `${prefix}:view`;
 }
 
 export function isTemplateRouteAllowed(

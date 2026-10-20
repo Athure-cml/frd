@@ -45,7 +45,7 @@ const category = computed<SupplierCategory>(() => {
 
 const permPrefix = computed(() => `supplier:${category.value.toLowerCase()}`);
 const canViewPartyCode = computed(() =>
-  hasAccessByCodes([`${permPrefix.value}:edit`]),
+  hasAccessByCodes([`${permPrefix.value}:import`]),
 );
 
 const supplierId = ref<number>();

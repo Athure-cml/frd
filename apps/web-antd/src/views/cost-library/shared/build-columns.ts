@@ -35,7 +35,12 @@ import {
   resolveRoadFeeUnitField,
 } from './fee-unit-pairs';
 import { getFieldCatalog, toFieldCatalogMap } from './field-catalog';
-import { formatDateMd, formatDateMmDd, formatPrice } from './formatters';
+import {
+  formatDateMd,
+  formatDateMmDd,
+  formatDateYmd,
+  formatPrice,
+} from './formatters';
 import { costStatusTagOptions } from './tags';
 import {
   customFieldColumnPath,
@@ -61,6 +66,10 @@ export interface BuildColumnsOptions<T extends { id: number }> {
   /** 仅卡车成本库列表：SUPPLIER 列显示卡车供应商简称 */
   supplierDisplayShort?: boolean;
   seqWidth?: number;
+  /** 表头是否显示必填标记，默认显示 */
+  showRequiredMark?: boolean;
+  /** 报价库列表日期用 yyyy-MM-dd，成本库沿用原格式 */
+  dateStyle?: 'cost' | 'ymd';
   template?: CostTableTemplate;
 }
 
@@ -131,14 +140,22 @@ function formatListDate(
   mode: CostMode,
   format: FieldCatalogEntry['format'],
   value: null | number | string,
+  dateStyle: 'cost' | 'ymd' = 'cost',
 ) {
+  if (dateStyle === 'ymd') {
+    return formatDateYmd(value);
+  }
   if (format === 'dateMmDd' || (format === 'dateMd' && mode === 'sea')) {
     return formatDateMmDd(value);
   }
   return formatDateMd(value);
 }
 
-function buildFormatter(entry: FieldCatalogEntry, mode: CostMode) {
+function buildFormatter(
+  entry: FieldCatalogEntry,
+  mode: CostMode,
+  dateStyle: 'cost' | 'ymd' = 'cost',
+) {
   const unitField = resolveRoadFeeUnitField(entry.field);
   if (entry.format === 'amount') {
     return ({
@@ -172,7 +189,7 @@ function buildFormatter(entry: FieldCatalogEntry, mode: CostMode) {
   }
   if (entry.format === 'dateMd' || entry.format === 'dateMmDd') {
     return ({ cellValue }: { cellValue: null | number | string }) =>
-      formatListDate(mode, entry.format, cellValue);
+      formatListDate(mode, entry.format, cellValue, dateStyle);
   }
   return undefined;
 }
@@ -237,6 +254,7 @@ function buildRequiredHeaderSlot(title: string) {
 function buildLeafColumn(
   entry: FieldCatalogEntry,
   options: {
+    dateStyle?: 'cost' | 'ymd';
     mode: CostMode;
     override?: CostTableFieldOverride;
     required?: boolean;
@@ -337,12 +355,13 @@ function buildLeafColumn(
           typeof value === 'string' || typeof value === 'number'
             ? value
             : String(value),
+          options.dateStyle,
         );
       }
       return String(value);
     };
   } else {
-    const formatter = buildFormatter(entry, options.mode);
+    const formatter = buildFormatter(entry, options.mode, options.dateStyle);
     if (formatter) {
       column.formatter = formatter;
     }
@@ -388,6 +407,8 @@ function resolveFieldColumns(
   layout: CostTableTemplateLayout,
   catalogMap: Map<string, FieldCatalogEntry>,
   options?: {
+    dateStyle?: 'cost' | 'ymd';
+    showRequiredMark?: boolean;
     stationDisplayShort?: boolean;
     supplierDisplayShort?: boolean;
   },
@@ -401,11 +422,14 @@ function resolveFieldColumns(
         const entry = catalogMap.get(field);
         if (!entry) return null;
         return buildLeafColumn(entry, {
+          dateStyle: options?.dateStyle,
           mode,
           override: layout.fieldOverrides?.[field],
           stationDisplayShort: options?.stationDisplayShort,
           supplierDisplayShort: options?.supplierDisplayShort,
-          required: isFieldRequiredInLayout(layout, field),
+          required:
+            options?.showRequiredMark !== false &&
+            isFieldRequiredInLayout(layout, field),
           title: resolveFieldTitle(mode, field, layout),
         });
       })
@@ -418,7 +442,9 @@ function buildLayoutColumns(
   layout: CostTableTemplateLayout,
   catalogMap: Map<string, FieldCatalogEntry>,
   options?: {
+    dateStyle?: 'cost' | 'ymd';
     flattenGroups?: boolean;
+    showRequiredMark?: boolean;
     stationDisplayShort?: boolean;
     supplierDisplayShort?: boolean;
   },
@@ -454,11 +480,14 @@ function buildLayoutColumns(
       if (entry) {
         columns.push(
           buildLeafColumn(entry, {
+            dateStyle: options?.dateStyle,
             mode,
             override: layout.fieldOverrides?.[field],
             stationDisplayShort: options?.stationDisplayShort,
             supplierDisplayShort: options?.supplierDisplayShort,
-            required: isFieldRequiredInLayout(layout, field),
+            required:
+              options?.showRequiredMark !== false &&
+              isFieldRequiredInLayout(layout, field),
             title: resolveFieldTitle(mode, field, layout),
           }) as Record<string, unknown>,
         );
@@ -485,11 +514,14 @@ function buildLayoutColumns(
       if (entry) {
         children.push(
           buildLeafColumn(entry, {
+            dateStyle: options?.dateStyle,
             mode,
             override: layout.fieldOverrides?.[groupedField],
             stationDisplayShort: options?.stationDisplayShort,
             supplierDisplayShort: options?.supplierDisplayShort,
-            required: isFieldRequiredInLayout(layout, groupedField),
+            required:
+              options?.showRequiredMark !== false &&
+              isFieldRequiredInLayout(layout, groupedField),
             title: resolveFieldTitle(mode, groupedField, layout),
           }) as Record<string, unknown>,
         );
@@ -522,19 +554,23 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
     onActionClick,
     stationDisplayShort = false,
     supplierDisplayShort = false,
+    dateStyle = 'cost',
     seqWidth = 52,
+    showRequiredMark = true,
     template = getDefaultTemplate(mode),
   } = options;
 
   if (mode === 'fumigation') {
     return buildFumigationColumnsFromLayout(template.layout, {
       canEdit,
+      formatDateValue: dateStyle === 'ymd' ? formatDateYmd : undefined,
       includeCheckbox,
       includeOperation,
       nameField: 'region',
       nameTitle: $t('page.costLibrary.fumigationFields.region'),
       onActionClick,
       seqWidth,
+      showRequiredMark,
     });
   }
 
@@ -551,7 +587,9 @@ export function buildColumnsFromTemplate<T extends { id: number }>(
       : template.layout,
     catalogMap,
     {
+      dateStyle,
       flattenGroups: mode === 'road',
+      showRequiredMark,
       stationDisplayShort,
       supplierDisplayShort,
     },

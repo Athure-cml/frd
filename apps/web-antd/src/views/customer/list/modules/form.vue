@@ -16,7 +16,7 @@ import { toCustomerSavePayload, useCustomerFormSchema } from '../data';
 
 const emit = defineEmits<{ success: [] }>();
 
-const { canViewPartyCode } = usePartyCodeVisibility('customer:edit');
+const { canViewPartyCode } = usePartyCodeVisibility('customer:import');
 
 const customerId = ref<number>();
 const isEdit = computed(() => !!customerId.value);

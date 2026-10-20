@@ -1,8 +1,7 @@
 import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemRoleApi } from '#/api/system/role';
-
-import { useUserStore } from '@vben/stores';
+import type { SystemUserApi } from '#/api/system/user';
 
 import { getUserList } from '#/api/system/user';
 import { $t } from '#/locales';
@@ -16,33 +15,47 @@ import { dataScopeTagOptions } from '../shared/tags';
 
 const t = (key: string) => $t(`page.system.${key}`);
 
-function currentUserId(): number | undefined {
-  const raw = useUserStore().userInfo?.userId;
-  if (raw === null || raw === undefined || raw === '') {
-    return undefined;
+/** 表单哨兵：本人（运行时由后端并入登录人，不落库） */
+const ASSIGNED_SELF_SENTINEL = 0;
+
+/** 指定数据只能勾选当前编辑角色以外的用户 */
+function belongsToEditingRole(
+  user: SystemUserApi.SystemUser,
+  editingRoleCode?: string,
+) {
+  const code = editingRoleCode?.trim();
+  if (!code) {
+    return false;
   }
-  const id = Number(raw);
-  return Number.isFinite(id) && id > 0 ? id : undefined;
+  return (user.roles ?? []).includes(code);
 }
 
-/** 当前登录用户默认勾选且不可取消 */
+/** 本人固定勾选且不可取消 */
 function withLockedSelf(ids?: null | number[]) {
-  const selfId = currentUserId();
   const others = (ids ?? []).filter(
     (id) =>
       id !== null &&
       id !== undefined &&
-      id > 0 &&
-      (selfId === undefined || id !== selfId),
+      id !== ASSIGNED_SELF_SENTINEL &&
+      id > 0,
   );
-  return selfId === undefined ? others : [selfId, ...others];
+  return [ASSIGNED_SELF_SENTINEL, ...others];
 }
 
-function normalizeAssignedUserIds(ids?: null | number[]) {
-  return withLockedSelf(ids);
+function stripLockedSelf(ids?: null | number[]) {
+  return (ids ?? []).filter(
+    (id) =>
+      id !== null &&
+      id !== undefined &&
+      id !== ASSIGNED_SELF_SENTINEL &&
+      id > 0,
+  );
 }
 
-export function useRoleFormSchema(isBuiltin: boolean): VbenFormSchema[] {
+export function useRoleFormSchema(
+  isBuiltin: boolean,
+  editingRoleCode?: string,
+): VbenFormSchema[] {
   return [
     {
       component: 'Input',
@@ -76,20 +89,42 @@ export function useRoleFormSchema(isBuiltin: boolean): VbenFormSchema[] {
     },
     {
       component: 'ApiSelect',
-      componentProps: (_values, formApi) => ({
+      componentProps: (values, formApi) => ({
         allowClear: false,
         api: async () => {
-          const lockedId = currentUserId();
           const result = await getUserList({
             page: 1,
             pageSize: 500,
             status: 1,
           });
-          return result.items.map((user) => ({
-            disabled: lockedId !== undefined && user.id === lockedId,
-            label: `${user.realName}（${user.username}）`,
-            value: user.id,
-          }));
+          const outsiders = result.items.filter(
+            (user) => !belongsToEditingRole(user, editingRoleCode),
+          );
+          const allowed = new Set(outsiders.map((user) => user.id));
+          const current = withLockedSelf(
+            Array.isArray(values?.assignedUserIds)
+              ? values.assignedUserIds
+              : [],
+          );
+          const cleaned = withLockedSelf(
+            current.filter(
+              (id) => id === ASSIGNED_SELF_SENTINEL || allowed.has(id),
+            ),
+          );
+          if (cleaned.join(',') !== current.join(',')) {
+            formApi?.setFieldValue?.('assignedUserIds', cleaned);
+          }
+          return [
+            {
+              disabled: true,
+              label: t('dataScope.selfLocked'),
+              value: ASSIGNED_SELF_SENTINEL,
+            },
+            ...outsiders.map((user) => ({
+              label: `${user.realName}（${user.username}）`,
+              value: user.id,
+            })),
+          ];
         },
         class: 'w-full',
         mode: 'multiple',
@@ -102,7 +137,7 @@ export function useRoleFormSchema(isBuiltin: boolean): VbenFormSchema[] {
           );
         },
       }),
-      defaultValue: withLockedSelf([]),
+      defaultValue: [ASSIGNED_SELF_SENTINEL],
       dependencies: {
         required(values) {
           return values?.dataScope === 'ASSIGNED';
@@ -288,9 +323,7 @@ export function toRoleSavePayload(
     remark: values.remark,
     permissionCodes: values.permissionCodes ?? [],
     assignedUserIds:
-      dataScope === 'ASSIGNED'
-        ? normalizeAssignedUserIds(values.assignedUserIds)
-        : [],
+      dataScope === 'ASSIGNED' ? stripLockedSelf(values.assignedUserIds) : [],
   };
 }
 
@@ -305,6 +338,6 @@ export function rowToRoleFormValues(row: SystemRoleApi.SystemRole) {
     assignedUserIds:
       row.dataScope === 'ASSIGNED'
         ? withLockedSelf(row.assignedUserIds)
-        : withLockedSelf([]),
+        : [ASSIGNED_SELF_SENTINEL],
   };
 }
