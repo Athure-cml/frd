@@ -211,7 +211,7 @@
   white-space: nowrap;
 }
 
-/* 表头单行紧凑：贴合字段文案，禁止换行 */
+/* 表头单行紧凑：贴合字段文案，禁止换行（排序按钮定位恢复为仓库原始/vxe 默认） */
 .cost-library-grid .vxe-header--column,
 .cost-library-grid .vxe-header--column .vxe-cell,
 .cost-library-grid .vxe-header--column .vxe-cell--title,
@@ -311,6 +311,30 @@
 :root .vxe-grid.cost-library-grid {
   height: 100% !important;
   min-height: 360px !important;
+}
+
+.cost-library-grid-host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+}
+
+/*
+ * vxe 横向滚动靠自定义条 .vxe-table--scroll-x-virtual，
+ * 原生 scrollbar 已被 scrollbar-width:none 藏掉，不要再强开 overflow-x。
+ * 这里只保证布局区不被撑破，并把自定义横条露出来。
+ */
+.cost-library-grid .vxe-grid--layout-body-content-wrapper {
+  min-width: 0;
+  min-height: 0;
+}
+
+.cost-library-grid .vxe-table--scroll-x-virtual {
+  flex-shrink: 0;
 }
 
 /* 小屏：紧凑工具栏 + 按视口估算高度 */

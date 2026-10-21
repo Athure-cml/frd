@@ -70,6 +70,10 @@ import { toCopyDrawerData, toRenewDrawerData } from '../shared/drawer-data';
 import { createHighlightOnlySearchField } from '../shared/highlight-only-search';
 import { createInQuoteLibrarySearchField } from '../shared/in-quote-library-search';
 import { createCostRowHighlightStyleHandlers } from '../shared/row-highlight-style';
+import {
+  scheduleGridRecalculate,
+  useGridResizeRecalculate,
+} from '../shared/schedule-grid-recalculate';
 import { normalizeCostStatusSearchParam } from '../shared/status-search';
 import {
   getGridStorageId,
@@ -224,12 +228,18 @@ function applyTemplate(force = false) {
       return;
     }
     try {
+      // 不再 resetColumn：会清空滚动态，和菜单加载叠在一起必闪横条
       $grid.loadColumn?.(columns);
-      $grid.recalculate?.(true);
       appliedLayoutSignature = signature;
     } catch {
       // grid may already be disposed during KeepAlive switch
+      return;
     }
+    scheduleGridRecalculate(() =>
+      pageAlive
+        ? (gridApi.grid as null | { recalculate?: (refull?: boolean) => void })
+        : null,
+    );
   });
 }
 
@@ -252,7 +262,7 @@ async function refreshTemplates(options?: { force?: boolean }) {
     if (active) {
       activeTemplateId.value = active.id;
       saveTemplateId(props.mode, active.id);
-      applyTemplate();
+      applyTemplate(options?.force === true);
     }
   } catch {
     // keep default template when fetch fails
@@ -308,9 +318,15 @@ onMounted(() => {
 onActivated(() => {
   pageAlive = true;
   appliedLayoutSignature = '';
-  refreshTemplates();
+  // 从模板编辑返回时强制拉最新布局（含列宽）
+  void refreshTemplates({ force: true });
   applyAiCostPrefill(consumeAiCostPrefill(props.mode as AiCostPrefillMode));
   void nextTick(() => patchSearchFormReset());
+  scheduleGridRecalculate(() =>
+    pageAlive
+      ? (gridApi.grid as null | { recalculate?: (refull?: boolean) => void })
+      : null,
+  );
 });
 
 onDeactivated(() => {
@@ -829,6 +845,13 @@ const [Grid, gridApi] = useVbenVxeGrid({
       void applySelectionToRows(lastPageItems);
       syncSelection();
       relationFocus.onDataRendered(lastPageItems);
+      scheduleGridRecalculate(() =>
+        pageAlive
+          ? (gridApi.grid as null | {
+              recalculate?: (refull?: boolean) => void;
+            })
+          : null,
+      );
     },
   },
   gridOptions: {
@@ -837,6 +860,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
       reserve: false,
     },
     columns: resolveColumns(),
+    // 不落本地列宽/显隐缓存：否则会盖住模板列宽，或藏列后 fit 撑满导致无横滚
+    customConfig: {
+      storage: false,
+    },
+    // 禁止列宽自适应撑满：fit 为 true 时会把 scrollXWidth 拉成容器宽，自定义横条被隐藏
+    fit: false,
     // 由 .cost-library-grid CSS 覆盖全局 height:auto，保证加载态可见
     height: '100%',
     id: getGridStorageId(
@@ -877,7 +906,16 @@ const [Grid, gridApi] = useVbenVxeGrid({
       remote: true,
       trigger: 'default',
     },
+    // 宽表始终保留横条轨道，避免菜单加载抖动时 overflowX 被误判关掉
+    scrollbarConfig: props.scrollX
+      ? {
+          x: { visible: 'visible' },
+        }
+      : undefined,
+    // vxe 用自定义横条，必须保持 scrollX；原生条已被 CSS 隐藏
     scrollX: props.scrollX ? { enabled: true } : undefined,
+    // 表头过长省略，悬停显示完整标题
+    showHeaderOverflow: 'tooltip',
     toolbarConfig: {
       custom: true,
       refresh: true,
@@ -890,6 +928,13 @@ const [Grid, gridApi] = useVbenVxeGrid({
     rowStyle: highlightHandlers.rowStyle,
   } as VxeTableGridOptions,
 });
+
+const gridHostRef = ref<HTMLElement | null>(null);
+useGridResizeRecalculate(gridHostRef, () =>
+  pageAlive
+    ? (gridApi.grid as null | { recalculate?: (refull?: boolean) => void })
+    : null,
+);
 
 watch(isMobile, (mobile) => {
   if (!pageAlive) {
@@ -1112,107 +1157,113 @@ async function onPromoteToQuoteLibrary() {
       :mode="mode"
       @success="onBatchSuccess"
     />
-    <Grid
-      :form-options="searchFormOptions"
-      :grid-class="gridClass ?? 'cost-library-grid'"
-    >
-      <template #toolbar-tools>
-        <div class="cost-toolbar">
-          <div class="cost-toolbar__group">
-            <Button
-              v-if="canViewTemplates"
-              :size="toolbarSize"
-              @click="onManageTemplates"
-            >
-              <Settings class="size-3.5" />
-              {{ templateBtnLabel }}
-            </Button>
-            <Button
-              v-if="canEdit"
-              :size="toolbarSize"
-              type="primary"
-              @click="onCreate"
-            >
-              <Plus class="size-3.5" />
-              {{ createBtnLabel }}
-            </Button>
-            <Button v-if="canEdit" :size="toolbarSize" @click="onImport">
-              <ArrowUpToLine class="size-3.5" />
-              {{ $t('page.costLibrary.actions.import') }}
-            </Button>
-            <Button :loading="exporting" :size="toolbarSize" @click="onExport">
-              <Download class="size-3.5" />
-              {{ $t('page.costLibrary.actions.export') }}
-            </Button>
-            <Button
-              v-if="enableIntroduceQuote && canIntroduceQuote"
-              :disabled="!introduceQuoteEnabled"
-              :size="toolbarSize"
-              type="primary"
-              ghost
-              @click="onIntroduceQuote"
-            >
-              {{ $t('page.costLibrary.actions.introduceQuote') }}
-            </Button>
-          </div>
-          <div class="cost-toolbar__group cost-toolbar__group--batch">
-            <Tag v-if="selectedCount > 0" class="m-0" color="processing">
-              {{ $t('page.costLibrary.hint.selectedCount', [selectedCount]) }}
-            </Tag>
-            <Button
-              v-if="!crossPageSelectActive"
-              :loading="selectingAllPages"
-              :size="toolbarSize"
-              @click="onSelectAllAcrossPages"
-            >
-              {{ $t('page.costLibrary.actions.selectAllAcrossPages') }}
-            </Button>
-            <Button
-              v-if="crossPageSelectActive"
-              class="cost-clear-selection-btn"
-              ghost
-              type="primary"
-              :size="toolbarSize"
-              @click="clearSelection"
-            >
-              {{ $t('page.costLibrary.actions.clearSelection') }}
-            </Button>
-            <Dropdown :trigger="['click']">
-              <Button :size="toolbarSize">
-                {{ $t('page.costLibrary.highlight.markMenu') }}
+    <div ref="gridHostRef" class="cost-library-grid-host h-full min-h-0">
+      <Grid
+        :form-options="searchFormOptions"
+        :grid-class="gridClass ?? 'cost-library-grid'"
+      >
+        <template #toolbar-tools>
+          <div class="cost-toolbar">
+            <div class="cost-toolbar__group">
+              <Button
+                v-if="canViewTemplates"
+                :size="toolbarSize"
+                @click="onManageTemplates"
+              >
+                <Settings class="size-3.5" />
+                {{ templateBtnLabel }}
               </Button>
-              <template #overlay>
-                <Menu
-                  :items="highlightMenuItems"
-                  @click="onHighlightMenuClick"
-                />
-              </template>
-            </Dropdown>
-            <Button
-              v-if="canPromoteQuoteLibrary"
-              :disabled="!promoteQuoteLibraryEnabled"
-              :size="toolbarSize"
-              type="primary"
-              ghost
-              @click="onPromoteToQuoteLibrary"
-            >
-              {{ $t('page.costLibrary.actions.promoteToQuoteLibrary') }}
-            </Button>
-            <Dropdown
-              v-if="canEdit"
-              :disabled="selectedCount === 0"
-              :trigger="['click']"
-            >
-              <Button :disabled="selectedCount === 0" :size="toolbarSize">
-                {{ $t('page.costLibrary.actions.batchMenu') }}
+              <Button
+                v-if="canEdit"
+                :size="toolbarSize"
+                type="primary"
+                @click="onCreate"
+              >
+                <Plus class="size-3.5" />
+                {{ createBtnLabel }}
               </Button>
-              <template #overlay>
-                <Menu :items="batchMenuItems" @click="onBatchMenuClick" />
-              </template>
-            </Dropdown>
+              <Button v-if="canEdit" :size="toolbarSize" @click="onImport">
+                <ArrowUpToLine class="size-3.5" />
+                {{ $t('page.costLibrary.actions.import') }}
+              </Button>
+              <Button
+                :loading="exporting"
+                :size="toolbarSize"
+                @click="onExport"
+              >
+                <Download class="size-3.5" />
+                {{ $t('page.costLibrary.actions.export') }}
+              </Button>
+              <Button
+                v-if="enableIntroduceQuote && canIntroduceQuote"
+                :disabled="!introduceQuoteEnabled"
+                :size="toolbarSize"
+                type="primary"
+                ghost
+                @click="onIntroduceQuote"
+              >
+                {{ $t('page.costLibrary.actions.introduceQuote') }}
+              </Button>
+            </div>
+            <div class="cost-toolbar__group cost-toolbar__group--batch">
+              <Tag v-if="selectedCount > 0" class="m-0" color="processing">
+                {{ $t('page.costLibrary.hint.selectedCount', [selectedCount]) }}
+              </Tag>
+              <Button
+                v-if="!crossPageSelectActive"
+                :loading="selectingAllPages"
+                :size="toolbarSize"
+                @click="onSelectAllAcrossPages"
+              >
+                {{ $t('page.costLibrary.actions.selectAllAcrossPages') }}
+              </Button>
+              <Button
+                v-if="crossPageSelectActive"
+                class="cost-clear-selection-btn"
+                ghost
+                type="primary"
+                :size="toolbarSize"
+                @click="clearSelection"
+              >
+                {{ $t('page.costLibrary.actions.clearSelection') }}
+              </Button>
+              <Dropdown :trigger="['click']">
+                <Button :size="toolbarSize">
+                  {{ $t('page.costLibrary.highlight.markMenu') }}
+                </Button>
+                <template #overlay>
+                  <Menu
+                    :items="highlightMenuItems"
+                    @click="onHighlightMenuClick"
+                  />
+                </template>
+              </Dropdown>
+              <Button
+                v-if="canPromoteQuoteLibrary"
+                :disabled="!promoteQuoteLibraryEnabled"
+                :size="toolbarSize"
+                type="primary"
+                ghost
+                @click="onPromoteToQuoteLibrary"
+              >
+                {{ $t('page.costLibrary.actions.promoteToQuoteLibrary') }}
+              </Button>
+              <Dropdown
+                v-if="canEdit"
+                :disabled="selectedCount === 0"
+                :trigger="['click']"
+              >
+                <Button :disabled="selectedCount === 0" :size="toolbarSize">
+                  {{ $t('page.costLibrary.actions.batchMenu') }}
+                </Button>
+                <template #overlay>
+                  <Menu :items="batchMenuItems" @click="onBatchMenuClick" />
+                </template>
+              </Dropdown>
+            </div>
           </div>
-        </div>
-      </template>
-    </Grid>
+        </template>
+      </Grid>
+    </div>
   </Page>
 </template>

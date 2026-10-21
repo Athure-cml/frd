@@ -5,7 +5,7 @@ import { preferences } from '@vben/preferences';
 import { $t } from '#/locales';
 
 import { buildOperationColumn } from '../../system/shared/columns';
-import { costStatusTagOptions } from './tags';
+import { costStatusTagOptions, quoteLibraryStatusTagOptions } from './tags';
 
 function isMobileViewport() {
   return !!preferences.app.isMobile;
@@ -26,8 +26,10 @@ export const COST_RELATION_COL_WIDTH = 120;
 export const QUOTE_RELATION_COL_WIDTH = 168;
 /** 操作「修改 / 复制 / 删除」 */
 const COST_OPERATION_COL_WIDTH_DEFAULT = 148;
-/** 报价库操作「修改 / 删除」 */
-const QUOTE_LIBRARY_OPERATION_COL_WIDTH = 108;
+/** 报价库操作「确认 / 修改 / 删除」 */
+const QUOTE_LIBRARY_OPERATION_COL_WIDTH = 168;
+/** 报价库状态列（含「待确认」） */
+const QUOTE_LIBRARY_STATUS_COL_WIDTH = 88;
 /** 操作「修改 / 续期 / 复制 / 删除」 */
 const COST_OPERATION_COL_WIDTH_WITH_RENEW = 188;
 
@@ -94,8 +96,17 @@ type QuoteLibraryLockableRow = { inQuoteLibrary?: boolean };
 
 type QuoteOrderLockedRow = { quoteOrderLocked?: boolean };
 
+type QuoteLibraryConfirmRow = {
+  confirmStatus?: 'confirmed' | 'pendingConfirm';
+  quoteOrderLocked?: boolean;
+};
+
 function disableWhenQuoteOrderLocked(row: QuoteOrderLockedRow) {
   return row.quoteOrderLocked === true;
+}
+
+function showQuoteLibraryConfirm(row: QuoteLibraryConfirmRow) {
+  return row.confirmStatus === 'pendingConfirm';
 }
 
 /** 成本库：成交报价单已引用 → 禁改删；仅入报价库 → 仍禁删 */
@@ -109,29 +120,87 @@ function disableCostDeleteWhenLocked(
   return row.quoteOrderLocked === true || row.inQuoteLibrary === true;
 }
 
-/** 报价库列表操作列：删除走表格内 Popconfirm 气泡确认 */
+/** 报价库状态列：标签含「待确认」，列宽略增 */
+export function applyQuoteLibraryStatusColumn<T>(
+  columns: VxeTableGridOptions<T>['columns'],
+) {
+  if (!columns?.length) {
+    return columns;
+  }
+  const walk = (cols: NonNullable<VxeTableGridOptions<T>['columns']>) => {
+    for (const column of cols) {
+      if ((column as { field?: string }).field === 'status') {
+        (
+          column as {
+            cellRender?: { name: string; options: unknown };
+            minWidth?: number;
+            width?: number;
+          }
+        ).cellRender = {
+          name: 'CellTag',
+          options: quoteLibraryStatusTagOptions(),
+        };
+        (column as { minWidth?: number }).minWidth =
+          QUOTE_LIBRARY_STATUS_COL_WIDTH;
+        (column as { width?: number }).width = QUOTE_LIBRARY_STATUS_COL_WIDTH;
+      }
+      const children = (column as { children?: typeof cols }).children;
+      if (children?.length) {
+        walk(children);
+      }
+    }
+  };
+  walk(columns);
+  return columns;
+}
+
+/** 报价库列表操作列：确认 / 修改 / 删除（删除走表格内 Popconfirm） */
 export function appendQuoteLibraryOperationColumn<T extends { id: number }>(
   columns: VxeTableGridOptions<T>['columns'],
-  canEdit: boolean,
+  canManage: boolean,
   onActionClick: OnActionClickFn<T>,
+  options?: {
+    canConfirm?: boolean;
+    canDelete?: boolean;
+    canEdit?: boolean;
+  },
 ) {
   const mobile = isMobileViewport();
-  const operation = buildOperationColumn(canEdit, onActionClick, {
+  const canEdit = options?.canEdit !== false;
+  const canDelete = options?.canDelete !== false;
+  const canConfirm = options?.canConfirm === true;
+  const operationOptions: Array<Record<string, any>> = [];
+  if (canConfirm) {
+    operationOptions.push({
+      code: 'confirm',
+      confirmDescription: false,
+      confirmTitle: $t('page.quote.library.confirm.confirmValid'),
+      show: showQuoteLibraryConfirm,
+      text: $t('page.quote.library.actions.confirm'),
+    });
+  }
+  if (canEdit) {
+    operationOptions.push({
+      code: 'edit',
+      disabled: disableWhenQuoteOrderLocked,
+    });
+  }
+  if (canDelete) {
+    operationOptions.push({
+      code: 'delete',
+      confirmDescription: false,
+      confirmTitle: $t('page.costLibrary.confirm.delete'),
+      disabled: disableWhenQuoteOrderLocked,
+    });
+  }
+  if (operationOptions.length === 0) {
+    return columns;
+  }
+  const operation = buildOperationColumn(canManage, onActionClick, {
     minWidth: QUOTE_LIBRARY_OPERATION_COL_WIDTH,
     nameField: 'id',
     nameTitle: $t('page.quote.library.deleteNameTitle'),
-    operationOptions: [
-      {
-        code: 'edit',
-        disabled: disableWhenQuoteOrderLocked,
-      },
-      {
-        code: 'delete',
-        confirmDescription: false,
-        confirmTitle: $t('page.costLibrary.confirm.delete'),
-        disabled: disableWhenQuoteOrderLocked,
-      },
-    ],
+    operationOptions,
     width: QUOTE_LIBRARY_OPERATION_COL_WIDTH,
   });
   if (operation) {

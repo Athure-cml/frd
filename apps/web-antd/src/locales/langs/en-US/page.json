@@ -936,14 +936,32 @@
         "feeEmpty": "Enter at least one fee field",
         "resetSuccess": "Fees reset to the default from cost and quote rules",
         "deleteUnlocksCost": "Removing from the quote library unlocks the linked cost for editing.",
-        "quoteOrderLocked": "This record is referenced by a quote and cannot be edited or deleted."
+        "quoteOrderLocked": "This record is referenced by a quote and cannot be edited or deleted.",
+        "confirmSuccess": "Confirmed",
+        "selectPendingConfirm": "Select pending-confirm rows"
       },
       "confirm": {
         "deleteTitle": "Remove from quote library",
         "delete": "Confirm delete?",
         "deleteNamed": "Confirm delete \"{0}\"?",
-        "batchDelete": "Confirm delete {0} selected row(s)?"
-      }
+        "batchDelete": "Confirm delete {0} selected row(s)?",
+        "confirmValid": "Confirm that this data is valid?",
+        "confirmValidTitle": "Confirm data",
+        "batchConfirm": "Confirmed data will take effect in the quote library",
+        "batchConfirmTitle": "Batch confirm"
+      },
+      "fields": {
+        "confirmStatus": "Confirm Status"
+      },
+      "actions": {
+        "confirm": "Confirm",
+        "batchConfirm": "Batch Confirm"
+      },
+      "confirmStatus": {
+        "pendingConfirm": "Pending Confirm",
+        "confirmed": "Confirmed"
+      },
+      "confirmStatusFilterAll": "All confirm statuses"
     },
     "createTitle": "New Quote",
     "editTitle": "Edit Quote",
@@ -1152,10 +1170,12 @@
       "noCostSnapshot": "No quote library snapshot",
       "noCostImported": "Not imported: {0}",
       "costExpired": "Expired quote library records cannot be imported. Choose active or pending ones.",
+      "costPendingConfirm": "Pending-confirm quote library records cannot be imported. Confirm them first.",
       "noCostMatchType": "{0}: no matching quote library data",
       "costImportedType": "Imported {0}",
       "costImporting": "Applying quote rules…",
       "maxSeaFreight": "Up to {0} ocean freight lines allowed",
+      "maxRoadFreight": "Up to {0} truck quote library records allowed",
       "sheetGenerated": "Quote sheet generated — you may adjust values before saving",
       "zipSearching": "Searching…"
     },
@@ -1207,6 +1227,7 @@
       "seaSsl": "SSL",
       "seaRemark": "REMARK",
       "truckingFee": "Trucking fee",
+      "truckingFeeN": "Trucking fee {0}",
       "truckingFeeFmNonOak": "Trucking fee FM NON OAK",
       "truckingFeeFmOak": "Trucking fee FM OAK",
       "truckExtras": "Additional Trucking Fees",
@@ -1228,9 +1249,9 @@
       "cargoAgent": "CARGO AGENT FEE",
       "remark": "REMARK",
       "unitPerContainer": "Per Container",
-      "unitNsLift": "Per Container",
-      "unitChassis": "Per Day if need",
-      "unitWaiting": "Per Hour, 2H Free",
+      "unitNsLift": "Per Container /Per Time if need",
+      "unitChassis": "Per Container /Per Day if need",
+      "unitWaiting": "Per Hour, 2H Free if need",
       "unitPerBill": "PER BILL",
       "unitPerCif": "PER CIF AMOUNT",
       "unitBankFee": "BANK FEE AT COST"
@@ -1265,8 +1286,8 @@
       "selectOne": "Select one quote library record",
       "selectSea": "Select at least one ocean quote library record",
       "selectedCount": "{0} selected",
-      "confirmHint": "Click to select, double-click or press Confirm to import. Expired records are searchable but not importable.",
-      "confirmHintSea": "Multi-select up to {0}; matched/imported rows are pre-checked. Expired records are searchable but not importable.",
+      "confirmHint": "Click to select, double-click or press Confirm to import. Expired and pending-confirm records are searchable but not importable.",
+      "confirmHintSea": "Multi-select up to {0}; matched/imported rows are pre-checked. Expired and pending-confirm records are searchable but not importable.",
       "selectRows": "Select at least one quote library record",
       "addSelected": "Add selected ({0})",
       "selectedHint": "{0} quote library record(s) selected",

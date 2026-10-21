@@ -73,11 +73,11 @@ function listByType(type: QuoteCostType) {
 
 const sections = computed(() =>
   visibleCostTypes.value.map((type) => {
-    if (type === 'SEA') {
-      const seaMatches = listByType('SEA');
+    if (type === 'SEA' || type === 'ROAD') {
+      const typedMatches = listByType(type);
       return {
-        match: seaMatches[0],
-        matches: seaMatches,
+        match: typedMatches[0],
+        matches: typedMatches,
         type,
       };
     }

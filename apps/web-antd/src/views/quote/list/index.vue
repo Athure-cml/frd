@@ -25,6 +25,10 @@ import {
 import { $t } from '#/locales';
 
 import {
+  scheduleGridRecalculate,
+  useGridResizeRecalculate,
+} from '../../cost-library/shared/schedule-grid-recalculate';
+import {
   buildListExportParams,
   getGridSelectedIds,
 } from '../../shared/export-params';
@@ -176,10 +180,21 @@ const searchFormOptions = useI18nFormOptions(() => ({
 
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
+  gridEvents: {
+    dataRendered: () => {
+      scheduleGridRecalculate(
+        () =>
+          gridApi.grid as null | {
+            recalculate?: (refull?: boolean) => void;
+          },
+      );
+    },
+  },
   gridOptions: {
     id: 'quote-list',
     columns: useQuoteColumns(onActionClick, canDelete, canVoid, canOperateRow),
-    height: 'auto',
+    // 勿用 auto：数据加载后表体变高，横向滚动条会被裁掉，直到 resize 才恢复
+    height: '100%',
     pagerConfig: {},
     proxyConfig: {
       ajax: {
@@ -207,6 +222,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
       highlight: true,
       reserve: true,
     },
+    fit: false,
+    scrollbarConfig: {
+      x: { visible: 'visible' },
+    },
+    // vxe 用自定义横条，必须保持 scrollX
     scrollX: { enabled: true },
     toolbarConfig: {
       custom: true,
@@ -216,6 +236,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
   } as VxeTableGridOptions<QuoteApi.QuoteListItem>,
 });
+
+const gridHostRef = ref<HTMLElement | null>(null);
+useGridResizeRecalculate(
+  gridHostRef,
+  () =>
+    gridApi.grid as null | {
+      recalculate?: (refull?: boolean) => void;
+    },
+);
 
 watch(
   () => [route.query.libraryMode, route.query.libraryCostId],
@@ -237,35 +266,37 @@ watch(
         {{ $t('page.quote.clearLibraryFilter') }}
       </Button>
     </div>
-    <Grid class="quote-grid" :form-options="searchFormOptions">
-      <template #toolbar-tools>
-        <Button
-          v-if="canExport"
-          class="mr-2"
-          :loading="exporting"
-          @click="onBatchExport"
-        >
-          <Download class="size-4" />
-          {{ $t('page.quote.actions.export') }}
-        </Button>
-        <Button v-if="canCreate" type="primary" @click="onCreate">
-          <Plus class="size-4" />
-          {{ $t('page.quote.actions.create') }}
-        </Button>
-      </template>
-      <template #quoteNo="{ row }">
-        <button class="quote-no-link" type="button" @click="onView(row)">
-          {{ row.quoteNo }}
-        </button>
-      </template>
-      <template #status="{ row }">
-        <Tag
-          :class="resolveQuoteListStatusTag(row).className"
-          :color="resolveQuoteListStatusTag(row).color"
-        >
-          {{ resolveQuoteListStatusTag(row).label }}
-        </Tag>
-      </template>
-    </Grid>
+    <div ref="gridHostRef" class="cost-library-grid-host h-full min-h-0">
+      <Grid class="quote-grid" :form-options="searchFormOptions">
+        <template #toolbar-tools>
+          <Button
+            v-if="canExport"
+            class="mr-2"
+            :loading="exporting"
+            @click="onBatchExport"
+          >
+            <Download class="size-4" />
+            {{ $t('page.quote.actions.export') }}
+          </Button>
+          <Button v-if="canCreate" type="primary" @click="onCreate">
+            <Plus class="size-4" />
+            {{ $t('page.quote.actions.create') }}
+          </Button>
+        </template>
+        <template #quoteNo="{ row }">
+          <button class="quote-no-link" type="button" @click="onView(row)">
+            {{ row.quoteNo }}
+          </button>
+        </template>
+        <template #status="{ row }">
+          <Tag
+            :class="resolveQuoteListStatusTag(row).className"
+            :color="resolveQuoteListStatusTag(row).color"
+          >
+            {{ resolveQuoteListStatusTag(row).label }}
+          </Tag>
+        </template>
+      </Grid>
+    </div>
   </Page>
 </template>

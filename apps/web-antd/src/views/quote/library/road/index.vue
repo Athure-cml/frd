@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { useRoadSearchSchema } from '../../../cost-library/road/data';
 import QuoteLibraryPage from '../components/quote-library-page.vue';
+import { useQuoteLibraryRoadSearchSchema } from '../shared/quote-library-search';
 </script>
 
 <template>
@@ -8,7 +8,7 @@ import QuoteLibraryPage from '../components/quote-library-page.vue';
     description-key="page.quote.library.roadDesc"
     export-filename="卡车报价库.xlsx"
     mode="road"
-    :search-schema="useRoadSearchSchema"
+    :search-schema="useQuoteLibraryRoadSearchSchema"
     title-key="page.quote.library.road"
   />
 </template>

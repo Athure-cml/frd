@@ -191,4 +191,29 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+
+  .quote-print-sheet {
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: none !important;
+
+    /* 撑满 A4 可印区域，避免蓝框下方大片留白 */
+    min-height: 281mm !important;
+    margin: 0 !important;
+    border: 1px solid #b4c6e7;
+  }
+
+  .quote-print-sheet__footer {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .quote-print-sheet__remark {
+    flex: 1 1 auto;
+    min-height: 48px;
+  }
 }

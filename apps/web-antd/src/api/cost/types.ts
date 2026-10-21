@@ -2,6 +2,9 @@ export type CostMode = 'fumigation' | 'road' | 'sea';
 
 export type CostStatus = 'active' | 'expired' | 'pending';
 
+/** 报价库确认状态（与成本库 CostStatus 无关） */
+export type QuoteLibraryConfirmStatus = 'confirmed' | 'pendingConfirm';
+
 export interface CostHighlightView {
   color: string;
   deptCount?: number;
@@ -59,6 +62,7 @@ export interface FreightCostRecord {
   freightValidDate?: string;
   gri?: number;
   griValidDate?: string;
+  confirmStatus?: QuoteLibraryConfirmStatus;
   highlight?: CostHighlightView | null;
   id: number;
   inQuoteLibrary?: boolean;
@@ -111,6 +115,7 @@ export interface RoadCostRecord {
   city: string;
   extraFields?: Record<string, unknown>;
   fsc?: number;
+  confirmStatus?: QuoteLibraryConfirmStatus;
   highlight?: CostHighlightView | null;
   id: number;
   inQuoteLibrary?: boolean;
@@ -144,6 +149,7 @@ export type RoadCostSave = Omit<RoadCostRecord, 'id' | 'updatedAt'> & {
 export interface FumigationCostRecord {
   address?: string;
   extraFields?: Record<string, unknown>;
+  confirmStatus?: QuoteLibraryConfirmStatus;
   highlight?: CostHighlightView | null;
   id: number;
   inQuoteLibrary?: boolean;

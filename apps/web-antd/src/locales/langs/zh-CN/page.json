@@ -935,14 +935,32 @@
         "feeEmpty": "请至少填写一个费用字段",
         "resetSuccess": "已重置为成本与报价规则匹配的默认费用",
         "deleteUnlocksCost": "删除后将从报价库移除，对应成本恢复可编辑。",
-        "quoteOrderLocked": "该记录已被报价单引用，无法修改或删除。"
+        "quoteOrderLocked": "该记录已被报价单引用，无法修改或删除。",
+        "confirmSuccess": "确认成功",
+        "selectPendingConfirm": "请选择待确认的记录"
       },
       "confirm": {
         "deleteTitle": "从报价库删除",
         "delete": "是否确认删除？",
         "deleteNamed": "是否确认删除「{0}」？",
-        "batchDelete": "是否确认删除选中的 {0} 条？"
-      }
+        "batchDelete": "是否确认删除选中的 {0} 条？",
+        "confirmValid": "是否确认数据有效？",
+        "confirmValidTitle": "确认数据",
+        "batchConfirm": "确认后数据将在报价库中生效",
+        "batchConfirmTitle": "批量确认"
+      },
+      "fields": {
+        "confirmStatus": "确认状态"
+      },
+      "actions": {
+        "confirm": "确认",
+        "batchConfirm": "批量确认"
+      },
+      "confirmStatus": {
+        "pendingConfirm": "待确认",
+        "confirmed": "已确认"
+      },
+      "confirmStatusFilterAll": "全部确认状态"
     },
     "createTitle": "新建报价单",
     "editTitle": "编辑报价单",
@@ -1151,10 +1169,12 @@
       "noCostSnapshot": "暂无报价库匹配快照",
       "noCostImported": "尚未引入{0}",
       "costExpired": "不能引入已过期的报价库数据，请选择生效中或未生效的记录",
+      "costPendingConfirm": "不能引入待确认的报价库数据，请先确认后再引入",
       "noCostMatchType": "{0}：无对应报价库数据，请先将成本入报价库",
       "costImportedType": "已引入{0}",
       "costImporting": "正在按报价规则计算费用…",
       "maxSeaFreight": "最多引入 {0} 条海运费",
+      "maxRoadFreight": "最多引入 {0} 条卡车报价库数据",
       "sheetGenerated": "报价单已生成，可手动调整后保存",
       "zipSearching": "查询中…"
     },
@@ -1205,7 +1225,8 @@
       "oceanFreightN": "海运费{0} Ocean Freight",
       "seaSsl": "船司",
       "seaRemark": "REMARK",
-      "truckingFee": "卡车费 (Trucking fee)",
+      "truckingFee": "卡车费 Trucking fee",
+      "truckingFeeN": "卡车费{0} Trucking fee",
       "truckingFeeFmNonOak": "卡车费 FM NON OAK",
       "truckingFeeFmOak": "卡车费 FM OAK",
       "truckExtras": "卡车额外费用",
@@ -1227,9 +1248,9 @@
       "cargoAgent": "贸易代理费 CARGO AGENT FEE",
       "remark": "REMARK",
       "unitPerContainer": "Per Container",
-      "unitNsLift": "Per Container",
-      "unitChassis": "Per Day if need",
-      "unitWaiting": "Per Hour, 2H Free",
+      "unitNsLift": "Per Container /Per Time if need",
+      "unitChassis": "Per Container /Per Day if need",
+      "unitWaiting": "Per Hour, 2H Free if need",
       "unitPerBill": "PER BILL",
       "unitPerCif": "PER CIF AMOUNT",
       "unitBankFee": "BANK FEE AT COST"
@@ -1264,8 +1285,8 @@
       "selectOne": "请选择一条报价库记录",
       "selectSea": "请至少选择一条海运报价库记录",
       "selectedCount": "已选 {0} 条",
-      "confirmHint": "单击选中一行，双击或点「确认」引入；已过期可搜索查看，不可引入",
-      "confirmHintSea": "可多选，最多 {0} 条；已匹配/已引入的记录会自动勾选；已过期可搜索查看，不可引入",
+      "confirmHint": "单击选中一行，双击或点「确认」引入；已过期、待确认可搜索查看，不可引入",
+      "confirmHintSea": "可多选，最多 {0} 条；已匹配/已引入的记录会自动勾选；已过期、待确认可搜索查看，不可引入",
       "selectRows": "请先选择报价库记录",
       "addSelected": "添加已选（{0}）",
       "selectedHint": "已选 {0} 条报价库记录",

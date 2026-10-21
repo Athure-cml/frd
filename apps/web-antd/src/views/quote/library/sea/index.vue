@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { useSeaSearchSchema } from '../../../cost-library/sea/data';
 import QuoteLibraryPage from '../components/quote-library-page.vue';
+import { useQuoteLibrarySeaSearchSchema } from '../shared/quote-library-search';
 </script>
 
 <template>
@@ -8,7 +8,7 @@ import QuoteLibraryPage from '../components/quote-library-page.vue';
     description-key="page.quote.library.seaDesc"
     export-filename="海运报价库.xlsx"
     mode="sea"
-    :search-schema="useSeaSearchSchema"
+    :search-schema="useQuoteLibrarySeaSearchSchema"
     title-key="page.quote.library.sea"
   />
 </template>

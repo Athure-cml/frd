@@ -1,13 +1,14 @@
 const PRINTING_CLASS = 'quote-print-sheet--printing';
+const PRINT_HOST_CLASS = 'quote-print-host';
 
 function findPrintSheetElement(): HTMLElement | null {
-  const node =
+  return (
     document.querySelector<HTMLElement>('.ant-modal-body .quote-print-sheet') ??
     document.querySelector<HTMLElement>(
       '.quote-print-preview .quote-print-sheet',
     ) ??
-    document.querySelector<HTMLElement>('.quote-print-sheet');
-  return node;
+    document.querySelector<HTMLElement>('.quote-print-sheet')
+  );
 }
 
 export function printQuoteSheet() {
@@ -17,12 +18,22 @@ export function printQuoteSheet() {
     return;
   }
 
-  source.classList.add(PRINTING_CLASS);
+  // 克隆到 body 独立容器打印，避免弹窗关闭按钮 / 固定宽度进入打印页
+  document.querySelectorAll(`.${PRINT_HOST_CLASS}`).forEach((node) => {
+    node.remove();
+  });
+
+  const host = document.createElement('div');
+  host.className = PRINT_HOST_CLASS;
+  const clone = source.cloneNode(true) as HTMLElement;
+  clone.classList.add(PRINTING_CLASS);
+  host.append(clone);
+  document.body.append(host);
   document.documentElement.classList.add('quote-printing');
 
   const cleanup = () => {
-    source.classList.remove(PRINTING_CLASS);
     document.documentElement.classList.remove('quote-printing');
+    host.remove();
   };
 
   window.addEventListener('afterprint', cleanup, { once: true });

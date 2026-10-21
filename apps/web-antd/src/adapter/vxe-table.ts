@@ -373,7 +373,10 @@ setupVbenVxeTable({
         }
 
         const btns = operations.map((opt) =>
-          opt.code === 'delete' && opt.confirm !== false
+          (opt.code === 'delete' ||
+            opt.code === 'confirm' ||
+            opt.confirm === true) &&
+          opt.confirm !== false
             ? renderConfirm(opt)
             : renderBtn(opt),
         );

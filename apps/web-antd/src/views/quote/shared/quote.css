@@ -7,6 +7,25 @@
   min-width: 0;
 }
 
+/*
+ * 与成本库同理：覆盖全局 height:auto，让表体在 Page 内容区内定高，
+ * 横向滚动条始终落在可视区域内，避免「先有滚动条、数据加载后消失」。
+ */
+:root .vxe-grid.quote-grid {
+  height: 100% !important;
+  min-height: 360px !important;
+}
+
+.cost-library-grid-host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+}
+
 .quote-library-filter-banner {
   display: flex;
   flex-wrap: wrap;
@@ -237,56 +256,57 @@
   white-space: pre-wrap;
 }
 
+/* 屏幕上不显示打印宿主；仅打印时启用 */
+.quote-print-host {
+  display: none;
+}
+
 @media print {
+  /* A4 可印高度 ≈ 297mm - 上下边距 8mm*2 */
   @page {
+    size: a4;
     margin: 8mm;
   }
 
   html.quote-printing,
   html.quote-printing body {
-    height: 100%;
-    padding: 0;
-    margin: 0;
-  }
-
-  html.quote-printing body * {
-    visibility: hidden;
-  }
-
-  html.quote-printing .quote-print-sheet--printing,
-  html.quote-printing .quote-print-sheet--printing * {
-    visibility: visible;
-  }
-
-  html.quote-printing .quote-print-sheet--printing {
-    position: absolute;
-    top: 0;
-    left: 0;
-    box-sizing: border-box;
-    width: 100%;
-    max-width: none;
-    min-height: 100vh;
-    margin: 0;
-    transform: none;
-  }
-
-  html.quote-printing .ant-modal-mask,
-  html.quote-printing .ant-modal-header,
-  html.quote-printing .ant-modal-footer {
-    display: none !important;
-  }
-
-  html.quote-printing .ant-modal-wrap,
-  html.quote-printing .ant-modal,
-  html.quote-printing .ant-modal-content,
-  html.quote-printing .ant-modal-body {
-    position: static !important;
+    height: auto !important;
+    min-height: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
     overflow: visible !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  /* 只打印克隆宿主，避开弹窗关闭按钮与 1040px 宽度限制 */
+  html.quote-printing body > *:not(.quote-print-host) {
+    display: none !important;
+  }
+
+  html.quote-printing .quote-print-host {
+    box-sizing: border-box;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 281mm !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  html.quote-printing .quote-print-host .quote-print-sheet,
+  html.quote-printing .quote-print-sheet--printing {
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 281mm !important;
+    margin: 0 !important;
+    transform: none !important;
   }
 }
 

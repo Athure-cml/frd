@@ -8,7 +8,10 @@ import { $t } from '#/locales';
 import { buildColumnsFromTemplate } from '../../../cost-library/shared/build-columns';
 import { buildFumigationColumnsFromLayout } from '../../../cost-library/shared/build-fumigation-columns';
 import { DEFAULT_TOTAL_COLUMN_BG } from '../../../cost-library/shared/column-bg-style';
-import { appendQuoteLibraryOperationColumn } from '../../../cost-library/shared/columns';
+import {
+  appendQuoteLibraryOperationColumn,
+  applyQuoteLibraryStatusColumn,
+} from '../../../cost-library/shared/columns';
 import { getDefaultTemplate } from '../../../cost-library/shared/default-templates';
 import { ROAD_REMARK_FIELD } from '../../../cost-library/shared/field-catalog/road';
 import { formatDateYmd } from '../../../cost-library/shared/formatters';
@@ -164,12 +167,19 @@ function applyRuleHintHeaders(
   });
 }
 
+export type QuoteLibraryColumnPermissions = {
+  canConfirm?: boolean;
+  canDelete?: boolean;
+  canEdit?: boolean;
+};
+
 function buildRoadOrSeaColumns(
   mode: 'road' | 'sea',
   ruleHintMap: Record<string, string>,
   onActionClick: OnActionClickFn<QuoteLibraryRow>,
   canManage: boolean,
   template?: CostTableTemplate,
+  permissions?: QuoteLibraryColumnPermissions,
 ): VxeTableGridOptions<QuoteLibraryRow>['columns'] {
   const columns = buildColumnsFromTemplate<QuoteLibraryRow>({
     canEdit: canManage,
@@ -184,10 +194,15 @@ function buildRoadOrSeaColumns(
     template: template ?? getDefaultTemplate(mode),
   });
   const hinted = applyRuleHintHeaders(columns, ruleHintMap);
+  applyQuoteLibraryStatusColumn(hinted);
   if (!canManage) {
     return hinted;
   }
-  return appendQuoteLibraryOperationColumn(hinted, canManage, onActionClick);
+  return appendQuoteLibraryOperationColumn(hinted, canManage, onActionClick, {
+    canConfirm: permissions?.canConfirm === true,
+    canDelete: permissions?.canDelete !== false,
+    canEdit: permissions?.canEdit !== false,
+  });
 }
 
 function buildFumigationColumns(
@@ -195,6 +210,7 @@ function buildFumigationColumns(
   onActionClick: OnActionClickFn<QuoteLibraryRow>,
   canManage: boolean,
   template?: CostTableTemplate,
+  permissions?: QuoteLibraryColumnPermissions,
 ): VxeTableGridOptions<QuoteLibraryRow>['columns'] {
   const layout = (template ?? getDefaultTemplate('fumigation')).layout;
   const columns = buildFumigationColumnsFromLayout(layout, {
@@ -204,6 +220,7 @@ function buildFumigationColumns(
     includeOperation: canManage,
     onActionClick,
     quoteLibraryOperation: true,
+    quoteLibraryOperationPermissions: permissions,
     stationDisplayShort: true,
   }) as VxeTableGridOptions<QuoteLibraryRow>['columns'];
   return applyRuleHintHeaders(columns, ruleHintMap);
@@ -389,6 +406,7 @@ export function useQuoteLibraryColumns(
   onActionClick: OnActionClickFn<QuoteLibraryRow> = () => {},
   canManage = false,
   template?: CostTableTemplate,
+  permissions?: QuoteLibraryColumnPermissions,
 ): VxeTableGridOptions<QuoteLibraryRow>['columns'] {
   if (mode === 'fumigation') {
     return buildFumigationColumns(
@@ -396,6 +414,7 @@ export function useQuoteLibraryColumns(
       onActionClick,
       canManage,
       template,
+      permissions,
     );
   }
   return buildRoadOrSeaColumns(
@@ -404,5 +423,6 @@ export function useQuoteLibraryColumns(
     onActionClick,
     canManage,
     template,
+    permissions,
   );
 }

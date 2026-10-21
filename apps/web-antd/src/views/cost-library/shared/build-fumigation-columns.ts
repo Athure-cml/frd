@@ -19,6 +19,7 @@ import {
   appendCostOperationColumn,
   appendCostStatusColumn,
   appendQuoteLibraryOperationColumn,
+  applyQuoteLibraryStatusColumn,
   buildCostCheckboxColumn,
 } from './columns';
 import { getFieldCatalog, toFieldCatalogMap } from './field-catalog';
@@ -160,12 +161,17 @@ function buildLeafColumn(
     title: string;
   },
 ) {
+  const sortable = options.override?.sortable === true;
   const size = resolveCompactColumnSize(options.title, entry, {
     required: options.required,
+    sortable,
   });
-  const minWidth =
-    options.override?.minWidth ?? entry.minWidth ?? size.minWidth;
-  const width = options.override?.width ?? entry.width;
+  const rawWidth = options.override?.width ?? entry.width;
+  const hasFixedWidth = typeof rawWidth === 'number' && rawWidth > 0;
+  // 模板显式 width 必须生效；若 minWidth > width，vxe 会按 minWidth 撑开
+  const minWidth = hasFixedWidth
+    ? Math.min(options.override?.minWidth ?? rawWidth, rawWidth)
+    : (options.override?.minWidth ?? entry.minWidth ?? size.minWidth);
   const formatDate = options.formatDateValue ?? formatDateMd;
   const column: Record<string, unknown> = {
     align: entry.align,
@@ -174,11 +180,14 @@ function buildLeafColumn(
     headerClassName: options.required ? 'col-required' : undefined,
     minWidth,
     showOverflow: entry.showOverflow ?? true,
-    sortable: options.override?.sortable === true,
+    sortable,
     title: options.title,
   };
-  if (typeof width === 'number' && width > 0) {
-    column.width = width;
+  if (hasFixedWidth) {
+    column.width = rawWidth;
+  } else if (typeof minWidth === 'number' && minWidth > 0) {
+    // 同时写 width，避免仅 minWidth 时被拉满容器，刷新后算不出横向滚动
+    column.width = minWidth;
   }
 
   if (isCustomFieldKey(field)) {
@@ -283,6 +292,11 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
     onActionClick?: OnActionClickFn<T>;
     /** 报价库列表：操作列禁用已引用行，删除走页面 Modal */
     quoteLibraryOperation?: boolean;
+    quoteLibraryOperationPermissions?: {
+      canConfirm?: boolean;
+      canDelete?: boolean;
+      canEdit?: boolean;
+    };
     seqWidth?: number;
     /** 表头是否显示必填 * 标记，默认 true */
     showRequiredMark?: boolean;
@@ -299,6 +313,7 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
     nameTitle = $t('page.costLibrary.fumigationFields.region'),
     onActionClick = () => {},
     quoteLibraryOperation = false,
+    quoteLibraryOperationPermissions,
     seqWidth = 56,
     showRequiredMark = true,
     stationDisplayShort = false,
@@ -367,13 +382,21 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
   ] as VxeTableGridOptions<T>['columns'];
 
   appendCostStatusColumn(columns);
+  if (quoteLibraryOperation) {
+    applyQuoteLibraryStatusColumn(columns);
+  }
 
   if (!includeOperation) {
     return columns;
   }
 
   if (quoteLibraryOperation) {
-    return appendQuoteLibraryOperationColumn(columns, canEdit, onActionClick);
+    return appendQuoteLibraryOperationColumn(
+      columns,
+      canEdit,
+      onActionClick,
+      quoteLibraryOperationPermissions,
+    );
   }
 
   return appendCostOperationColumn(

@@ -5,7 +5,12 @@ import { Button, Popconfirm } from 'ant-design-vue';
 
 import { $t } from '#/locales';
 
-export type ActionConfirmKind = 'copy' | 'delete' | 'edit' | 'renew';
+export type ActionConfirmKind =
+  | 'confirm'
+  | 'copy'
+  | 'delete'
+  | 'edit'
+  | 'renew';
 
 const props = withDefaults(
   defineProps<{
@@ -33,6 +38,7 @@ const emit = defineEmits<{
 }>();
 
 const TITLE_KEYS: Record<ActionConfirmKind, string> = {
+  confirm: 'page.quote.library.confirm.confirmValid',
   copy: 'page.costLibrary.confirm.copy',
   delete: 'page.costLibrary.confirm.delete',
   edit: 'page.costLibrary.confirm.edit',

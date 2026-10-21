@@ -119,6 +119,7 @@ import {
 import { takeRoadQuoteIntroduceId } from '../shared/road-quote-introduce';
 import {
   fetchCostImportFields,
+  getQuoteLibraryImportBlockReason,
   isActiveCostRecord,
   mergeFumigationCostImport,
   mergeRoadCostImport,
@@ -137,6 +138,15 @@ import {
   syncSeaMatchRemarks,
   syncSheetFromOceanFreightEntries,
 } from '../shared/sheet-ocean-freight';
+import {
+  MAX_ROAD_MATCHES,
+  resolveTruckingFeeValues,
+  truckingFeeLabel,
+} from '../shared/sheet-road-freight';
+import {
+  applyFixedTruckExtraFees,
+  FIXED_TRUCK_REDELIVERY_RATE,
+} from '../shared/sheet-truck-extras';
 import ZipCodeFields from '../shared/zip-code-fields.vue';
 
 import '../shared/quote.css';
@@ -227,6 +237,7 @@ const sheet = reactive<QuoteApi.QuoteSheetFields>({
   oceanFreight: '',
   ssl: '',
   truckingFee: undefined,
+  truckingFee2: undefined,
   truckingNonOakUsd: undefined,
   truckingOakUsd: undefined,
   nsLift: undefined,
@@ -405,6 +416,12 @@ const showTradeAgentFee = computed(() => hasServiceType('TRADE'));
 const showServiceFeesSection = computed(
   () => showSeaFees.value || showTruckFees.value,
 );
+const truckingFeeFields = computed(() =>
+  resolveTruckingFeeValues(sheet, {
+    roadMatchCount: costMatches.value.filter((item) => item.costType === 'ROAD')
+      .length,
+  }),
+);
 
 /** 勾选熏蒸服务时启用熏蒸相关字段与匹配 */
 const fumigationEnabled = computed(() => showFumigationFees.value);
@@ -469,6 +486,7 @@ function clearSeaServiceFees() {
 
 function clearTruckServiceFees() {
   sheet.truckingFee = undefined;
+  sheet.truckingFee2 = undefined;
   sheet.truckingNonOakUsd = undefined;
   sheet.truckingOakUsd = undefined;
   sheet.nsLift = undefined;
@@ -518,6 +536,8 @@ watch(
     }
     if (removed('TRUCK')) {
       clearTruckServiceFees();
+    } else if (nextSet.has('TRUCK') && !prevSet.has('TRUCK')) {
+      applyFixedTruckExtraFees(sheet);
     }
     if (removed('FUMIGATION')) {
       clearFumigationServiceFees();
@@ -569,6 +589,7 @@ function onFumigationPointChange(value?: string) {
   if (value?.trim()) {
     if (!oakType.value) {
       sheet.truckingFee = undefined;
+      sheet.truckingFee2 = undefined;
     }
   } else {
     sheet.fmNonOak = 0;
@@ -687,41 +708,62 @@ function buildCostImportContext(): CostImportContext {
   };
 }
 
+async function resolveRoadImportFields(
+  match: QuoteApi.QuoteCostMatchItem,
+  context: ReturnType<typeof buildCostImportContext>,
+) {
+  if (match.snapshot && Object.keys(match.snapshot).length > 0) {
+    const { fields } = await applyQuoteCostImport({
+      costRefId: match.costRefId,
+      costType: 'ROAD',
+      snapshot: match.snapshot,
+      ...context,
+    });
+    return {
+      fields,
+      record: match.snapshot as RoadCostRecord,
+    };
+  }
+  const record = await getRoadCost(match.costRefId);
+  const fields = await fetchCostImportFields('ROAD', record, context);
+  return { fields, record };
+}
+
 async function refreshRoadTruckingFromMatch() {
   if (hydratingSheet.value) {
     return;
   }
   if (fumigationEnabled.value && !oakType.value) {
     sheet.truckingFee = undefined;
+    sheet.truckingFee2 = undefined;
     return;
   }
-  const roadMatch = costMatches.value.find((item) => item.costType === 'ROAD');
-  if (!roadMatch) {
+  const roadMatches = costMatches.value
+    .filter((item) => item.costType === 'ROAD')
+    .slice(0, MAX_ROAD_MATCHES);
+  if (roadMatches.length === 0) {
     return;
   }
   try {
-    if (roadMatch.snapshot && Object.keys(roadMatch.snapshot).length > 0) {
-      const { fields } = await applyQuoteCostImport({
-        costRefId: roadMatch.costRefId,
-        costType: 'ROAD',
-        snapshot: roadMatch.snapshot,
-        ...buildCostImportContext(),
-      });
-      mergeRoadCostImport(
-        sheet,
-        fields,
-        fumigationEnabled.value,
-        roadMatch.snapshot as RoadCostRecord,
-      );
+    const context = buildCostImportContext();
+    const first = roadMatches[0];
+    if (!first) {
       return;
     }
-    const record = await getRoadCost(roadMatch.costRefId);
-    const fields = await fetchCostImportFields(
-      'ROAD',
-      record,
-      buildCostImportContext(),
+    const firstResolved = await resolveRoadImportFields(first, context);
+    mergeRoadCostImport(
+      sheet,
+      firstResolved.fields,
+      fumigationEnabled.value,
+      firstResolved.record,
     );
-    mergeRoadCostImport(sheet, fields, fumigationEnabled.value, record);
+    const second = roadMatches[1];
+    if (second) {
+      const secondResolved = await resolveRoadImportFields(second, context);
+      sheet.truckingFee2 = secondResolved.fields.truckingFee;
+    } else {
+      sheet.truckingFee2 = undefined;
+    }
   } catch {
     // 无卡车成本或接口失败时保留当前卡车费
   }
@@ -824,6 +866,22 @@ function mergeCostMatch(item: QuoteApi.QuoteCostMatchItem) {
     costMatches.value = [
       ...nonSea,
       ...[...withoutDup, item].slice(-MAX_OCEAN_FREIGHT_LINES),
+    ];
+    return;
+  }
+  if (item.costType === 'ROAD') {
+    const nonRoad = costMatches.value.filter(
+      (match) => match.costType !== 'ROAD',
+    );
+    const roadItems = costMatches.value.filter(
+      (match) => match.costType === 'ROAD',
+    );
+    const withoutDup = roadItems.filter(
+      (match) => match.costRefId !== item.costRefId,
+    );
+    costMatches.value = [
+      ...nonRoad,
+      ...[...withoutDup, item].slice(-MAX_ROAD_MATCHES),
     ];
     return;
   }
@@ -958,6 +1016,9 @@ async function applyDetailToForm(
         .filter(Boolean)
         .join(', ');
     }
+    if (serviceTypes.value.includes('TRUCK')) {
+      applyFixedTruckExtraFees(sheet);
+    }
     normalizeSheetUsdFields();
     syncFumigationFromSheet();
     costMatches.value = normalizeCostMatches(detail.costSnapshots ?? []);
@@ -1037,6 +1098,7 @@ function normalizeCostMatches(items: QuoteApi.QuoteCostMatchItem[]) {
   const result: QuoteApi.QuoteCostMatchItem[] = [];
   const seenTypes = new Set<QuoteCostType>();
   const seaIds = new Set<number>();
+  const roadIds = new Set<number>();
   for (const item of items) {
     if (item.costType === 'SEA') {
       if (
@@ -1046,6 +1108,14 @@ function normalizeCostMatches(items: QuoteApi.QuoteCostMatchItem[]) {
         continue;
       }
       seaIds.add(item.costRefId);
+      result.push(item);
+      continue;
+    }
+    if (item.costType === 'ROAD') {
+      if (roadIds.has(item.costRefId) || roadIds.size >= MAX_ROAD_MATCHES) {
+        continue;
+      }
+      roadIds.add(item.costRefId);
       result.push(item);
       continue;
     }
@@ -1062,9 +1132,9 @@ function openCostImport(type: QuoteCostType) {
     return;
   }
   const selectedIds =
-    type === 'SEA'
+    type === 'SEA' || type === 'ROAD'
       ? costMatches.value
-          .filter((item) => item.costType === 'SEA')
+          .filter((item) => item.costType === type)
           .map((item) => item.costRefId)
       : undefined;
   costPickerRef.value?.open(type, matchKeys.value, { selectedIds });
@@ -1074,11 +1144,33 @@ function onImportCostType({ key }: { key: string }) {
   openCostImport(key as QuoteCostType);
 }
 
-async function applyImportedRoadCost(record: RoadCostRecord) {
-  if (
-    !isActiveCostRecord('ROAD', record as unknown as Record<string, unknown>)
-  ) {
-    message.error($t('page.quote.message.costExpired'));
+function quoteLibraryImportBlockMessage(
+  type: QuoteCostType,
+  record: Record<string, unknown>,
+) {
+  const reason = getQuoteLibraryImportBlockReason(type, record);
+  if (reason === 'pendingConfirm') {
+    return $t('page.quote.message.costPendingConfirm');
+  }
+  return $t('page.quote.message.costExpired');
+}
+
+async function applyImportedRoadCosts(records: RoadCostRecord[]) {
+  const limited = records.slice(0, MAX_ROAD_MATCHES);
+  for (const record of limited) {
+    if (
+      !isActiveCostRecord('ROAD', record as unknown as Record<string, unknown>)
+    ) {
+      message.error(
+        quoteLibraryImportBlockMessage(
+          'ROAD',
+          record as unknown as Record<string, unknown>,
+        ),
+      );
+      return;
+    }
+  }
+  if (limited.length === 0) {
     return;
   }
   const label =
@@ -1089,15 +1181,38 @@ async function applyImportedRoadCost(record: RoadCostRecord) {
     0,
   );
   try {
-    mergeCostMatch(recordToCostMatchItem('ROAD', record, matchKeys.value));
-    const fields = await fetchCostImportFields('ROAD', record, context);
-    mergeRoadCostImport(sheet, fields, fumigationEnabled.value, record);
+    const first = limited[0];
+    if (!first) {
+      return;
+    }
+    const firstFields = await fetchCostImportFields('ROAD', first, context);
+    mergeRoadCostImport(sheet, firstFields, fumigationEnabled.value, first);
+    const second = limited[1];
+    if (second) {
+      const secondFields = await fetchCostImportFields('ROAD', second, context);
+      sheet.truckingFee2 = secondFields.truckingFee;
+    } else {
+      sheet.truckingFee2 = undefined;
+    }
+    const nonRoad = costMatches.value.filter(
+      (item) => item.costType !== 'ROAD',
+    );
+    costMatches.value = [
+      ...nonRoad,
+      ...limited.map((record) =>
+        recordToCostMatchItem('ROAD', record, matchKeys.value),
+      ),
+    ];
     message.success($t('page.quote.message.costImportedType', [label]));
   } catch {
     message.error($t('page.ai.requestFailed'));
   } finally {
     hideLoading();
   }
+}
+
+async function applyImportedRoadCost(record: RoadCostRecord) {
+  await applyImportedRoadCosts([record]);
 }
 
 async function onCostsConfirmed(
@@ -1111,15 +1226,23 @@ async function onCostsConfirmed(
     if (
       !isActiveCostRecord(type, record as unknown as Record<string, unknown>)
     ) {
-      message.error($t('page.quote.message.costExpired'));
+      message.error(
+        quoteLibraryImportBlockMessage(
+          type,
+          record as unknown as Record<string, unknown>,
+        ),
+      );
       return;
     }
   }
   if (type === 'ROAD') {
-    const record = records[0];
-    if (record) {
-      await applyImportedRoadCost(record as RoadCostRecord);
+    if (records.length > MAX_ROAD_MATCHES) {
+      message.error(
+        $t('page.quote.message.maxRoadFreight', [MAX_ROAD_MATCHES]),
+      );
+      return;
     }
+    await applyImportedRoadCosts(records as RoadCostRecord[]);
     return;
   }
   const label =
@@ -1347,13 +1470,15 @@ function buildPayload(): QuoteApi.QuoteSave {
     fumigationEnabled: fumigationEnabled.value,
   };
   // 未勾选服务类型时不落库对应费用，避免打印/导出带出旧值
-  if (!showSeaFees.value) {
-    payload.oceanFreight = '';
-    payload.ofUsd = '';
-    payload.ssl = '';
-  }
-  if (!showTruckFees.value) {
+  payload.oceanFreight = showSeaFees.value ? payload.oceanFreight : '';
+  payload.ofUsd = showSeaFees.value ? payload.ofUsd : '';
+  payload.ssl = showSeaFees.value ? payload.ssl : '';
+  if (showTruckFees.value) {
+    // 二次送箱费固定 AT COST，不落数字
+    payload.redeliveryFee = undefined;
+  } else {
     payload.truckingFee = undefined;
+    payload.truckingFee2 = undefined;
     payload.truckingNonOakUsd = undefined;
     payload.truckingOakUsd = undefined;
     payload.nsLift = undefined;
@@ -1363,17 +1488,15 @@ function buildPayload(): QuoteApi.QuoteSave {
     payload.truckRemark = '';
     payload.supplier = '';
   }
-  if (!showFumigationFees.value) {
-    payload.fumigationPoint = '';
-    payload.fmNonOak = undefined;
-    payload.fmOak = undefined;
-  }
-  if (!showInsuranceFee.value) {
-    payload.cargoInsurancePremium = '';
-  }
-  if (!showTradeAgentFee.value) {
-    payload.cargoAgentFee = '';
-  }
+  payload.fumigationPoint = showFumigationFees.value
+    ? payload.fumigationPoint
+    : '';
+  payload.fmNonOak = showFumigationFees.value ? payload.fmNonOak : undefined;
+  payload.fmOak = showFumigationFees.value ? payload.fmOak : undefined;
+  payload.cargoInsurancePremium = showInsuranceFee.value
+    ? payload.cargoInsurancePremium
+    : '';
+  payload.cargoAgentFee = showTradeAgentFee.value ? payload.cargoAgentFee : '';
   if (canUseCostLibrary.value) {
     const allowed = new Set(costSourceTypes.value);
     payload.costMatches = costMatches.value.filter((item) =>
@@ -1431,6 +1554,7 @@ function buildFormSnapshot(): string {
     supplier: normalizeDirtyText(sheet.supplier),
     truckRemark: normalizeDirtyText(sheet.truckRemark),
     truckingFee: normalizeDirtyNumber(sheet.truckingFee),
+    truckingFee2: normalizeDirtyNumber(sheet.truckingFee2),
     truckingNonOakUsd: normalizeDirtyNumber(sheet.truckingNonOakUsd),
     truckingOakUsd: normalizeDirtyNumber(sheet.truckingOakUsd),
     waiting: normalizeDirtyNumber(sheet.waiting),
@@ -1537,12 +1661,11 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
     const keepFumigationPoint = sheet.fumigationPoint;
     const keepFumigationEnabled = fumigationEnabled.value;
     const keepOakType = oakType.value;
-    const existingRoadMatch = costMatches.value.find(
-      (item) => item.costType === 'ROAD',
-    );
-    const preservedRoadSheet = existingRoadMatch
-      ? pickRoadSheetFields(sheet)
-      : null;
+    const existingRoadMatches = costMatches.value
+      .filter((item) => item.costType === 'ROAD')
+      .slice(0, MAX_ROAD_MATCHES);
+    const preservedRoadSheet =
+      existingRoadMatches.length > 0 ? pickRoadSheetFields(sheet) : null;
     const result = await generateQuoteSheet({
       por: sheet.por,
       pol: sheet.pol,
@@ -1556,7 +1679,7 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
       fumigationEnabled: keepFumigationEnabled,
       oakType: keepOakType,
       quoteDate: quoteDate.value.format('YYYY-MM-DD'),
-      skipRoadMatch: Boolean(existingRoadMatch),
+      skipRoadMatch: existingRoadMatches.length > 0,
     });
     if (result.quoteDate) {
       quoteDate.value = dayjs(result.quoteDate);
@@ -1581,12 +1704,12 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
     let nextMatches = (result.costMatches ?? []).filter(
       (item) => keepFumigationEnabled || item.costType !== 'FUMIGATION',
     );
-    if (existingRoadMatch) {
+    if (existingRoadMatches.length > 0) {
       nextMatches = nextMatches.filter((item) => item.costType !== 'ROAD');
-      nextMatches.push(existingRoadMatch);
+      nextMatches.push(...existingRoadMatches);
     }
     costMatches.value = normalizeCostMatches(nextMatches);
-    if (existingRoadMatch) {
+    if (existingRoadMatches.length > 0) {
       await refreshRoadTruckingFromMatch();
     }
     loadOceanFreightEntriesFromSheet();
@@ -2393,21 +2516,32 @@ onUnmounted(() => {
                       </Form.Item>
                     </div>
                   </template>
-                  <Form.Item v-if="showTruckFees">
-                    <template #label>
-                      <QuoteRuleLabel
-                        :hint="ruleHint('truckingFee')"
-                        :label="$t('page.quote.sheet.truckingFee')"
+                  <template v-if="showTruckFees">
+                    <Form.Item
+                      v-for="(fee, index) in truckingFeeFields"
+                      :key="fee.field"
+                    >
+                      <template #label>
+                        <QuoteRuleLabel
+                          :hint="index === 0 ? ruleHint('truckingFee') : ''"
+                          :label="
+                            truckingFeeLabel(
+                              index,
+                              truckingFeeFields.length,
+                              $t,
+                            )
+                          "
+                        />
+                      </template>
+                      <InputNumber
+                        v-model:value="sheet[fee.field]"
+                        class="w-full"
+                        :disabled="readOnly"
+                        :min="0"
+                        :precision="0"
                       />
-                    </template>
-                    <InputNumber
-                      v-model:value="sheet.truckingFee"
-                      class="w-full"
-                      :disabled="readOnly"
-                      :min="0"
-                      :precision="0"
-                    />
-                  </Form.Item>
+                    </Form.Item>
+                  </template>
                 </div>
               </Form>
             </div>
@@ -2429,7 +2563,7 @@ onUnmounted(() => {
                       class="w-full"
                       :disabled="readOnly"
                       :min="0"
-                      :precision="2"
+                      :precision="0"
                     />
                   </Form.Item>
                   <Form.Item :label="$t('page.quote.sheet.chassis')">
@@ -2438,7 +2572,7 @@ onUnmounted(() => {
                       class="w-full"
                       :disabled="readOnly"
                       :min="0"
-                      :precision="2"
+                      :precision="0"
                     />
                   </Form.Item>
                   <Form.Item :label="$t('page.quote.sheet.waiting')">
@@ -2447,16 +2581,14 @@ onUnmounted(() => {
                       class="w-full"
                       :disabled="readOnly"
                       :min="0"
-                      :precision="2"
+                      :precision="0"
                     />
                   </Form.Item>
                   <Form.Item :label="$t('page.quote.sheet.redelivery')">
-                    <InputNumber
-                      v-model:value="sheet.redeliveryFee"
+                    <Input
                       class="w-full"
-                      :disabled="readOnly"
-                      :min="0"
-                      :precision="2"
+                      disabled
+                      :value="FIXED_TRUCK_REDELIVERY_RATE"
                     />
                   </Form.Item>
                   <Form.Item

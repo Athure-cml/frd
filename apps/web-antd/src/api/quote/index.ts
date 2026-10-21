@@ -58,6 +58,8 @@ export namespace QuoteApi {
     supplier?: string;
     truckRemark?: string;
     truckingFee?: number;
+    /** 第二条卡车费（最多引入 2 条卡车报价库时使用） */
+    truckingFee2?: number;
     truckingNonOakUsd?: number;
     truckingOakUsd?: number;
     waiting?: number;

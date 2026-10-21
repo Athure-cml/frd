@@ -29,6 +29,10 @@ export interface QuoteLibraryPromoteResult {
   skipped: number;
 }
 
+export interface QuoteLibraryConfirmResult {
+  confirmed: number;
+}
+
 export async function getQuoteLibraryRoadList(params: Recordable<any>) {
   return requestClient.get<PageResult<RoadCostRecord>>(`${BASE}/road`, {
     params,
@@ -110,6 +114,25 @@ export async function batchDeleteQuoteLibrary(
   ids: number[],
 ) {
   return requestClient.post(`${modeBase(mode)}/batch-delete`, { ids });
+}
+
+export async function confirmQuoteLibraryRecord(
+  mode: 'fumigation' | 'road' | 'sea',
+  id: number,
+) {
+  return requestClient.post<QuoteLibraryConfirmResult>(
+    `${modeBase(mode)}/${id}/confirm`,
+  );
+}
+
+export async function batchConfirmQuoteLibrary(
+  mode: 'fumigation' | 'road' | 'sea',
+  ids: number[],
+) {
+  return requestClient.post<QuoteLibraryConfirmResult>(
+    `${modeBase(mode)}/batch-confirm`,
+    { ids },
+  );
 }
 
 export async function promoteToQuoteLibrary(

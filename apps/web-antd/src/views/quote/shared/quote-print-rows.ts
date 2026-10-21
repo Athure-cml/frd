@@ -5,6 +5,11 @@ import type { QuoteApi, QuoteServiceType } from '#/api/quote';
 
 import { parseUsdNumber } from './quote-sheet-format';
 import { resolveOceanFreightEntries } from './sheet-ocean-freight';
+import {
+  resolveTruckingFeeValues,
+  truckingFeeLabel,
+} from './sheet-road-freight';
+import { FIXED_TRUCK_REDELIVERY_RATE } from './sheet-truck-extras';
 
 export type QuotePrintFeeRow =
   | {
@@ -160,15 +165,18 @@ export function buildQuotePrintFeeRows(
   }
 
   if (showTruck) {
-    pushFeeRow(
-      rows,
-      t('page.quote.sheet.truckingFee'),
-      sheet.truckingFee,
-      unitContainer,
-      '',
-      '',
-      true,
-    );
+    const truckingFees = resolveTruckingFeeValues(sheet);
+    for (const [index, fee] of truckingFees.entries()) {
+      pushFeeRow(
+        rows,
+        truckingFeeLabel(index, truckingFees.length, t),
+        fee.value,
+        unitContainer,
+        '',
+        '',
+        true,
+      );
+    }
   }
 
   if (showFumigation) {
@@ -230,7 +238,7 @@ export function buildQuotePrintFeeRows(
       rows,
       t('page.quote.sheet.nsLift'),
       sheet.nsLift,
-      unitContainer,
+      t('page.quote.sheet.unitNsLift'),
       '',
       '',
       true,
@@ -256,7 +264,7 @@ export function buildQuotePrintFeeRows(
     pushFeeRow(
       rows,
       t('page.quote.sheet.redelivery'),
-      sheet.redeliveryFee,
+      FIXED_TRUCK_REDELIVERY_RATE,
       unitContainer,
       '',
       '',

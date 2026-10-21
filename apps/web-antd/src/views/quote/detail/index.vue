@@ -45,6 +45,11 @@ import { stashQuoteCopySource } from '../shared/quote-copy';
 import { printQuoteSheet } from '../shared/quote-print';
 import QuotePrintSheet from '../shared/quote-print-sheet.vue';
 import { QUOTE_SHEET_COLUMNS, sheetCellValue } from '../shared/sheet-columns';
+import {
+  MAX_ROAD_MATCHES,
+  resolveTruckingFeeValues,
+  truckingFeeLabel,
+} from '../shared/sheet-road-freight';
 
 import '../shared/quote.css';
 
@@ -118,6 +123,7 @@ const ROUTE_SHEET_FIELDS: Array<keyof QuoteApi.QuoteSheetFields> = [
 const FEE_SHEET_FIELDS: Array<keyof QuoteApi.QuoteSheetFields> = [
   'oceanFreight',
   'truckingFee',
+  'truckingFee2',
   'nsLift',
   'chassis',
   'waiting',
@@ -140,8 +146,8 @@ const AMOUNT_FIELDS = new Set<keyof QuoteApi.QuoteSheetFields>([
   'fmOak',
   'nsLift',
   'oceanFreight',
-  'redeliveryFee',
   'truckingFee',
+  'truckingFee2',
   'waiting',
 ]);
 
@@ -199,16 +205,59 @@ const costSourceTypes = computed(() =>
 
 const displayCostMatches = computed(() => {
   const items = detail.value?.costSnapshots ?? [];
-  const map = new Map<QuoteCostType, QuoteApi.QuoteCostMatchItem>();
+  const result: QuoteApi.QuoteCostMatchItem[] = [];
+  const seenTypes = new Set<QuoteCostType>();
+  const seaIds = new Set<number>();
+  const roadIds = new Set<number>();
   for (const item of items) {
-    if (!map.has(item.costType)) {
-      map.set(item.costType, item);
+    if (item.costType === 'SEA') {
+      if (seaIds.has(item.costRefId)) {
+        continue;
+      }
+      seaIds.add(item.costRefId);
+      result.push(item);
+      continue;
+    }
+    if (item.costType === 'ROAD') {
+      if (roadIds.has(item.costRefId) || roadIds.size >= MAX_ROAD_MATCHES) {
+        continue;
+      }
+      roadIds.add(item.costRefId);
+      result.push(item);
+      continue;
+    }
+    if (!seenTypes.has(item.costType)) {
+      seenTypes.add(item.costType);
+      result.push(item);
     }
   }
-  return [...map.values()];
+  return result;
+});
+
+const detailFeeFields = computed(() => {
+  const sheet = detail.value?.sheet;
+  if (!sheet) {
+    return FEE_SHEET_FIELDS;
+  }
+  const trucking = resolveTruckingFeeValues(sheet);
+  const truckingFields = new Set(trucking.map((item) => item.field));
+  return FEE_SHEET_FIELDS.filter((field) => {
+    if (field === 'truckingFee' || field === 'truckingFee2') {
+      return truckingFields.has(field);
+    }
+    return true;
+  });
 });
 
 function sheetColumnTitle(field: keyof QuoteApi.QuoteSheetFields) {
+  if (field === 'truckingFee' || field === 'truckingFee2') {
+    const sheet = detail.value?.sheet;
+    const trucking = sheet ? resolveTruckingFeeValues(sheet) : [];
+    const index = trucking.findIndex((item) => item.field === field);
+    if (index !== -1) {
+      return truckingFeeLabel(index, trucking.length, $t);
+    }
+  }
   return QUOTE_SHEET_COLUMNS.find((col) => col.field === field)?.title ?? field;
 }
 
@@ -544,7 +593,7 @@ onMounted(async () => {
             <div class="quote-editor-section__body">
               <div class="quote-detail-grid quote-detail-grid--fees">
                 <div
-                  v-for="field in FEE_SHEET_FIELDS"
+                  v-for="field in detailFeeFields"
                   :key="field"
                   :class="fieldCellClass(field, true)"
                 >

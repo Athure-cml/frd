@@ -146,7 +146,8 @@ export function getGridStorageId(
 ) {
   const layoutHash = hashLayoutColumns(layout);
   const prefix = library === 'quote' ? 'quote-library' : 'cost-library';
+  // w13：模板改宽后旧版本地列宽缓存会盖住 fieldOverrides.width
   return layoutHash
-    ? `${prefix}-${mode}-${templateId}-w12-${layoutHash}`
-    : `${prefix}-${mode}-${templateId}-w12`;
+    ? `${prefix}-${mode}-${templateId}-w13-${layoutHash}`
+    : `${prefix}-${mode}-${templateId}-w13`;
 }

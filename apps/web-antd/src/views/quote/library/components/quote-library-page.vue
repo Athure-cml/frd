@@ -17,13 +17,15 @@ import { Page } from '@vben/common-ui';
 import { Download, Settings } from '@vben/icons';
 import { usePreferences } from '@vben/preferences';
 
-import { Button, message } from 'ant-design-vue';
+import { Button, Dropdown, Menu, message, Modal } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { downloadCostExport } from '#/api/cost';
 import { getQuoteRuleList } from '#/api/quote-rule';
 import {
+  batchConfirmQuoteLibrary,
   batchDeleteQuoteLibrary,
+  confirmQuoteLibraryRecord,
   deleteQuoteLibraryRecord,
   exportQuoteLibrary,
   getQuoteLibraryListApi,
@@ -31,7 +33,6 @@ import {
 import { $t } from '#/locales';
 
 import { normalizeRoadCitySearchParam } from '../../../cost-library/road/data';
-import ActionConfirmButton from '../../../cost-library/shared/action-confirm-button.vue';
 import { createTemplateColumnBgStyleHandlers } from '../../../cost-library/shared/column-bg-style';
 import {
   adaptCostColumnsForViewport,
@@ -44,7 +45,11 @@ import {
 } from '../../../cost-library/shared/cost-quote-relation';
 import { getDefaultTemplate } from '../../../cost-library/shared/default-templates';
 import { createCostRowHighlightStyleHandlers } from '../../../cost-library/shared/row-highlight-style';
-import { normalizeCostStatusSearchParam } from '../../../cost-library/shared/status-search';
+import {
+  scheduleGridRecalculate,
+  useGridResizeRecalculate,
+} from '../../../cost-library/shared/schedule-grid-recalculate';
+import { normalizeQuoteLibraryStatusSearchParams } from '../../../cost-library/shared/status-search';
 import {
   getGridStorageId,
   getTemplateLayoutSignature,
@@ -84,8 +89,14 @@ const fetchList = getQuoteLibraryListApi(props.mode);
 
 /** 报价库权限与成本库独立，不再回落到 cost:*:edit */
 const canEdit = hasAccessByCodes([`quote:library:${props.mode}:edit`]);
+const canConfirm = hasAccessByCodes([`quote:library:${props.mode}:confirm`]);
 const canDelete = hasAccessByCodes([`quote:library:${props.mode}:delete`]);
-const canManage = canEdit || canDelete;
+const canManage = canEdit || canConfirm || canDelete;
+const columnPermissions = {
+  canConfirm,
+  canDelete,
+  canEdit,
+};
 /** 「查看成本」需对应成本库查看权限 */
 const canViewCost = hasAccessByCodes([`cost:${props.mode}:view`]);
 const canViewTemplates = hasAccessByCodes([
@@ -120,6 +131,9 @@ const batchModalRef = ref<InstanceType<typeof QuoteLibraryBatchEditModal>>();
 const exporting = ref(false);
 
 function onActionClick(params: OnActionClickParams<QuoteLibraryRow>) {
+  if (params.code === 'confirm') {
+    void onConfirm(params.row);
+  }
   if (params.code === 'edit') {
     onEdit(params.row);
   }
@@ -139,6 +153,7 @@ const gridColumns = computed(() => {
           onActionClick,
           canManage,
           activeTemplate.value,
+          columnPermissions,
         ),
       ),
       {
@@ -202,6 +217,13 @@ const [Grid, gridApi] = useVbenVxeGrid({
     checkboxChange: onCheckboxChange,
     dataRendered: () => {
       relationFocus.onDataRendered(lastPageItems);
+      // 数据渲染后布局高度通常已稳定，补一次横滚区域计算
+      scheduleGridRecalculate(
+        () =>
+          gridApi.grid as null | {
+            recalculate?: (refull?: boolean) => void;
+          },
+      );
     },
   },
   gridOptions: {
@@ -209,13 +231,20 @@ const [Grid, gridApi] = useVbenVxeGrid({
     checkboxConfig: {
       reserve: true,
     },
+    // 不落本地列宽/显隐缓存：否则会盖住模板列宽，或藏列后 fit 撑满导致无横滚
+    customConfig: {
+      storage: false,
+    },
+    // 禁止列宽自适应撑满：fit 为 true 时会把 scrollXWidth 拉成容器宽，自定义横条被隐藏
+    fit: false,
     id: getGridStorageId(
       props.mode as CostMode,
       activeTemplate.value.id,
       activeTemplate.value.layout,
       'quote',
     ),
-    height: 'auto',
+    // 勿用 auto：数据加载后表体变高，横向滚动条会被裁掉
+    height: '100%',
     pagerConfig: {},
     proxyConfig: {
       autoLoad: true,
@@ -228,8 +257,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
             sortOrder: sort.order,
             ...normalizeListParams(formValues),
           });
-          lastPageItems = result.items ?? [];
-          return result;
+          const items = (result.items ?? []).map((row) => ({
+            ...row,
+            status:
+              row.confirmStatus === 'pendingConfirm'
+                ? 'pendingConfirm'
+                : row.status,
+          }));
+          lastPageItems = items;
+          return { ...result, items };
         },
       },
       sort: true,
@@ -239,7 +275,14 @@ const [Grid, gridApi] = useVbenVxeGrid({
     rowConfig: {
       keyField: 'id',
     },
+    // 宽表始终保留横条轨道，避免菜单加载抖动时 overflowX 被误判关掉
+    scrollbarConfig: {
+      x: { visible: 'visible' },
+    },
+    // vxe 用自定义横条，必须保持 scrollX；原生条已被 CSS 隐藏
     scrollX: { enabled: true },
+    // 表头过长省略，悬停显示完整标题
+    showHeaderOverflow: 'tooltip',
     sortConfig: {
       remote: true,
       trigger: 'default',
@@ -248,6 +291,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
     ...createTemplateColumnBgStyleHandlers(),
   } as VxeTableGridOptions<QuoteLibraryRow>,
 });
+
+const gridHostRef = ref<HTMLElement | null>(null);
+useGridResizeRecalculate(
+  gridHostRef,
+  () =>
+    gridApi.grid as null | {
+      recalculate?: (refull?: boolean) => void;
+    },
+);
 
 watch(isMobile, (mobile) => {
   gridApi.setGridOptions({
@@ -280,9 +332,15 @@ function applyTemplateColumns(force = false) {
       loadColumn?: (cols: typeof columns) => void;
       recalculate?: (refull?: boolean) => void;
     };
+    // 不再 resetColumn：会清空滚动态，和菜单加载叠在一起必闪横条
     $grid?.loadColumn?.(columns);
-    $grid?.recalculate?.(true);
     appliedLayoutSignature = signature;
+    scheduleGridRecalculate(
+      () =>
+        gridApi.grid as null | {
+          recalculate?: (refull?: boolean) => void;
+        },
+    );
   });
 }
 
@@ -381,6 +439,19 @@ function getRowName(row: QuoteLibraryRow) {
   return [region, station].filter(Boolean).join(' / ') || String(row.id ?? '');
 }
 
+async function onConfirm(row: QuoteLibraryRow) {
+  if (!canConfirm || typeof row.id !== 'number') {
+    return;
+  }
+  if (row.confirmStatus !== 'pendingConfirm') {
+    return;
+  }
+  await confirmQuoteLibraryRecord(props.mode, row.id as number);
+  message.success($t('page.quote.library.hint.confirmSuccess'));
+  clearSelection();
+  onRefresh();
+}
+
 async function onDelete(row: QuoteLibraryRow) {
   if (!canDelete || typeof row.id !== 'number') {
     return;
@@ -417,7 +488,32 @@ function onBatchEdit() {
   batchModalRef.value?.open(ids);
 }
 
-async function onBatchDelete() {
+function getPendingConfirmSelectedIds() {
+  return getSelectedIds().filter((id) => {
+    const row = findRowById(id);
+    return row?.confirmStatus === 'pendingConfirm';
+  });
+}
+
+function onBatchConfirm() {
+  const ids = getPendingConfirmSelectedIds();
+  if (ids.length === 0) {
+    message.warning($t('page.quote.library.hint.selectPendingConfirm'));
+    return;
+  }
+  Modal.confirm({
+    content: $t('page.quote.library.confirm.batchConfirm'),
+    onOk: async () => {
+      await batchConfirmQuoteLibrary(props.mode, ids);
+      message.success($t('page.quote.library.hint.confirmSuccess'));
+      clearSelection();
+      onRefresh();
+    },
+    title: $t('page.quote.library.confirm.batchConfirmTitle'),
+  });
+}
+
+function onBatchDelete() {
   const ids = getEditableSelectedIds();
   if (ids.length === 0) {
     if (getSelectedIds().length > 0) {
@@ -427,10 +523,59 @@ async function onBatchDelete() {
     message.warning($t('page.costLibrary.hint.selectRows'));
     return;
   }
-  await batchDeleteQuoteLibrary(props.mode, ids);
-  message.success($t('ui.actionMessage.operationSuccess'));
-  clearSelection();
-  onRefresh();
+  Modal.confirm({
+    content: $t('page.quote.library.confirm.batchDelete', [ids.length]),
+    onOk: async () => {
+      await batchDeleteQuoteLibrary(props.mode, ids);
+      message.success($t('ui.actionMessage.operationSuccess'));
+      clearSelection();
+      onRefresh();
+    },
+    title: $t('page.quote.library.confirm.deleteTitle'),
+  });
+}
+
+const batchMenuItems = computed(() => {
+  const disabled = selectedCount.value === 0;
+  const items: Array<Record<string, unknown>> = [];
+  if (canEdit) {
+    items.push({
+      disabled,
+      key: 'edit',
+      label: $t('page.costLibrary.actions.batchEdit'),
+    });
+  }
+  if (canConfirm) {
+    items.push({
+      disabled,
+      key: 'confirm',
+      label: $t('page.quote.library.actions.batchConfirm'),
+    });
+  }
+  if (canDelete) {
+    if (items.length > 0) {
+      items.push({ type: 'divider' });
+    }
+    items.push({
+      danger: true,
+      disabled,
+      key: 'delete',
+      label: $t('page.costLibrary.actions.batchDelete'),
+    });
+  }
+  return items;
+});
+
+function onBatchMenuClick({ key }: { key: string }) {
+  if (key === 'edit') {
+    onBatchEdit();
+  }
+  if (key === 'confirm') {
+    onBatchConfirm();
+  }
+  if (key === 'delete') {
+    onBatchDelete();
+  }
 }
 
 function onBatchSuccess() {
@@ -440,11 +585,16 @@ function onBatchSuccess() {
 
 function normalizeListParams(formValues?: null | Record<string, unknown>) {
   const params = { ...formValues } as Record<string, unknown>;
-  const normalizedStatus = normalizeCostStatusSearchParam(params.status);
-  if (normalizedStatus) {
-    params.status = normalizedStatus;
+  const statusParts = normalizeQuoteLibraryStatusSearchParams(params.status);
+  if (statusParts.status) {
+    params.status = statusParts.status;
   } else {
     delete params.status;
+  }
+  if (statusParts.confirmStatus) {
+    params.confirmStatus = statusParts.confirmStatus;
+  } else {
+    delete params.confirmStatus;
   }
   if (props.mode === 'road') {
     const normalizedCity = normalizeRoadCitySearchParam(params.city);
@@ -515,6 +665,12 @@ onMounted(() => {
 
 onActivated(() => {
   void refreshTemplates({ force: true });
+  scheduleGridRecalculate(
+    () =>
+      gridApi.grid as null | {
+        recalculate?: (refull?: boolean) => void;
+      },
+  );
 });
 </script>
 
@@ -524,54 +680,44 @@ onActivated(() => {
     :description="$t(descriptionKey)"
     :title="$t(titleKey)"
   >
-    <Grid :form-options="searchFormOptions" :grid-class="gridClass">
-      <template #toolbar-tools>
-        <div class="quote-library-toolbar">
-          <Button
-            v-if="canViewTemplates"
-            @click="
-              invalidateTableTemplateCache(props.mode as CostMode, 'quote');
-              router.push(`/quotes/library/templates/${props.mode}`);
-            "
-          >
-            <Settings class="size-3.5" />
-            {{ $t('page.quote.library.template.manage') }}
-          </Button>
-          <Button :loading="exporting" @click="onExport">
-            <Download class="size-3.5" />
-            {{ $t('page.costLibrary.actions.export') }}
-          </Button>
-          <template v-if="canManage">
+    <div ref="gridHostRef" class="cost-library-grid-host h-full min-h-0">
+      <Grid :form-options="searchFormOptions" :grid-class="gridClass">
+        <template #toolbar-tools>
+          <div class="quote-library-toolbar">
             <Button
-              v-if="canEdit"
-              :disabled="selectedCount === 0"
-              type="primary"
-              @click="onBatchEdit"
-            >
-              {{ $t('page.costLibrary.actions.batchEdit') }}
-            </Button>
-            <ActionConfirmButton
-              v-if="canDelete"
-              action="delete"
-              danger
-              :disabled="selectedCount === 0"
-              :label="$t('page.costLibrary.actions.batchDelete')"
-              :title="
-                $t('page.quote.library.confirm.batchDelete', [selectedCount])
+              v-if="canViewTemplates"
+              @click="
+                invalidateTableTemplateCache(props.mode as CostMode, 'quote');
+                router.push(`/quotes/library/templates/${props.mode}`);
               "
-              type="default"
-              @confirm="onBatchDelete"
-            />
-            <span
-              v-if="selectedCount > 0"
-              class="text-sm text-muted-foreground"
             >
-              {{ $t('page.costLibrary.hint.batchSelected', [selectedCount]) }}
-            </span>
-          </template>
-        </div>
-      </template>
-    </Grid>
+              <Settings class="size-3.5" />
+              {{ $t('page.quote.library.template.manage') }}
+            </Button>
+            <Button :loading="exporting" @click="onExport">
+              <Download class="size-3.5" />
+              {{ $t('page.costLibrary.actions.export') }}
+            </Button>
+            <template v-if="canManage">
+              <Dropdown :disabled="selectedCount === 0" :trigger="['click']">
+                <Button :disabled="selectedCount === 0">
+                  {{ $t('page.costLibrary.actions.batchMenu') }}
+                </Button>
+                <template #overlay>
+                  <Menu :items="batchMenuItems" @click="onBatchMenuClick" />
+                </template>
+              </Dropdown>
+              <span
+                v-if="selectedCount > 0"
+                class="text-sm text-muted-foreground"
+              >
+                {{ $t('page.costLibrary.hint.batchSelected', [selectedCount]) }}
+              </span>
+            </template>
+          </div>
+        </template>
+      </Grid>
+    </div>
     <QuoteLibraryEditDrawer
       v-if="canEdit"
       ref="editDrawerRef"

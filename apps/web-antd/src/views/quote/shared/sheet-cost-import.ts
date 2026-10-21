@@ -7,6 +7,8 @@ import type { QuoteApi, QuoteCostType } from '#/api/quote';
 
 import { applyQuoteCostImport } from '#/api/quote';
 
+import { applyFixedTruckExtraFees } from './sheet-truck-extras';
+
 export type CostLibraryRecord =
   | FreightCostRecord
   | FumigationCostRecord
@@ -24,7 +26,7 @@ export interface QuoteMatchKeys {
   zipCode?: string;
 }
 
-/** 引入报价库弹窗默认筛选：生效中 + 未生效（可改筛已过期仅查看，仍不可引入） */
+/** 引入报价库弹窗默认筛选：生效中 + 未生效（不含待确认；可改筛待确认/已过期仅查看，仍不可引入） */
 const PICKER_DEFAULT_STATUS = ['active', 'pending'] as const;
 
 function putTrimmed(
@@ -235,13 +237,39 @@ function resolveSnapshotStatus(
   return latestEnd < today ? 'expired' : 'active';
 }
 
-/** 报价引入成本：允许生效中、未生效；已过期不可引入 */
+/** 待确认不可引入（display 映射后 status 也可能是 pendingConfirm） */
+export function isPendingConfirmRecord(
+  record: Record<string, unknown>,
+): boolean {
+  return (
+    record.confirmStatus === 'pendingConfirm' ||
+    record.status === 'pendingConfirm'
+  );
+}
+
+export type QuoteLibraryImportBlockReason = 'expired' | 'pendingConfirm';
+
+/** 不可引入时返回原因；可引入返回 null */
+export function getQuoteLibraryImportBlockReason(
+  type: QuoteCostType,
+  record: Record<string, unknown>,
+): null | QuoteLibraryImportBlockReason {
+  if (isPendingConfirmRecord(record)) {
+    return 'pendingConfirm';
+  }
+  const status = record.status ?? resolveSnapshotStatus(type, record);
+  if (status === 'active' || status === 'pending') {
+    return null;
+  }
+  return 'expired';
+}
+
+/** 报价引入成本：允许已确认的生效中/未生效；已过期、待确认不可引入 */
 export function isActiveCostRecord(
   type: QuoteCostType,
   record: Record<string, unknown>,
 ): boolean {
-  const status = record.status ?? resolveSnapshotStatus(type, record);
-  return status === 'active' || status === 'pending';
+  return getQuoteLibraryImportBlockReason(type, record) === null;
 }
 
 export function recordToCostMatchItem(
@@ -318,12 +346,12 @@ const ROAD_SHEET_PRESERVE_KEYS = [
   'supplier',
   'pickUpAddress',
   'truckingFee',
+  'truckingFee2',
   'truckingNonOakUsd',
   'truckingOakUsd',
   'nsLift',
   'chassis',
   'waiting',
-  'redeliveryFee',
   'truckRemark',
 ] as const satisfies ReadonlyArray<keyof QuoteApi.QuoteSheetFields>;
 
@@ -394,18 +422,8 @@ export function mergeRoadCostImport(
     [sheet.zipCode, sheet.city, sheet.state].filter(Boolean).join(', ') ||
     sheet.pickUpAddress;
 
-  if (fields.nsLift !== undefined && fields.nsLift !== null) {
-    sheet.nsLift = fields.nsLift;
-  }
-  if (fields.chassis !== undefined && fields.chassis !== null) {
-    sheet.chassis = fields.chassis;
-  }
-  if (fields.waiting !== undefined && fields.waiting !== null) {
-    sheet.waiting = fields.waiting;
-  }
-  if (fields.redeliveryFee !== undefined && fields.redeliveryFee !== null) {
-    sheet.redeliveryFee = fields.redeliveryFee;
-  }
+  // 卡车额外费用为业务固定值，不从报价库覆盖
+  applyFixedTruckExtraFees(sheet);
   sheet.truckRemark =
     fields.truckRemark ?? resolveRoadRemark(record) ?? sheet.truckRemark;
   sheet.truckingFee = fields.truckingFee;

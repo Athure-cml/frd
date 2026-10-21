@@ -12,13 +12,13 @@ export const QUOTE_SHEET_COLUMNS: Array<{
   { field: 'pod', title: 'POD', width: 88 },
   { field: 'oceanFreight', title: 'OCEAN FREIGHT', width: 130 },
   { field: 'truckingFee', title: 'TRUCKING FEE', type: 'money', width: 120 },
+  { field: 'truckingFee2', title: 'TRUCKING FEE 2', type: 'money', width: 120 },
   { field: 'nsLift', title: 'NS LIFT', type: 'money', width: 96 },
   { field: 'chassis', title: 'CHASSIS', type: 'money', width: 96 },
   { field: 'waiting', title: 'WAITING', type: 'money', width: 96 },
   {
     field: 'redeliveryFee',
     title: 'REDELIVERY FEE',
-    type: 'money',
     width: 120,
   },
   { field: 'truckRemark', title: 'TRUCK REMARK', width: 160 },
@@ -117,6 +117,9 @@ export function sheetCellValue(
 ) {
   if (field === 'porPol') {
     return formatPorPol(sheet);
+  }
+  if (field === 'redeliveryFee') {
+    return 'AT COST';
   }
   const col = QUOTE_SHEET_COLUMNS.find((item) => item.field === field);
   const value = sheet?.[field as keyof QuoteApi.QuoteSheetFields];

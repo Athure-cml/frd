@@ -2,7 +2,10 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { CostMode } from '#/api/cost';
 import type { QuoteCostType } from '#/api/quote';
 
-import { appendCostStatusColumn } from '../../cost-library/shared/columns';
+import {
+  appendCostStatusColumn,
+  applyQuoteLibraryStatusColumn,
+} from '../../cost-library/shared/columns';
 import { buildQuoteLibrarySnapshotColumns } from '../library/shared/quote-library-columns';
 
 export const QUOTE_COST_TYPE_TO_MODE: Record<QuoteCostType, CostMode> = {
@@ -78,6 +81,7 @@ export function buildQuoteCostPickerColumns(
   ];
   // 状态列固定右侧、置于最右（卡车 SUPPLIER 已在快照列中固定右侧）
   appendCostStatusColumn(columns);
+  applyQuoteLibraryStatusColumn(columns);
   return columns;
 }
 

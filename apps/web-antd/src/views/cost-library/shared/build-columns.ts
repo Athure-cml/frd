@@ -245,7 +245,7 @@ function buildCatalogMap(mode: CostMode, layout: CostTableTemplateLayout) {
 
 function buildRequiredHeaderSlot(title: string) {
   return () =>
-    h('span', { class: 'col-required-header' }, [
+    h('span', { class: 'col-required-header', title }, [
       h('span', { class: 'col-required-mark' }, '*'),
       h('span', null, title),
     ]);
@@ -263,8 +263,10 @@ function buildLeafColumn(
     title: string;
   },
 ) {
+  const sortable = options.override?.sortable === true;
   const size = resolveCompactColumnSize(options.title, entry, {
     required: options.required,
+    sortable,
   });
   const headerClassName = [
     entry.headerClassName,
@@ -272,20 +274,26 @@ function buildLeafColumn(
   ]
     .filter(Boolean)
     .join(' ');
-  const minWidth =
-    options.override?.minWidth ?? entry.minWidth ?? size.minWidth;
-  const width = options.override?.width ?? entry.width;
+  const rawWidth = options.override?.width ?? entry.width;
+  const hasFixedWidth = typeof rawWidth === 'number' && rawWidth > 0;
+  // 模板显式 width 必须生效；若 minWidth > width，vxe 会按 minWidth 撑开导致「输入宽度不生效」
+  const minWidth = hasFixedWidth
+    ? Math.min(options.override?.minWidth ?? rawWidth, rawWidth)
+    : (options.override?.minWidth ?? entry.minWidth ?? size.minWidth);
   const column: Record<string, unknown> = {
     align: entry.align,
     field: entry.field,
     headerClassName: headerClassName || undefined,
     minWidth,
     showOverflow: entry.showOverflow ?? true,
-    sortable: options.override?.sortable === true,
+    sortable,
     title: options.title,
   };
-  if (typeof width === 'number' && width > 0) {
-    column.width = width;
+  if (hasFixedWidth) {
+    column.width = rawWidth;
+  } else if (typeof minWidth === 'number' && minWidth > 0) {
+    // 同时写 width，避免仅 minWidth 时被拉满容器，刷新后算不出横向滚动
+    column.width = minWidth;
   }
 
   if (options.required) {

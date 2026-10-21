@@ -158,7 +158,7 @@ const feeRows = computed(() => [
   {
     field: 'redeliveryFee' as const,
     item: $t('page.quote.sheet.redelivery'),
-    rateType: 'money' as const,
+    rateType: 'remark' as const,
     unit: $t('page.quote.sheet.unitPerContainer'),
   },
   {

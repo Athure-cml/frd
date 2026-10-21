@@ -98,8 +98,12 @@ watch(
   () => zipCode.value,
   (value, oldValue) => {
     if (!value) {
-      city.value = '';
-      state.value = '';
+      // 仅当 ZIP 从有值被清空时联动清 city/state。
+      // 匹配报价等场景会把空 ZIP 写成 null/''，若一律清空会误删用户已填城市/州。
+      if (oldValue) {
+        city.value = '';
+        state.value = '';
+      }
       options.value = [];
       return;
     }

@@ -429,14 +429,20 @@ export function useQuoteColumns(
     operationOptions,
   });
 
-  const sheetCols = QUOTE_LIST_COLUMNS.map((col) => ({
-    field: col.listSource === 'row' ? col.field : `sheet.${String(col.field)}`,
-    formatter: ({ row }: { row: QuoteApi.QuoteListItem }) =>
-      formatQuoteListCellValue(row, col),
-    minWidth: col.width ?? 100,
-    showOverflow: true,
-    title: col.title,
-  }));
+  const sheetCols = QUOTE_LIST_COLUMNS.map((col) => {
+    const width = col.width ?? 100;
+    return {
+      field:
+        col.listSource === 'row' ? col.field : `sheet.${String(col.field)}`,
+      formatter: ({ row }: { row: QuoteApi.QuoteListItem }) =>
+        formatQuoteListCellValue(row, col),
+      // 同时给 width + minWidth，避免仅 minWidth 时 recalculate 把列撑满容器导致横向滚动条消失
+      minWidth: width,
+      showOverflow: true,
+      title: col.title,
+      width,
+    };
+  });
 
   const columns: VxeTableGridOptions<QuoteApi.QuoteListItem>['columns'] = [
     { type: 'checkbox', width: 48, fixed: 'left' },
@@ -446,6 +452,7 @@ export function useQuoteColumns(
       minWidth: 130,
       slots: { default: 'quoteNo' },
       title: 'QUOTE NO',
+      width: 130,
     },
     {
       field: 'createdByName',
@@ -453,6 +460,7 @@ export function useQuoteColumns(
       minWidth: 100,
       showOverflow: true,
       title: t('fields.operator'),
+      width: 100,
     },
     {
       field: 'serviceTypes',
@@ -462,12 +470,14 @@ export function useQuoteColumns(
       minWidth: 120,
       showOverflow: true,
       title: t('fields.serviceType'),
+      width: 120,
     },
     {
       field: 'customerName',
       fixed: 'left',
       minWidth: 120,
       title: 'CLIENT',
+      width: 120,
     },
     ...sheetCols,
     {
