@@ -2,16 +2,17 @@
 import type { CostLibraryRecord, QuoteMatchKeys } from './sheet-cost-import';
 
 import type { VbenFormSchema } from '#/adapter/form';
-import type { CostMode } from '#/api/cost';
+import type { CostMode, CostTableTemplate } from '#/api/cost';
 import type { QuoteCostType } from '#/api/quote';
 
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
 import { useVbenModal } from '@vben/common-ui';
 
 import { message } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
+import { listCostTableTemplates } from '#/api/cost/templates';
 import { getQuoteLibraryListApi } from '#/api/quote/library';
 import { $t } from '#/locales';
 
@@ -21,8 +22,15 @@ import { adaptCostColumnsForViewport } from '../../cost-library/shared/columns';
 import { withCostSearchFormLayout } from '../../cost-library/shared/cost-search-form-layout';
 import { getCostGridClass } from '../../cost-library/shared/cost-search-schema';
 import { createHighlightOnlySearchField } from '../../cost-library/shared/highlight-only-search';
+import {
+  FUMIGATION_MULTI_SEARCH_FIELDS,
+  normalizePipeSearchParams,
+  normalizeSeaMultiSearchParams,
+  ROAD_MULTI_SEARCH_FIELDS,
+} from '../../cost-library/shared/multi-search-params';
 import { createCostRowHighlightStyleHandlers } from '../../cost-library/shared/row-highlight-style';
 import { normalizeQuoteLibraryStatusSearchParams } from '../../cost-library/shared/status-search';
+import { resolveActiveTemplate } from '../../cost-library/shared/use-table-templates';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import {
   useQuoteLibraryFumigationSearchSchema,
@@ -54,6 +62,8 @@ const selectedRow = ref<CostLibraryRecord | null>(null);
 const preselectedIds = ref<number[]>([]);
 const selectedCount = ref(0);
 const searchFormCollapsed = ref(true);
+/** 与报价库列表一致：仅用报价库当前应用模板，不用内置默认（避免弹窗闪两套表头） */
+const activeTemplate = ref<CostTableTemplate | null>(null);
 const pendingOpen = ref<null | {
   keys: QuoteMatchKeys;
   selectedIds?: number[];
@@ -129,12 +139,73 @@ const pickerGridClass = computed(
   () => `quote-cost-picker-grid ${getCostGridClass(pickerMode.value)}`,
 );
 
+const gridHostRef = ref<HTMLElement | null>(null);
+/** 弹窗表格区可视宽：接口列宽只当下限，按此铺满 */
+const hostWidth = ref(0);
+let hostWidthObserver: null | ResizeObserver = null;
+
+function readHostWidth() {
+  const el = gridHostRef.value;
+  if (!el) {
+    return 0;
+  }
+  const probe = el.querySelector(
+    '.quote-cost-picker__probe',
+  ) as HTMLElement | null;
+  return Math.max(0, Math.floor(probe?.clientWidth ?? el.clientWidth));
+}
+
+function syncHostWidth() {
+  const next = readHostWidth();
+  if (next > 0 && Math.abs(next - hostWidth.value) >= 1) {
+    hostWidth.value = next;
+  }
+}
+
+async function refreshActiveTemplate(mode: CostMode) {
+  try {
+    // 直连接口，不用 loadTableTemplates 的内置默认回退（否则会先闪一套默认表头）
+    const remote = await listCostTableTemplates(mode, 'quote');
+    const scoped = remote?.filter((item) => item.mode === mode) ?? [];
+    activeTemplate.value = resolveActiveTemplate(scoped, mode, 'quote') ?? null;
+  } catch {
+    activeTemplate.value = null;
+  }
+}
+
 function resolvePickerColumns(type: QuoteCostType = costType.value) {
+  const template = activeTemplate.value;
+  if (!template) {
+    return [];
+  }
+  const mode = quoteCostTypeToMode(type);
   return adaptCostColumnsForViewport(
-    buildQuoteCostPickerColumns(quoteCostTypeToMode(type), {
+    buildQuoteCostPickerColumns(mode, {
+      containerWidth: hostWidth.value,
       multiSelect: type === 'SEA' || type === 'ROAD',
+      template,
     }),
   );
+}
+
+function refreshPickerColumns(type: QuoteCostType = costType.value) {
+  syncHostWidth();
+  if (!activeTemplate.value || hostWidth.value <= 0) {
+    return;
+  }
+  const columns = resolvePickerColumns(type);
+  gridApi.setGridOptions({
+    columns,
+    fit: false,
+  });
+  void nextTick(() => {
+    const $grid = gridApi.grid as null | {
+      loadColumn?: (cols: typeof columns) => void;
+      recalculate?: (refull?: boolean) => void;
+    };
+    $grid?.loadColumn?.(columns);
+    $grid?.recalculate?.(true);
+  });
 }
 
 function getSelectedRows(): CostLibraryRecord[] {
@@ -213,6 +284,9 @@ const [Modal, modalApi] = useVbenModal({
       pendingOpen.value = null;
       preselectedIds.value = [];
       selectedCount.value = 0;
+      activeTemplate.value = null;
+      // gridApi 跨次打开会复用，必须清列，否则会先闪上一套表头
+      gridApi.setGridOptions({ columns: [] });
     }
   },
   onOpened() {
@@ -254,8 +328,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
   },
   gridOptions: {
-    columns: resolvePickerColumns(),
+    // 等报价库模板加载后再刷列，初始空列避免先闪内置默认表头
+    columns: [],
+    customConfig: {
+      storage: false,
+    },
+    // 与报价库列表一致：fit:true 会藏掉自定义横条
+    fit: false,
     height: '100%',
+    id: 'quote-cost-library-picker',
     minHeight: 480,
     pagerConfig: {},
     proxyConfig: {
@@ -277,6 +358,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
           } else {
             delete params.confirmStatus;
           }
+          if (pickerMode.value === 'sea') {
+            normalizeSeaMultiSearchParams(params);
+          }
           if (pickerMode.value === 'road') {
             const normalizedCity = normalizeRoadCitySearchParam(params.city);
             if (normalizedCity) {
@@ -284,6 +368,13 @@ const [Grid, gridApi] = useVbenVxeGrid({
             } else {
               delete params.city;
             }
+            normalizePipeSearchParams(params, [
+              'supplier',
+              ...ROAD_MULTI_SEARCH_FIELDS,
+            ]);
+          }
+          if (pickerMode.value === 'fumigation') {
+            normalizePipeSearchParams(params, FUMIGATION_MULTI_SEARCH_FIELDS);
           }
           const result = await api({
             page: page.currentPage,
@@ -315,6 +406,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
     rowConfig: {
       isHover: true,
       keyField: 'id',
+    },
+    scrollbarConfig: {
+      x: { visible: 'visible' },
     },
     scrollX: {
       enabled: true,
@@ -423,16 +517,25 @@ async function applyOpenSearch() {
   preselectedIds.value = selectedIds ?? [];
   const mode = quoteCostTypeToMode(type);
 
+  // 先清空再刷报价库模板列，避免复用上次列/内置默认造成「两套表头」
+  gridApi.setGridOptions({ columns: [] });
+  if (!activeTemplate.value) {
+    await refreshActiveTemplate(mode);
+  }
+  if (!activeTemplate.value) {
+    message.error($t('page.quote.message.loadTemplateFailed'));
+    await modalApi.close();
+    return;
+  }
   await nextTick();
+  syncHostWidth();
 
   searchFormCollapsed.value = true;
   gridApi.setState({
     formOptions: buildPickerSearchFormOptions(type),
     gridClass: `quote-cost-picker-grid ${getCostGridClass(mode)}`,
   });
-  gridApi.setGridOptions({
-    columns: resolvePickerColumns(type),
-  });
+  refreshPickerColumns(type);
   applySelectMode();
 
   const initialValues = {
@@ -444,9 +547,40 @@ async function applyOpenSearch() {
   clearSelection();
   await gridApi.reload?.();
   await nextTick();
-  gridApi.grid?.recalculate?.();
+  // 弹窗动画结束后宽度才准，再铺一次
+  window.setTimeout(() => {
+    syncHostWidth();
+    refreshPickerColumns(type);
+    gridApi.grid?.recalculate?.(true);
+  }, 80);
   await applyPreselectedRows();
 }
+
+watch(gridHostRef, (el) => {
+  hostWidthObserver?.disconnect();
+  hostWidthObserver = null;
+  if (!el || typeof ResizeObserver === 'undefined') {
+    return;
+  }
+  hostWidthObserver = new ResizeObserver(() => {
+    const prev = hostWidth.value;
+    syncHostWidth();
+    if (hostWidth.value > 0 && hostWidth.value !== prev) {
+      refreshPickerColumns();
+    }
+  });
+  hostWidthObserver.observe(el);
+  const probe = el.querySelector('.quote-cost-picker__probe');
+  if (probe) {
+    hostWidthObserver.observe(probe);
+  }
+  syncHostWidth();
+});
+
+onBeforeUnmount(() => {
+  hostWidthObserver?.disconnect();
+  hostWidthObserver = null;
+});
 
 async function onConfirmPick() {
   await confirmPick();
@@ -462,6 +596,13 @@ async function open(
   preselectedIds.value = options?.selectedIds ?? [];
   selectedRow.value = null;
   selectedCount.value = 0;
+  // 先拉报价库模板再开弹窗，避免先渲染空/错表头再切换
+  activeTemplate.value = null;
+  await refreshActiveTemplate(quoteCostTypeToMode(type));
+  if (!activeTemplate.value) {
+    message.error($t('page.quote.message.loadTemplateFailed'));
+    return;
+  }
   pendingOpen.value = { keys, selectedIds: options?.selectedIds, type };
   modalApi.open();
 }
@@ -473,9 +614,12 @@ defineExpose({ open });
   <Modal :title="modalTitle">
     <div class="quote-cost-picker">
       <div
+        ref="gridHostRef"
         class="quote-cost-picker__grid"
         :class="{ 'quote-cost-search--collapsed': searchFormCollapsed }"
       >
+        <!-- 测弹窗可视宽：不被表格列撑开 -->
+        <div class="quote-cost-picker__probe" aria-hidden="true"></div>
         <Grid :form-options="searchFormOptions" />
       </div>
     </div>

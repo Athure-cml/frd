@@ -15,6 +15,7 @@ export type QuoteServiceType =
 export type QuoteOakType = 'NON_OAK' | 'OAK';
 
 export type QuoteStatus =
+  | 'ARCHIVED'
   | 'DRAFT'
   | 'EFFECTIVE'
   | 'EXPIRED'
@@ -22,6 +23,8 @@ export type QuoteStatus =
   | 'LOST'
   | 'PENDING'
   | 'PENDING_APPROVAL'
+  | 'PENDING_QUOTE'
+  | 'QUOTED'
   | 'REJECTED'
   | 'REVISING'
   | 'SENT'
@@ -89,8 +92,9 @@ export namespace QuoteApi {
   export interface QuoteListItem {
     allIn?: number;
     createdAt: string;
-    createdBy: number;
-    createdByName: string;
+    /** 操作人：询价递交生成后可为空，首次保存后写入 */
+    createdBy?: null | number;
+    createdByName?: null | string;
     currency: string;
     customerId?: number;
     customerName: string;
@@ -103,7 +107,11 @@ export namespace QuoteApi {
     serviceTypes?: QuoteServiceType[];
     oakType?: QuoteOakType;
     sheet: QuoteSheetFields;
+    /** 引入卡车报价库 SUPPLIER（来自 ROAD 成本快照，不落库） */
+    supplier?: string;
     status: QuoteStatus;
+    /** 归档原因：SUPERSEDED | QUOTED_EXPIRED | PENDING_EXPIRED */
+    archiveReason?: 'PENDING_EXPIRED' | 'QUOTED_EXPIRED' | 'SUPERSEDED' | null;
     totalAmount: number;
     transportMode: QuoteTransportMode;
     updatedAt: string;
@@ -127,7 +135,6 @@ export namespace QuoteApi {
   export interface QuoteDetail extends QuoteListItem {
     baseCurrency?: string;
     costSnapshots: QuoteCostMatchItem[];
-    createdBy: number;
     deptId?: number;
     editable: boolean;
     operable: boolean;
@@ -136,6 +143,26 @@ export namespace QuoteApi {
     lines: QuoteLine[];
     remark?: string;
     submittedAt?: string;
+  }
+
+  export interface QuoteMailLog {
+    attachmentName?: string;
+    createdAt?: string;
+    errorCode?: string;
+    errorMessage?: string;
+    finishedAt?: string;
+    id: number;
+    inquiryId?: number;
+    operatorName?: string;
+    quoteId: number;
+    quoteNo?: string;
+    skipReason?: string;
+    stage?: string;
+    startedAt?: string;
+    status: 'FAILED' | 'SENDING' | 'SENT' | 'SKIPPED';
+    subject?: string;
+    toEmail?: string;
+    triggerType?: string;
   }
 
   export interface QuoteLine {
@@ -158,6 +185,7 @@ export namespace QuoteApi {
   }
 
   export interface QuoteSave extends QuoteSheetFields {
+    changeReason?: string;
     costMatches?: QuoteCostMatchItem[];
     currency?: string;
     customerId?: number;
@@ -175,6 +203,8 @@ export namespace QuoteApi {
       unit?: string;
       unitPrice?: number;
     }>;
+    /** 变更来源单：有值时走 /revise，保存直接已报价 */
+    parentQuoteId?: number;
     remark?: string;
     routeSummary?: string;
     serviceTypes?: QuoteServiceType[];
@@ -288,8 +318,14 @@ export async function updateQuote(id: number, data: QuoteApi.QuoteSave) {
   return requestClient.put<QuoteApi.QuoteDetail>(`/quotes/${id}`, data);
 }
 
+/** 退回报价单（取消待报价，关联询价单回到待递交） */
 export async function deleteQuote(id: number) {
   return requestClient.delete(`/quotes/${id}`);
+}
+
+/** @see deleteQuote */
+export async function returnQuote(id: number) {
+  return deleteQuote(id);
 }
 
 export async function matchQuoteCosts(data: QuoteApi.MatchCostsRequest) {
@@ -356,6 +392,30 @@ export async function voidQuote(id: number) {
   return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/void`);
 }
 
+export async function confirmQuote(id: number) {
+  return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/confirm`);
+}
+
+/** 已报价发信流水（最新在前） */
+export async function getQuoteMailLogs(id: number) {
+  return requestClient.get<QuoteApi.QuoteMailLog[]>(`/quotes/${id}/mail-logs`);
+}
+
+/** 重新发送已报价邮件（异步执行，轮询 mail-logs 取结果） */
+export async function resendQuoteMail(id: number) {
+  return requestClient.post<QuoteApi.QuoteMailLog[]>(
+    `/quotes/${id}/mail/resend`,
+  );
+}
+
+/** 人工指定邮箱发送报价单邮件（异步执行，轮询 mail-logs 取结果） */
+export async function sendQuoteMail(id: number, toEmails: string[]) {
+  return requestClient.post<QuoteApi.QuoteMailLog[]>(
+    `/quotes/${id}/mail/send`,
+    { toEmails },
+  );
+}
+
 export async function dismissQuoteCostRisk(id: number) {
   return requestClient.post<QuoteApi.QuoteDetail>(
     `/quotes/${id}/dismiss-cost-risk`,
@@ -366,10 +426,15 @@ export async function copyQuote(id: number) {
   return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/copy`);
 }
 
-export async function reviseQuote(id: number, changeReason: string) {
-  return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/revise`, {
-    changeReason,
-  });
+/** 变更保存：新单直接落已报价，旧版归档 */
+export async function reviseQuote(
+  parentId: number,
+  data: QuoteApi.QuoteSave & { changeReason: string },
+) {
+  return requestClient.post<QuoteApi.QuoteDetail>(
+    `/quotes/${parentId}/revise`,
+    data,
+  );
 }
 
 export async function exportQuotes(params: Recordable<any> = {}) {

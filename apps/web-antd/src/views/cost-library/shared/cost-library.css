@@ -50,9 +50,17 @@
   ) !important;
 }
 
-/* 部门常用行背景（rowStyle 注入 --cost-row-highlight-*） */
-.cost-library-grid .vxe-body--row.cost-row-highlight .vxe-body--column .vxe-cell {
-  color: var(--cost-row-highlight-fg, inherit);
+/* 部门常用行背景（rowStyle / cellStyle 注入 --cost-row-highlight-*）；盖过模板列底色 */
+.cost-library-grid .vxe-body--row.cost-row-highlight .vxe-body--column,
+.cost-library-grid .vxe-body--row.cost-row-highlight .vxe-body--column .vxe-cell,
+.cost-library-grid
+  .vxe-body--row.cost-row-highlight
+  .vxe-body--column.col-tmpl-bg,
+.cost-library-grid
+  .vxe-body--row.cost-row-highlight
+  .vxe-body--column.col-tmpl-bg
+  .vxe-cell {
+  color: var(--cost-row-highlight-fg, inherit) !important;
   background-color: var(--cost-row-highlight-bg, inherit) !important;
 }
 
@@ -97,7 +105,17 @@
   box-shadow: inset 0 0 0 1px hsl(var(--primary) / 35%);
 }
 
-.dark .cost-library-grid .vxe-body--row.cost-row-highlight .vxe-body--column .vxe-cell {
+.dark .cost-library-grid .vxe-body--row.cost-row-highlight .vxe-body--column,
+.dark .cost-library-grid .vxe-body--row.cost-row-highlight .vxe-body--column .vxe-cell,
+.dark
+  .cost-library-grid
+  .vxe-body--row.cost-row-highlight
+  .vxe-body--column.col-tmpl-bg,
+.dark
+  .cost-library-grid
+  .vxe-body--row.cost-row-highlight
+  .vxe-body--column.col-tmpl-bg
+  .vxe-cell {
   color: hsl(var(--foreground)) !important;
   background-color: color-mix(
     in srgb,
@@ -321,6 +339,13 @@
   min-width: 0;
   height: 100%;
   min-height: 0;
+}
+
+/* 熏蒸列较少：表格跟容器同宽，避免右侧留白（配合 fit） */
+.cost-library-grid.fumigation-cost-grid .vxe-table--main-wrapper,
+.cost-library-grid.fumigation-cost-grid .vxe-table--header-wrapper,
+.cost-library-grid.fumigation-cost-grid .vxe-table--body-wrapper {
+  width: 100% !important;
 }
 
 /*

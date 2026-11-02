@@ -167,6 +167,20 @@ export function useUserColumns(
     },
     {
       align: 'left',
+      field: 'phone',
+      minWidth: 130,
+      showOverflow: true,
+      title: t('fields.phone'),
+    },
+    {
+      align: 'left',
+      field: 'email',
+      minWidth: 180,
+      showOverflow: true,
+      title: t('fields.email'),
+    },
+    {
+      align: 'left',
       field: 'dept.name',
       minWidth: 120,
       title: t('fields.dept'),

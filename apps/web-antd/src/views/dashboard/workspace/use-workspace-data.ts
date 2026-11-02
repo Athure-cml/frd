@@ -25,9 +25,9 @@ export function useWorkspaceData() {
   const pipeline = ref<WorkspacePipelineView[]>([]);
   const topRoutes = ref<WorkspaceRouteView[]>([]);
   const quoteStats = ref<WorkspaceQuoteStatsView>({
+    inquiries: [],
     months: [],
     quoted: [],
-    won: [],
   });
 
   async function load() {

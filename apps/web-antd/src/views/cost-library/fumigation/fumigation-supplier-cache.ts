@@ -52,6 +52,16 @@ export function createFumigationStationSelectProps() {
   };
 }
 
+/** 搜索栏 STATION：多选 + 粘贴多条（录入表单仍用单选版） */
+export function createFumigationStationSearchMultiProps() {
+  return {
+    ...createFumigationStationSelectProps(),
+    class: 'w-full cost-select-multiple-wrap',
+    maxTagCount: 'responsive' as const,
+    mode: 'tags' as const,
+  };
+}
+
 /** 成本库表格 STATION 列：有简称显示简称，否则显示全称。 */
 export function formatFumigationStationShort(fullName?: null | string) {
   const name = fullName?.trim();

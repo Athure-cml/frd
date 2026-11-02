@@ -162,6 +162,49 @@ export function createPortSelectProps(options: {
   return base;
 }
 
+/** 多选搜索框：从 Excel/文档粘贴多条时按这些字符拆分（港口/供应商名含逗号，故不用逗号） */
+const MULTI_PASTE_SEPARATORS = ['\n', '\r', '\t', ';', '；', '、', '，'];
+
+function multiSearchSelectProps(base: Record<string, unknown>) {
+  return {
+    ...base,
+    class: 'w-full cost-select-multiple-wrap',
+    // tags 模式允许粘贴进来的值直接成为标签（options 需输入关键字才加载，用 multiple 会被丢弃）
+    mode: 'tags' as const,
+    // 超出控件宽度的标签不换行，折叠成「+N」
+    maxTagCount: 'responsive' as const,
+    tokenSeparators: MULTI_PASTE_SEPARATORS,
+  };
+}
+
+/** 搜索栏 POR/POL/POD：多选 + 粘贴多条 */
+export function createPortSearchSelectProps(
+  portTypes: GlobalPortApi.PortType[],
+) {
+  return multiSearchSelectProps(
+    createPortSelectProps({ multiple: true, portTypes, requireKeyword: true }),
+  );
+}
+
+/** 搜索栏船公司/代理：多选 + 粘贴多条 */
+export function createPartyNameSearchSelectProps(options: {
+  fetch: (params: {
+    name?: string;
+    page: number;
+    pageSize: number;
+    status: number;
+  }) => Promise<{ items: Array<{ name: string }> }>;
+}) {
+  return multiSearchSelectProps(
+    createPartyNameSelectProps({ fetch: options.fetch, requireKeyword: true }),
+  );
+}
+
+/** 搜索栏箱型：多选 + 粘贴多条 */
+export function createContainerTypeSearchMultiProps() {
+  return multiSearchSelectProps(createContainerTypeSearchProps());
+}
+
 export function createContainerTypeSearchProps() {
   const params = reactive({ keyword: '' });
   const setKeyword = useDebounceFn((keyword: string) => {

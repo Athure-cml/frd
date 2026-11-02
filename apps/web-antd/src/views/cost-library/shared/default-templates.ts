@@ -5,6 +5,7 @@ import type {
 } from '#/api/cost';
 
 import { ROAD_REMARK_FIELD } from './field-catalog/road';
+import { getFumigationV2Template } from './fumigation-template-layouts';
 
 export const BUILTIN_TEMPLATE_ID = 1;
 
@@ -56,8 +57,8 @@ const ROAD_DEFAULT_LAYOUT: CostTableTemplateLayout = {
   ],
   fieldOrder: [
     'zipCode',
-    'city',
     'state',
+    'city',
     'por',
     'station',
     'supplier',
@@ -204,83 +205,6 @@ const SEA_DEFAULT_LAYOUT: CostTableTemplateLayout = {
   ],
 };
 
-/** 熏蒸成本库默认列顺序，对齐业务 Excel：REGION / STATION / FM-OUTDOOR / FM-INDOOR / ADDRESS
- * 生效期无独立库字段，用模板自定义列写入 extraFields
- */
-const FUM_OUTDOOR_EFF = 'cf_fum_outdoor_eff';
-const FUM_INDOOR_EFF = 'cf_fum_indoor_eff';
-
-const FUMIGATION_DEFAULT_LAYOUT: CostTableTemplateLayout = {
-  customFields: [
-    {
-      dataType: 'date',
-      field: FUM_OUTDOOR_EFF,
-      required: true,
-      title: '生效期',
-    },
-    {
-      dataType: 'date',
-      field: FUM_INDOOR_EFF,
-      required: false,
-      title: '生效期',
-    },
-  ],
-  fieldOrder: [
-    'region',
-    'station',
-    'outdoorNonOak',
-    'outdoorOak',
-    FUM_OUTDOOR_EFF,
-    'outdoorValidity',
-    'indoorNonOak',
-    'indoorOak',
-    FUM_INDOOR_EFF,
-    'indoorValidity',
-    'address',
-    'remark',
-  ],
-  fieldOverrides: {
-    remark: { title: '备注' },
-    [FUM_OUTDOOR_EFF]: { required: true },
-    outdoorNonOak: { required: true },
-    outdoorOak: { required: true },
-    outdoorValidity: { required: true },
-    region: { required: true },
-    station: { required: true },
-  },
-  fields: [
-    'region',
-    'station',
-    'outdoorNonOak',
-    'outdoorOak',
-    FUM_OUTDOOR_EFF,
-    'outdoorValidity',
-    'indoorNonOak',
-    'indoorOak',
-    FUM_INDOOR_EFF,
-    'indoorValidity',
-    'address',
-    'remark',
-  ],
-  groups: [
-    {
-      fields: [
-        'outdoorNonOak',
-        'outdoorOak',
-        FUM_OUTDOOR_EFF,
-        'outdoorValidity',
-      ],
-      key: 'outdoor',
-      labelKey: 'page.costLibrary.fumigationGroups.outdoor',
-    },
-    {
-      fields: ['indoorNonOak', 'indoorOak', FUM_INDOOR_EFF, 'indoorValidity'],
-      key: 'indoor',
-      labelKey: 'page.costLibrary.fumigationGroups.indoor',
-    },
-  ],
-};
-
 function createBuiltinTemplate(
   mode: CostMode,
   layout: CostTableTemplateLayout,
@@ -296,8 +220,13 @@ function createBuiltinTemplate(
 }
 
 export function getBuiltinTemplates(mode: CostMode): CostTableTemplate[] {
-  const layoutByMode: Record<CostMode, CostTableTemplateLayout> = {
-    fumigation: FUMIGATION_DEFAULT_LAYOUT,
+  if (mode === 'fumigation') {
+    return [getFumigationV2Template()];
+  }
+  const layoutByMode: Record<
+    Exclude<CostMode, 'fumigation'>,
+    CostTableTemplateLayout
+  > = {
     road: ROAD_DEFAULT_LAYOUT,
     sea: SEA_DEFAULT_LAYOUT,
   };

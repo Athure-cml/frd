@@ -8,10 +8,11 @@ import { $t } from '#/locales';
 
 import { buildColumnsFromTemplate } from '../shared/build-columns';
 import {
-  createContainerTypeSearchProps,
-  createPartyNameSelectProps,
-  createPortSelectProps,
+  createContainerTypeSearchMultiProps,
+  createPartyNameSearchSelectProps,
+  createPortSearchSelectProps,
 } from '../shared/freight-schema';
+import MultiPasteSelect from '../shared/multi-paste-select.vue';
 import { createCostStatusSearchField } from '../shared/status-search';
 
 const f = (key: string) => $t(`page.costLibrary.seaFields.${key}`);
@@ -29,35 +30,30 @@ function dateSearchProps() {
 export function useSeaSearchSchema(): VbenFormSchema[] {
   return [
     {
-      component: 'ApiSelect',
-      componentProps: createPortSelectProps({
-        portTypes: ['INLAND', 'RAIL', 'SEAPORT'],
-        requireKeyword: true,
-      }),
+      component: MultiPasteSelect,
+      componentProps: createPortSearchSelectProps([
+        'INLAND',
+        'RAIL',
+        'SEAPORT',
+      ]),
       fieldName: 'por',
       label: f('por'),
     },
     {
-      component: 'ApiSelect',
-      componentProps: createPortSelectProps({
-        portTypes: ['SEAPORT'],
-        requireKeyword: true,
-      }),
+      component: MultiPasteSelect,
+      componentProps: createPortSearchSelectProps(['SEAPORT']),
       fieldName: 'pol',
       label: f('pol'),
     },
     {
-      component: 'ApiSelect',
-      componentProps: createPortSelectProps({
-        portTypes: ['SEAPORT'],
-        requireKeyword: true,
-      }),
+      component: MultiPasteSelect,
+      componentProps: createPortSearchSelectProps(['SEAPORT']),
       fieldName: 'pod',
       label: f('pod'),
     },
     {
-      component: 'ApiSelect',
-      componentProps: createContainerTypeSearchProps(),
+      component: MultiPasteSelect,
+      componentProps: createContainerTypeSearchMultiProps(),
       fieldName: 'containerType',
       label: f('containerType'),
     },
@@ -74,19 +70,17 @@ export function useSeaSearchSchema(): VbenFormSchema[] {
       label: f('freightValidDateSearch'),
     },
     {
-      component: 'ApiSelect',
-      componentProps: createPartyNameSelectProps({
+      component: MultiPasteSelect,
+      componentProps: createPartyNameSearchSelectProps({
         fetch: getShippingLineList,
-        requireKeyword: true,
       }),
       fieldName: 'ssl',
       label: f('ssl'),
     },
     {
-      component: 'ApiSelect',
-      componentProps: createPartyNameSelectProps({
+      component: MultiPasteSelect,
+      componentProps: createPartyNameSearchSelectProps({
         fetch: getAgentList,
-        requireKeyword: true,
       }),
       fieldName: 'agent',
       label: f('agent'),

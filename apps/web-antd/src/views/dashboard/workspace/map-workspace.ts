@@ -19,6 +19,8 @@ export interface WorkspaceTodoView {
   done: boolean;
   href: string;
   id: string;
+  /** 列表副文案（报价号·客户，或报价库类型·条数） */
+  meta: string;
   priority: 'high' | 'medium' | 'urgent';
   quoteNo: string;
   time: string;
@@ -27,7 +29,6 @@ export interface WorkspaceTodoView {
 }
 
 export interface WorkspacePipelineView {
-  amountLabel: string;
   customerName: string;
   id: string;
   operatorName: string;
@@ -53,9 +54,9 @@ export interface WorkspaceRouteView {
 }
 
 export interface WorkspaceQuoteStatsView {
+  inquiries: number[];
   months: string[];
   quoted: number[];
-  won: number[];
 }
 
 const METRIC_META: Record<
@@ -66,30 +67,30 @@ const METRIC_META: Record<
     titleKey: string;
   }
 > = {
-  monthQuotes: {
-    icon: 'lucide:file-text',
+  monthInquiries: {
+    icon: 'lucide:clipboard-list',
     iconTone: 'primary',
-    titleKey: 'page.analytics.kpi.monthQuotes',
+    titleKey: 'page.analytics.kpi.monthInquiries',
   },
-  monthAmount: {
-    icon: 'lucide:wallet',
+  monthQuoted: {
+    icon: 'lucide:file-check-2',
     iconTone: 'accent',
-    titleKey: 'page.analytics.kpi.monthAmount',
+    titleKey: 'page.analytics.kpi.monthQuoted',
   },
-  winRate: {
+  conversionRate: {
     icon: 'lucide:percent',
     iconTone: 'success',
-    titleKey: 'page.analytics.kpi.winRate',
+    titleKey: 'page.analytics.kpi.conversionRate',
   },
-  followUp: {
-    icon: 'lucide:clock',
+  pendingQuote: {
+    icon: 'lucide:hourglass',
     iconTone: 'warning',
-    titleKey: 'page.analytics.kpi.followUp',
+    titleKey: 'page.analytics.kpi.pendingQuote',
   },
-  expiringSoon: {
-    icon: 'lucide:alarm-clock',
+  costRisk: {
+    icon: 'lucide:triangle-alert',
     iconTone: 'destructive',
-    titleKey: 'page.analytics.kpi.expiringSoon',
+    titleKey: 'page.analytics.kpi.costRisk',
   },
 };
 
@@ -120,21 +121,43 @@ export function mapWorkspaceMetrics(
 }
 
 const TODO_TITLE_KEYS: Record<string, string> = {
+  pendingMail: 'page.workspace.todos.pendingMail',
   archiveLost: 'page.workspace.todos.archiveLost',
   approveQuote: 'page.workspace.todos.approveQuote',
   completeDraft: 'page.workspace.todos.completeDraft',
+  confirmLibraryFumigation: 'page.workspace.todos.confirmLibrary',
+  confirmLibraryRoad: 'page.workspace.todos.confirmLibrary',
+  confirmLibrarySea: 'page.workspace.todos.confirmLibrary',
   confirmWon: 'page.workspace.todos.confirmWon',
   followSent: 'page.workspace.todos.followSent',
+  pendingQuote: 'page.workspace.todos.pendingQuote',
   reviewCostRisk: 'page.workspace.todos.reviewCostRisk',
 };
 
 const TODO_ACTION_KEYS: Record<string, string> = {
+  pendingMail: 'page.workspace.todos.actions.resendMail',
   archiveLost: 'page.workspace.todos.actions.handle',
   approveQuote: 'page.workspace.todos.actions.approve',
   completeDraft: 'page.workspace.todos.actions.complete',
+  confirmLibraryFumigation: 'page.workspace.todos.actions.confirmLibrary',
+  confirmLibraryRoad: 'page.workspace.todos.actions.confirmLibrary',
+  confirmLibrarySea: 'page.workspace.todos.actions.confirmLibrary',
   confirmWon: 'page.workspace.todos.actions.archive',
   followSent: 'page.workspace.todos.actions.follow',
+  pendingQuote: 'page.workspace.todos.actions.quote',
   reviewCostRisk: 'page.workspace.todos.actions.review',
+};
+
+const LIBRARY_CONFIRM_HREF: Record<string, string> = {
+  confirmLibraryFumigation: '/quotes/library/fumigation?status=pendingConfirm',
+  confirmLibraryRoad: '/quotes/library/road?status=pendingConfirm',
+  confirmLibrarySea: '/quotes/library/sea?status=pendingConfirm',
+};
+
+const LIBRARY_CONFIRM_LABEL_KEYS: Record<string, string> = {
+  confirmLibraryFumigation: 'page.workspace.todos.library.fumigation',
+  confirmLibraryRoad: 'page.workspace.todos.library.road',
+  confirmLibrarySea: 'page.workspace.todos.library.sea',
 };
 
 function resolveTodoTitle(todoType: string) {
@@ -148,9 +171,28 @@ function resolveTodoActionLabel(todoType: string) {
 }
 
 function resolveTodoHref(item: DashboardApi.WorkspaceTodo) {
+  const libraryHref = LIBRARY_CONFIRM_HREF[item.todoType];
+  if (libraryHref) {
+    return libraryHref;
+  }
   return item.todoType === 'approveQuote'
     ? `/approval/${item.id}`
     : `/quotes/${item.id}/edit`;
+}
+
+function resolveTodoMeta(item: DashboardApi.WorkspaceTodo) {
+  const libraryLabelKey = LIBRARY_CONFIRM_LABEL_KEYS[item.todoType];
+  if (libraryLabelKey) {
+    const count = Number(item.customer);
+    const safeCount = Number.isFinite(count) ? count : 0;
+    return $t('page.workspace.todos.library.countMeta', [
+      $t(libraryLabelKey),
+      safeCount,
+    ]);
+  }
+  const quoteNo = item.quoteNo?.trim() || '—';
+  const customer = item.customer?.trim() || '—';
+  return `${quoteNo} · ${customer}`;
 }
 
 const TODO_PRIORITY_RANK: Record<WorkspaceTodoView['priority'], number> = {
@@ -169,6 +211,7 @@ export function mapWorkspaceTodos(
       done: item.done,
       href: resolveTodoHref(item),
       id: String(item.id),
+      meta: resolveTodoMeta(item),
       priority: item.priority,
       quoteNo: item.quoteNo,
       time: item.time,
@@ -186,22 +229,10 @@ export function mapWorkspaceTodos(
     });
 }
 
-function formatPipelineAmount(amount?: number, currency?: string) {
-  const value = Number(amount ?? 0);
-  const safe = Number.isFinite(value) ? value : 0;
-  const formatted = safe.toLocaleString(undefined, {
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 0,
-  });
-  const code = currency?.trim() || 'USD';
-  return `${code} ${formatted}`;
-}
-
 export function mapWorkspacePipeline(
   pipeline: DashboardApi.WorkspacePipelineItem[],
 ): WorkspacePipelineView[] {
   return pipeline.map((item) => ({
-    amountLabel: formatPipelineAmount(item.totalAmount, item.currency),
     customerName: item.customerName?.trim() || '—',
     id: String(item.id),
     operatorName: item.operatorName?.trim() || '—',
@@ -228,15 +259,29 @@ export function mapWorkspaceQuoteStats(
   stats?: DashboardApi.WorkspaceQuoteStats | null,
 ): WorkspaceQuoteStatsView {
   return {
+    inquiries: (stats?.inquiries ?? []).map(Number),
     months: stats?.months ?? [],
-    quoted: stats?.quoted ?? [],
-    won: stats?.won ?? [],
+    quoted: (stats?.quoted ?? []).map(Number),
   };
 }
 
 export function mapWorkspaceNotice(
   notice: DashboardApi.WorkspaceNotice,
 ): WorkspaceNoticeView {
+  if (notice.type === 'MAIL_FAILED') {
+    const quoteId = notice.payload?.quoteId;
+    const quoteNo = String(notice.payload?.quoteNo ?? '');
+    const reason = String(notice.payload?.reason ?? '');
+    return {
+      desc: $t('page.workspace.notices.mailFailed', [quoteNo, reason]),
+      icon: 'lucide:mail-warning',
+      id: notice.id,
+      link: quoteId ? `/quotes/${quoteId}/edit` : '/quotes/list',
+      time: notice.time,
+      title: $t('page.workspace.notices.mailFailedTitle'),
+    };
+  }
+
   if (notice.type === 'COST_RISK') {
     const quoteId = notice.payload?.quoteId;
     const reason = notice.payload?.reason;

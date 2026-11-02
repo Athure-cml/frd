@@ -11,7 +11,7 @@ withDefaults(
     stats?: WorkspaceQuoteStatsView;
   }>(),
   {
-    stats: () => ({ months: [], quoted: [], won: [] }),
+    stats: () => ({ inquiries: [], months: [], quoted: [] }),
   },
 );
 </script>
@@ -25,9 +25,9 @@ withDefaults(
     </div>
     <div class="workspace-chart-area">
       <AnalyticsTrends
+        :inquiries="stats.inquiries"
         :months="stats.months"
         :quoted="stats.quoted"
-        :won="stats.won"
       />
     </div>
   </WorkspaceCard>

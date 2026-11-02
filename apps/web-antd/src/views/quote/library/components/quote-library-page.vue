@@ -10,7 +10,7 @@ import type {
 import type { CostMode, CostTableTemplate } from '#/api/cost';
 
 import { computed, nextTick, onActivated, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
 import { Page } from '@vben/common-ui';
@@ -44,6 +44,12 @@ import {
   useRelationFocus,
 } from '../../../cost-library/shared/cost-quote-relation';
 import { getDefaultTemplate } from '../../../cost-library/shared/default-templates';
+import {
+  FUMIGATION_MULTI_SEARCH_FIELDS,
+  normalizePipeSearchParams,
+  normalizeSeaMultiSearchParams,
+  ROAD_MULTI_SEARCH_FIELDS,
+} from '../../../cost-library/shared/multi-search-params';
 import { createCostRowHighlightStyleHandlers } from '../../../cost-library/shared/row-highlight-style';
 import {
   scheduleGridRecalculate,
@@ -82,6 +88,7 @@ const props = defineProps<{
   titleKey: string;
 }>();
 
+const route = useRoute();
 const router = useRouter();
 const { hasAccessByCodes } = useAccess();
 const { isMobile } = usePreferences();
@@ -192,6 +199,9 @@ const gridClass = computed(() => {
   if (props.mode === 'sea') {
     classes.push('sea-cost-grid');
   }
+  if (props.mode === 'fumigation') {
+    classes.push('fumigation-cost-grid');
+  }
   return classes.join(' ');
 });
 
@@ -235,8 +245,8 @@ const [Grid, gridApi] = useVbenVxeGrid({
     customConfig: {
       storage: false,
     },
-    // 禁止列宽自适应撑满：fit 为 true 时会把 scrollXWidth 拉成容器宽，自定义横条被隐藏
-    fit: false,
+    // 卡车/海运列多需横滚，禁止 fit；熏蒸列少开启 fit 铺满，避免右侧留白
+    fit: props.mode === 'fumigation',
     id: getGridStorageId(
       props.mode as CostMode,
       activeTemplate.value.id,
@@ -270,8 +280,6 @@ const [Grid, gridApi] = useVbenVxeGrid({
       },
       sort: true,
     },
-    rowClassName: resolveRowClassName,
-    rowStyle: highlightHandlers.rowStyle,
     rowConfig: {
       keyField: 'id',
     },
@@ -288,7 +296,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
       trigger: 'default',
     },
     toolbarConfig: toolbarConfig.value,
+    // 列底色；有常用色时 handlers 让位。rowClass/rowStyle 放最后，保证常用色生效
     ...createTemplateColumnBgStyleHandlers(),
+    rowClassName: resolveRowClassName,
+    rowStyle: highlightHandlers.rowStyle,
   } as VxeTableGridOptions<QuoteLibraryRow>,
 });
 
@@ -585,6 +596,9 @@ function onBatchSuccess() {
 
 function normalizeListParams(formValues?: null | Record<string, unknown>) {
   const params = { ...formValues } as Record<string, unknown>;
+  if (params.highlightOnly !== true) {
+    delete params.highlightOnly;
+  }
   const statusParts = normalizeQuoteLibraryStatusSearchParams(params.status);
   if (statusParts.status) {
     params.status = statusParts.status;
@@ -596,6 +610,10 @@ function normalizeListParams(formValues?: null | Record<string, unknown>) {
   } else {
     delete params.confirmStatus;
   }
+  if (props.mode === 'sea') {
+    // 多选搜索值（数组）拼成「A|B」交给后端做 OR 匹配
+    normalizeSeaMultiSearchParams(params);
+  }
   if (props.mode === 'road') {
     const normalizedCity = normalizeRoadCitySearchParam(params.city);
     if (normalizedCity) {
@@ -603,6 +621,13 @@ function normalizeListParams(formValues?: null | Record<string, unknown>) {
     } else {
       delete params.city;
     }
+    normalizePipeSearchParams(params, [
+      'supplier',
+      ...ROAD_MULTI_SEARCH_FIELDS,
+    ]);
+  }
+  if (props.mode === 'fumigation') {
+    normalizePipeSearchParams(params, FUMIGATION_MULTI_SEARCH_FIELDS);
   }
   return params;
 }
@@ -658,13 +683,25 @@ async function loadQuoteRuleHints() {
   }
 }
 
+async function applyStatusFilterFromRoute() {
+  const status = String(route.query.status ?? '').trim();
+  if (!status) {
+    return;
+  }
+  await nextTick();
+  await gridApi.formApi?.setValues?.({ status });
+  await gridApi.query?.();
+}
+
 onMounted(() => {
   void refreshTemplates();
   void loadQuoteRuleHints();
+  void applyStatusFilterFromRoute();
 });
 
 onActivated(() => {
   void refreshTemplates({ force: true });
+  void applyStatusFilterFromRoute();
   scheduleGridRecalculate(
     () =>
       gridApi.grid as null | {
@@ -672,6 +709,13 @@ onActivated(() => {
       },
   );
 });
+
+watch(
+  () => route.query.status,
+  () => {
+    void applyStatusFilterFromRoute();
+  },
+);
 </script>
 
 <template>

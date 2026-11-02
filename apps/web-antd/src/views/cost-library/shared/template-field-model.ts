@@ -156,7 +156,42 @@ export function ensureFumigationRemarkField(
 export function ensureRoadTemplateLayout(
   layout: CostTableTemplateLayout,
 ): CostTableTemplateLayout {
-  return ensureRoadFeeUnitFields(ensureRoadStationField(layout));
+  return ensureRoadRouteOrder(
+    ensureRoadFeeUnitFields(ensureRoadStationField(layout)),
+  );
+}
+
+/** 卡车模板中路由三字段的固定顺序：ZIP CODE → STATE → CITY */
+const ROAD_ROUTE_ORDER = ['zipCode', 'state', 'city'];
+
+/**
+ * 历史模板里这三列是 STATE → CITY → ZIP 或 ZIP → CITY → STATE，
+ * 加载时统一成本地 ZIP → STATE → CITY（只调整这三列的相对位置，其余列不动）。
+ */
+export function ensureRoadRouteOrder(
+  layout: CostTableTemplateLayout,
+): CostTableTemplateLayout {
+  const order = resolveLayoutFieldOrderRaw(layout);
+  if (order.length === 0) {
+    return layout;
+  }
+  if (!ROAD_ROUTE_ORDER.every((field) => order.includes(field))) {
+    return layout;
+  }
+  const anchor = Math.min(
+    ...ROAD_ROUTE_ORDER.map((field) => order.indexOf(field)),
+  );
+  const head = order
+    .slice(0, anchor)
+    .filter((field) => !ROAD_ROUTE_ORDER.includes(field));
+  const tail = order
+    .slice(anchor)
+    .filter((field) => !ROAD_ROUTE_ORDER.includes(field));
+  const next = [...head, ...ROAD_ROUTE_ORDER, ...tail];
+  if (next.join('|') === order.join('|')) {
+    return layout;
+  }
+  return { ...layout, fieldOrder: next, fields: next };
 }
 
 /** 为金额列补齐单位 companion；按 key 配对，插在金额后，不依赖相邻识别 */
@@ -527,6 +562,16 @@ function applyFumigationGroupsFromOrder(
   fieldOrder: string[],
   layout: CostTableTemplateLayout,
 ): CostTableTemplateLayout {
+  // 新版单级表头：groups 为空时保持扁平，不再强制拼 OUTDOOR/INDOOR
+  if (!layout.groups?.length) {
+    return {
+      ...layout,
+      fieldOrder,
+      fields: fieldOrder,
+      groups: [],
+    };
+  }
+
   const pick = (allowed: readonly string[]) =>
     fieldOrder.filter((field) => allowed.includes(field));
 
@@ -540,6 +585,7 @@ function applyFumigationGroupsFromOrder(
           'outdoorNonOak',
           'outdoorOak',
           'cf_fum_outdoor_eff',
+          'cf_fum_eff',
           'outdoorValidity',
         ]),
         key: 'outdoor',

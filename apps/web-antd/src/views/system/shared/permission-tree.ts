@@ -68,6 +68,12 @@ const MENU_SCHEMA: MenuModuleDef[] = [
     children: [
       {
         kind: 'group',
+        segment: 'inquiry',
+        titleKey: 'page.inquiry.list',
+        match: (code) => code.startsWith('inquiry:'),
+      },
+      {
+        kind: 'group',
         segment: 'list',
         titleKey: 'page.quote.list',
         match: (code) =>
@@ -352,7 +358,7 @@ const ACTION_ORDER = [
 function actionRank(code: string) {
   const action = code.split(':').at(-1) ?? '';
   const idx = ACTION_ORDER.indexOf(action as (typeof ACTION_ORDER)[number]);
-  return idx !== -1 ? idx : ACTION_ORDER.length;
+  return idx === -1 ? ACTION_ORDER.length : idx;
 }
 
 function sortPermissions(items: PermissionItem[]) {

@@ -4,6 +4,8 @@ import { computed, inject } from 'vue';
 import { preferences } from '@vben/preferences';
 import { useUserStore } from '@vben/stores';
 
+import { FRD_QUOTE_LOGO_SRC } from '#/constants/brand';
+
 import ProfileAvatarUpload from './profile-avatar-upload.vue';
 import { profileContextKey } from './profile-context';
 import { formatRoleLabels } from './profile-utils';
@@ -60,10 +62,12 @@ const companyName = computed(() => preferences.app.name);
 
 <template>
   <div class="profile-badge">
-    <div aria-hidden="true" class="profile-badge__logo">
-      <span class="profile-badge__logo-letter">F</span>
-      <span class="profile-badge__logo-letter">R</span>
-      <span class="profile-badge__logo-letter">D</span>
+    <div class="profile-badge__logo">
+      <img
+        alt="FRD GLOBAL (SH) CO., LTD."
+        class="profile-badge__logo-img"
+        :src="FRD_QUOTE_LOGO_SRC"
+      />
     </div>
 
     <ProfileAvatarUpload />

@@ -149,13 +149,15 @@ function navigateTo(
 ) {
   if (link.startsWith('http://') || link.startsWith('https://')) {
     window.open(link, '_blank');
-  } else {
-    router.push({
-      path: link,
-      query: query || {},
-      state,
-    });
+    return;
   }
+  const [path, search = ''] = link.split('?');
+  const linkQuery = Object.fromEntries(new URLSearchParams(search));
+  router.push({
+    path,
+    query: { ...linkQuery, ...query },
+    state,
+  });
 }
 
 watch(

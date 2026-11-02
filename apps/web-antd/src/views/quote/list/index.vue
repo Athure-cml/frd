@@ -5,23 +5,18 @@ import type {
 } from '#/adapter/vxe-table';
 import type { QuoteApi } from '#/api/quote';
 
-import { computed, ref, watch } from 'vue';
+import { computed, onActivated, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
 import { Page } from '@vben/common-ui';
-import { Download, Plus } from '@vben/icons';
+import { Download } from '@vben/icons';
 import { downloadFileFromBlob } from '@vben/utils';
 
 import { Button, message, Modal, Tag } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import {
-  deleteQuote,
-  exportQuotes,
-  getQuoteList,
-  voidQuote,
-} from '#/api/quote';
+import { exportQuotes, getQuoteList, voidQuote } from '#/api/quote';
 import { $t } from '#/locales';
 
 import {
@@ -34,22 +29,31 @@ import {
 } from '../../shared/export-params';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import {
+  consumeQuoteListForceRefresh,
+  hasActiveListFilters,
+  markQuoteListForceRefresh,
+} from '../shared/list-cache';
+import {
   quoteRowClassName,
   resolveQuoteListStatusTag,
+  shouldShowQuoteListCostRiskTag,
   useQuoteColumns,
   useQuoteSearchSchema,
 } from './data';
 
 import '../shared/quote.css';
 
+defineOptions({ name: 'QuoteList' });
+
 const router = useRouter();
 const route = useRoute();
 const { hasAccessByCodes } = useAccess();
-const canCreate = hasAccessByCodes(['quote:create']);
 const canDelete = hasAccessByCodes(['quote:delete']);
 const canVoid = hasAccessByCodes(['quote:approve']);
 const canExport = hasAccessByCodes(['quote:export']);
 const exporting = ref(false);
+/** 最近一次列表请求的页码（用于 keepAlive 返回时判断是否需刷新） */
+const lastQueryPage = ref(1);
 
 /** 报价库反查：/quotes/list?libraryMode=road&libraryCostId=123 */
 const libraryFilter = computed(() => {
@@ -90,37 +94,19 @@ function canOperateRow(row: QuoteApi.QuoteListItem) {
   return row.operable === true;
 }
 
-async function onCreate() {
-  await router.push({ name: 'QuoteCreate' });
-}
-
 function onView(row: QuoteApi.QuoteListItem) {
   router.push({ name: 'QuoteEdit', params: { id: row.id } });
-}
-
-function onDelete(row: QuoteApi.QuoteListItem) {
-  const hideLoading = message.loading({
-    content: $t('ui.actionMessage.deleting', [row.quoteNo]),
-    duration: 0,
-    key: 'quote_delete_msg',
-  });
-  deleteQuote(row.id)
-    .then(() => {
-      message.success({
-        content: $t('ui.actionMessage.deleteSuccess', [row.quoteNo]),
-        key: 'quote_delete_msg',
-      });
-      gridApi.query();
-    })
-    .catch(() => hideLoading());
 }
 
 function onVoid(row: QuoteApi.QuoteListItem) {
   Modal.confirm({
     title: $t('page.quote.actions.void'),
     content: $t('page.quote.confirm.void', [row.quoteNo]),
+    okType: 'danger',
     onOk: async () => {
       await voidQuote(row.id);
+      markQuoteListForceRefresh('quote');
+      markQuoteListForceRefresh('inquiry');
       message.success($t('page.quote.message.voidSuccess'));
       gridApi.query();
     },
@@ -137,10 +123,6 @@ function onActionClick({
   }
   if (code === 'void') {
     onVoid(row);
-    return;
-  }
-  if (code === 'delete') {
-    onDelete(row);
   }
 }
 
@@ -199,6 +181,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async ({ page }, formValues) => {
+          lastQueryPage.value = page.currentPage || 1;
           const filter = libraryFilter.value;
           return await getQuoteList({
             page: page.currentPage,
@@ -252,6 +235,37 @@ watch(
     void gridApi.query();
   },
 );
+
+/**
+ * keepAlive 返回策略：
+ * 1) 详情侧有写操作 → 强制按当前条件刷新（能看见新建/变更）
+ * 2) 有搜索条件或非第 1 页 → 保留缓存，不请求
+ * 3) 默认空条件第 1 页 → 刷新，避免漏掉新单据
+ */
+onActivated(async () => {
+  scheduleGridRecalculate(
+    () =>
+      gridApi.grid as null | {
+        recalculate?: (refull?: boolean) => void;
+      },
+  );
+
+  const forceRefresh = consumeQuoteListForceRefresh('quote');
+  if (forceRefresh) {
+    await gridApi.query();
+    return;
+  }
+
+  const formValues =
+    (await gridApi.formApi?.getLatestSubmissionValues?.()) ?? {};
+  const keepCache =
+    hasActiveListFilters(formValues) ||
+    lastQueryPage.value > 1 ||
+    !!libraryFilter.value;
+  if (!keepCache) {
+    await gridApi.query();
+  }
+});
 </script>
 
 <template>
@@ -278,10 +292,6 @@ watch(
             <Download class="size-4" />
             {{ $t('page.quote.actions.export') }}
           </Button>
-          <Button v-if="canCreate" type="primary" @click="onCreate">
-            <Plus class="size-4" />
-            {{ $t('page.quote.actions.create') }}
-          </Button>
         </template>
         <template #quoteNo="{ row }">
           <button class="quote-no-link" type="button" @click="onView(row)">
@@ -289,12 +299,17 @@ watch(
           </button>
         </template>
         <template #status="{ row }">
-          <Tag
-            :class="resolveQuoteListStatusTag(row).className"
-            :color="resolveQuoteListStatusTag(row).color"
-          >
-            {{ resolveQuoteListStatusTag(row).label }}
-          </Tag>
+          <span class="quote-list-status-tags">
+            <Tag
+              :class="resolveQuoteListStatusTag(row).className"
+              :color="resolveQuoteListStatusTag(row).color"
+            >
+              {{ resolveQuoteListStatusTag(row).label }}
+            </Tag>
+            <Tag v-if="shouldShowQuoteListCostRiskTag(row)" color="error">
+              {{ $t('page.quote.risk.tag') }}
+            </Tag>
+          </span>
         </template>
       </Grid>
     </div>

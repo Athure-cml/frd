@@ -49,7 +49,8 @@ const feeRows = computed(() =>
 
 const displayDate = computed(() => formatPrintQuoteDate(props.quoteDate));
 const pickUpAddress = computed(() => props.sheet.pickUpAddress?.trim() || '—');
-const clientName = computed(() => props.customerName?.trim() || '—');
+// 客户字段不再取值，打印时固定显示横杠
+const clientName = computed(() => '—');
 const por = computed(() => props.sheet.por?.trim() || '—');
 const pod = computed(() => props.sheet.pod?.trim() || '—');
 const sheetRemark = computed(() => props.sheet.sheetRemark?.trim() || '');

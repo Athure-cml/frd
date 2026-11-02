@@ -52,10 +52,6 @@ const emit = defineEmits<{
               <span>{{ item.serviceTypeLabel }}</span>
               <span class="workspace-pipeline-dot" aria-hidden="true">·</span>
               <span>{{ item.customerName }}</span>
-              <span class="workspace-pipeline-dot" aria-hidden="true">·</span>
-              <span class="workspace-pipeline-amount">{{
-                item.amountLabel
-              }}</span>
             </div>
             <span
               class="workspace-pipeline-status"

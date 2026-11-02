@@ -171,7 +171,8 @@ export function buildTemplateFormSchema(
       continue;
     }
 
-    if (mode === 'fumigation') {
+    // 新版单级表头（groups 为空）不再插入 OUTDOOR/INDOOR 分区标题
+    if (mode === 'fumigation' && template.layout.groups?.length) {
       if (!outdoorDividerAdded && FUMIGATION_OUTDOOR_FIELDS.has(item.field)) {
         const divider = schemaMap.get('outdoorDivider');
         if (divider) {

@@ -20,8 +20,8 @@ const amount = (
 /** 列宽由 column-width 按表头估算，目录只描述字段语义 */
 export const ROAD_FIELD_CATALOG: FieldCatalogEntry[] = [
   { field: 'zipCode', group: 'route', labelKey: road('zipCode') },
-  { field: 'city', group: 'route', labelKey: road('city') },
   { field: 'state', group: 'route', labelKey: road('state') },
+  { field: 'city', group: 'route', labelKey: road('city') },
   { field: 'por', group: 'route', labelKey: road('por') },
   { field: 'station', group: 'route', labelKey: road('station') },
   { field: 'pol', group: 'route', labelKey: road('pol') },

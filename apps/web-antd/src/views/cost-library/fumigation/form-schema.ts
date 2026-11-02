@@ -7,7 +7,10 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 
 import { $t } from '#/locales';
 
-import { createPortSelectProps } from '../shared/freight-schema';
+import {
+  createPortSearchSelectProps,
+  createPortSelectProps,
+} from '../shared/freight-schema';
 import { createFumigationStationSelectProps } from './fumigation-supplier-cache';
 
 dayjs.extend(customParseFormat);
@@ -41,6 +44,11 @@ export function createRegionPortSearchProps() {
     portTypes: FUMIGATION_REGION_PORT_TYPES,
     requireKeyword: true,
   });
+}
+
+/** 搜索栏 REGION：多选 + 粘贴多条 */
+export function createRegionPortSearchMultiProps() {
+  return createPortSearchSelectProps(FUMIGATION_REGION_PORT_TYPES);
 }
 
 function datePickerProps() {
@@ -100,58 +108,22 @@ export function useFumigationFormSchema(): VbenFormSchema[] {
       rules: 'required',
     },
     {
-      component: 'Divider',
-      fieldName: 'outdoorDivider',
-      formItemClass: 'col-span-full',
-      hideLabel: true,
-      renderComponentContent: () => ({
-        default: () => $t('page.costLibrary.fumigationGroups.outdoor'),
-      }),
-    },
-    {
       component: 'InputNumber',
       componentProps: { class: 'w-full', min: 0, precision: 2 },
       fieldName: 'outdoorNonOak',
-      label: f('outdoorNonOak'),
+      label: 'FM NON OAK',
     },
     {
       component: 'InputNumber',
       componentProps: { class: 'w-full', min: 0, precision: 2 },
       fieldName: 'outdoorOak',
-      label: f('outdoorOak'),
+      label: 'FM OAK',
     },
     {
       component: 'DatePicker',
       componentProps: datePickerProps(),
       fieldName: 'outdoorValidity',
-      label: f('outdoorValidity'),
-    },
-    {
-      component: 'Divider',
-      fieldName: 'indoorDivider',
-      formItemClass: 'col-span-full',
-      hideLabel: true,
-      renderComponentContent: () => ({
-        default: () => $t('page.costLibrary.fumigationGroups.indoor'),
-      }),
-    },
-    {
-      component: 'InputNumber',
-      componentProps: { class: 'w-full', min: 0, precision: 2 },
-      fieldName: 'indoorNonOak',
-      label: f('indoorNonOak'),
-    },
-    {
-      component: 'InputNumber',
-      componentProps: { class: 'w-full', min: 0, precision: 2 },
-      fieldName: 'indoorOak',
-      label: f('indoorOak'),
-    },
-    {
-      component: 'DatePicker',
-      componentProps: datePickerProps(),
-      fieldName: 'indoorValidity',
-      label: f('indoorValidity'),
+      label: '有效期',
     },
     {
       component: 'Textarea',

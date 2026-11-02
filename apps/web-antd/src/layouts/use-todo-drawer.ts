@@ -8,7 +8,9 @@ import { mapWorkspaceTodos } from '#/views/dashboard/workspace/map-workspace';
 export type TodoDrawerFilter =
   | 'all'
   | 'approveQuote'
+  | 'confirmLibrary'
   | 'followSent'
+  | 'pendingQuote'
   | 'reviewCostRisk'
   | 'urgent';
 
@@ -28,8 +30,18 @@ const filteredItems = computed(() => {
     case 'approveQuote': {
       return list.filter((item) => item.todoType === 'approveQuote');
     }
+    case 'confirmLibrary': {
+      return list.filter((item) => item.todoType.startsWith('confirmLibrary'));
+    }
     case 'followSent': {
       return list.filter((item) => item.todoType === 'followSent');
+    }
+    // 待处理：待处理报价单 + 待发送邮件
+    case 'pendingQuote': {
+      return list.filter(
+        (item) =>
+          item.todoType === 'pendingQuote' || item.todoType === 'pendingMail',
+      );
     }
     case 'reviewCostRisk': {
       return list.filter((item) => item.todoType === 'reviewCostRisk');

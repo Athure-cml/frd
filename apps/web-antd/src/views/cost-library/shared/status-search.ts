@@ -3,7 +3,9 @@ import type { VbenFormSchema } from '#/adapter/form';
 import { $t } from '#/locales';
 
 /** 成本库/报价库/引入弹窗通用「状态」筛选（多选：未生效 / 生效中 / 已过期） */
-export function createCostStatusSearchField(): VbenFormSchema {
+export function createCostStatusSearchField(
+  defaultValue?: string[],
+): VbenFormSchema {
   return {
     component: 'Select',
     componentProps: {
@@ -29,6 +31,7 @@ export function createCostStatusSearchField(): VbenFormSchema {
       placeholder: $t('page.costLibrary.statusFilterAll'),
       showSearch: true,
     },
+    ...(defaultValue && defaultValue.length > 0 ? { defaultValue } : {}),
     fieldName: 'status',
     label: $t('page.costLibrary.fields.status'),
   };
@@ -52,8 +55,10 @@ export function normalizeCostStatusSearchParam(
 }
 
 /** 报价库「状态」筛选：待确认 + 未生效 / 生效中 / 已过期 */
-export function createQuoteLibraryStatusSearchField(): VbenFormSchema {
-  const base = createCostStatusSearchField();
+export function createQuoteLibraryStatusSearchField(
+  defaultValue?: string[],
+): VbenFormSchema {
+  const base = createCostStatusSearchField(defaultValue);
   return {
     ...base,
     componentProps: {

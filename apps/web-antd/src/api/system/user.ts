@@ -9,7 +9,9 @@ export namespace SystemUserApi {
     avatar?: string;
     dataScope: string;
     dept: SystemDeptApi.Department;
+    email?: string;
     id: number;
+    phone?: string;
     realName: string;
     roleNames: string[];
     roles: string[];

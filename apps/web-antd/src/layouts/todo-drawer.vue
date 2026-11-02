@@ -49,8 +49,12 @@ const tabs = computed(() => [
     label: $t('page.workspace.todos.filters.approve'),
   },
   {
-    key: 'followSent' as const,
-    label: $t('page.workspace.todos.filters.follow'),
+    key: 'pendingQuote' as const,
+    label: $t('page.workspace.todos.filters.pendingQuote'),
+  },
+  {
+    key: 'confirmLibrary' as const,
+    label: $t('page.workspace.todos.filters.confirmLibrary'),
   },
   {
     key: 'reviewCostRisk' as const,
@@ -172,9 +176,7 @@ function onItemClick(item: WorkspaceTodoView) {
                   {{ $t(`page.workspace.todos.priority.${item.priority}`) }}
                 </span>
               </div>
-              <p class="todo-drawer__meta">
-                {{ item.quoteNo }} · {{ item.customer }}
-              </p>
+              <p class="todo-drawer__meta">{{ item.meta }}</p>
               <div class="todo-drawer__foot">
                 <time class="todo-drawer__time">{{ item.time }}</time>
                 <span class="todo-drawer__action">{{ item.actionLabel }}</span>

@@ -44,6 +44,7 @@ import { resolveCostSourceTypes } from '../shared/cost-source-types';
 import { stashQuoteCopySource } from '../shared/quote-copy';
 import { printQuoteSheet } from '../shared/quote-print';
 import QuotePrintSheet from '../shared/quote-print-sheet.vue';
+import { canShowQuoteVoid } from '../shared/quote-status';
 import { QUOTE_SHEET_COLUMNS, sheetCellValue } from '../shared/sheet-columns';
 import {
   MAX_ROAD_MATCHES,
@@ -111,8 +112,8 @@ const showWorkflowActions = computed(() => {
 
 const ROUTE_SHEET_FIELDS: Array<keyof QuoteApi.QuoteSheetFields> = [
   'zipCode',
-  'city',
   'state',
+  'city',
   'pickUpAddress',
   'por',
   'pol',
@@ -492,7 +493,11 @@ onMounted(async () => {
                 {{ $t('page.quote.actions.won') }}
               </Button>
               <Button
-                v-if="canApprove && !detail.voided && detail.status !== 'WON'"
+                v-if="
+                  canApprove &&
+                  !detail.voided &&
+                  canShowQuoteVoid(detail.status)
+                "
                 class="quote-action-btn quote-action-btn--void"
                 danger
                 type="primary"
@@ -787,7 +792,7 @@ onMounted(async () => {
         <QuotePrintSheet
           :cost-snapshots="detail.costSnapshots"
           :customer-name="detail.customerName"
-          :quote-date="detail.createdAt"
+          :quote-date="detail.quoteDate ?? detail.createdAt"
           :service-types="detail.serviceTypes"
           :sheet="detail.sheet"
         />

@@ -1,12 +1,25 @@
 <script lang="ts" setup>
-import type { VxeTableGridOptions } from '#/adapter/vxe-table';
+/**
+ * 数据来源快照表
+ * - 高度：跟内容走
+ * - 宽度：按 Tab 容器测宽铺满（接口 width 只当下限）；超出则 vxe 自带横滚
+ * - 禁止再死用接口返回 width 当最终宽（会铺不满 Tab）
+ */
 import type { QuoteApi, QuoteCostType } from '#/api/quote';
 
-import { computed, nextTick, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { $t } from '#/locales';
 
+import { isFumigationLegacySnapshot } from '../../cost-library/shared/fumigation-template-layouts';
 import {
   buildCostSnapshotColumns,
   quoteCostTypeToMode,
@@ -22,42 +35,15 @@ const props = defineProps<{
   type: QuoteCostType;
 }>();
 
-const SNAPSHOT_HEADER_ROW_HEIGHT = 44;
-const SNAPSHOT_ROW_HEIGHT = 40;
-/** 预留横向滚动条高度，避免被容器裁切 */
-const SNAPSHOT_SCROLLBAR_HEIGHT = 14;
-/** 无数据时表格主体最小高度（不含滚动条） */
-const SNAPSHOT_MIN_BODY_HEIGHT = 120;
+const EMPTY_MIN_HEIGHT = 160;
 
-function resolveHeaderRowCount(
-  columns?: VxeTableGridOptions['columns'],
-): number {
-  if (!columns?.length) {
-    return 1;
-  }
-  const walk = (
-    cols: NonNullable<VxeTableGridOptions['columns']>,
-    depth: number,
-  ): number => {
-    let maxDepth = depth;
-    for (const col of cols) {
-      const childCols = col.children as
-        | NonNullable<VxeTableGridOptions['columns']>
-        | undefined;
-      if (childCols?.length) {
-        maxDepth = Math.max(maxDepth, walk(childCols, depth + 1));
-      }
-    }
-    return maxDepth;
-  };
-  return walk(columns, 1);
-}
+const hostRef = ref<HTMLElement | null>(null);
+/** Tab 可视宽度（probe 测量，不被列撑开） */
+const hostWidth = ref(0);
+
+let hostWidthObserver: null | ResizeObserver = null;
 
 const mode = computed(() => quoteCostTypeToMode(props.type));
-const snapshotColumns = computed(() => buildCostSnapshotColumns(mode.value));
-const headerRowCount = computed(() =>
-  resolveHeaderRowCount(snapshotColumns.value),
-);
 
 const sourceMatches = computed(() => {
   if (props.matches?.length) {
@@ -66,6 +52,23 @@ const sourceMatches = computed(() => {
   return props.match ? [props.match] : [];
 });
 
+const fumigationLegacy = computed(() => {
+  if (props.type !== 'FUMIGATION') {
+    return false;
+  }
+  const first = sourceMatches.value[0]?.snapshot;
+  return isFumigationLegacySnapshot(
+    first as null | Record<string, unknown> | undefined,
+  );
+});
+
+/** 必须带 hostWidth：用容器宽铺满，而不是死继承接口列宽 */
+const snapshotColumns = computed(() =>
+  buildCostSnapshotColumns(mode.value, hostWidth.value, {
+    fumigationLegacy: fumigationLegacy.value,
+  }),
+);
+
 const tableData = computed(() =>
   sourceMatches.value.map((item) =>
     normalizeSnapshotRow(props.type, item.snapshot ?? {}, item.costRefId),
@@ -73,20 +76,6 @@ const tableData = computed(() =>
 );
 
 const isEmpty = computed(() => tableData.value.length === 0);
-
-const headerHeight = computed(
-  () => headerRowCount.value * SNAPSHOT_HEADER_ROW_HEIGHT,
-);
-
-const bodyHeight = computed(() => {
-  const rowsHeight = isEmpty.value
-    ? SNAPSHOT_MIN_BODY_HEIGHT
-    : tableData.value.length * SNAPSHOT_ROW_HEIGHT;
-  // 空表也要留出滚动条，否则列溢出时底部条被裁掉
-  return rowsHeight + SNAPSHOT_SCROLLBAR_HEIGHT + 2;
-});
-
-const gridHeight = computed(() => headerHeight.value + bodyHeight.value);
 
 const gridClass = computed(() => {
   const base = 'cost-library-grid quote-cost-snapshot-grid';
@@ -101,6 +90,25 @@ const gridClass = computed(() => {
 
 const emptyText = computed(() => props.emptyDescription ?? $t('common.noData'));
 
+function readHostWidth() {
+  const el = hostRef.value;
+  if (!el) {
+    return 0;
+  }
+  const probe = el.querySelector(
+    '.quote-cost-snapshot__probe',
+  ) as HTMLElement | null;
+  const width = probe?.clientWidth ?? el.clientWidth;
+  return Math.max(0, Math.floor(width));
+}
+
+function syncHostWidth() {
+  const next = readHostWidth();
+  if (next > 0 && Math.abs(next - hostWidth.value) >= 1) {
+    hostWidth.value = next;
+  }
+}
+
 const [Grid, gridApi] = useVbenVxeGrid({
   gridClass: gridClass.value,
   gridOptions: {
@@ -109,9 +117,14 @@ const [Grid, gridApi] = useVbenVxeGrid({
       resizable: true,
     },
     columns: snapshotColumns.value,
+    customConfig: {
+      storage: false,
+    },
     data: tableData.value,
     emptyText: emptyText.value,
-    height: gridHeight.value,
+    fit: false,
+    id: `quote-cost-snapshot-${props.type}`,
+    ...(isEmpty.value ? { minHeight: EMPTY_MIN_HEIGHT } : {}),
     pagerConfig: {
       enabled: false,
     },
@@ -122,9 +135,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
       isHover: true,
       keyField: 'id',
     },
+    scrollbarConfig: {
+      x: { visible: 'auto' },
+    },
     scrollX: {
       enabled: true,
-      gt: 0,
     },
     scrollY: {
       enabled: false,
@@ -138,50 +153,89 @@ const [Grid, gridApi] = useVbenVxeGrid({
   },
 });
 
-watch(
-  [mode, tableData, gridHeight, snapshotColumns, emptyText],
-  async () => {
-    gridApi.setGridOptions({
-      columns: snapshotColumns.value,
-      data: tableData.value,
-      emptyText: emptyText.value,
-      height: gridHeight.value,
-    });
-    gridApi.setState({ gridClass: gridClass.value });
-    await nextTick();
-    gridApi.grid?.recalculate?.();
-    const $grid = gridApi.grid as {
-      loadColumn?: (cols: typeof snapshotColumns.value) => void;
-    };
-    $grid?.loadColumn?.(snapshotColumns.value);
-  },
-  { deep: true },
-);
+async function reloadGrid() {
+  syncHostWidth();
+  gridApi.setGridOptions({
+    columns: snapshotColumns.value,
+    data: tableData.value,
+    emptyText: emptyText.value,
+    fit: false,
+    height: undefined,
+    minHeight: isEmpty.value ? EMPTY_MIN_HEIGHT : undefined,
+    scrollbarConfig: {
+      x: { visible: 'auto' },
+    },
+    scrollX: { enabled: true },
+    scrollY: { enabled: false },
+  });
+  gridApi.setState({ gridClass: gridClass.value });
+  await nextTick();
+  const $grid = gridApi.grid as null | {
+    loadColumn?: (cols: typeof snapshotColumns.value) => void;
+    recalculate?: (refull?: boolean) => void;
+  };
+  $grid?.loadColumn?.(snapshotColumns.value);
+  await nextTick();
+  $grid?.recalculate?.(true);
+}
+
+watch([mode, tableData, snapshotColumns, emptyText, isEmpty], () => {
+  void reloadGrid();
+});
+
+onMounted(() => {
+  syncHostWidth();
+  void reloadGrid();
+  const el = hostRef.value;
+  if (!el || typeof ResizeObserver === 'undefined') {
+    return;
+  }
+  hostWidthObserver = new ResizeObserver(() => {
+    syncHostWidth();
+  });
+  hostWidthObserver.observe(el);
+  const probe = el.querySelector('.quote-cost-snapshot__probe');
+  if (probe) {
+    hostWidthObserver.observe(probe);
+  }
+});
+
+onBeforeUnmount(() => {
+  hostWidthObserver?.disconnect();
+  hostWidthObserver = null;
+});
 </script>
 
 <template>
-  <!-- 容器定宽 + VXE 内部横向滚动，才能让 SUPPLIER 等 fixed 列生效 -->
-  <div
-    class="quote-cost-snapshot"
-    :style="{ height: `${gridHeight}px`, minHeight: `${gridHeight}px` }"
-  >
+  <div ref="hostRef" class="quote-cost-snapshot">
+    <!-- 测 Tab 可视宽：不被表格列撑开 -->
+    <div class="quote-cost-snapshot__probe" aria-hidden="true"></div>
     <Grid />
   </div>
 </template>
 
 <style scoped>
 .quote-cost-snapshot {
-  flex: none;
+  position: relative;
   width: 100%;
+  min-width: 0;
   max-width: 100%;
   overflow: hidden;
 }
 
+.quote-cost-snapshot__probe {
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .quote-cost-snapshot
   :deep(.vxe-grid.cost-library-grid.quote-cost-snapshot-grid) {
-  width: 100%;
-  height: 100% !important;
-  min-height: 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-height: unset !important;
 }
 
 .quote-cost-snapshot :deep(.vxe-table--header .vxe-header--row) {

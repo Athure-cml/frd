@@ -43,9 +43,9 @@ export namespace DashboardApi {
   }
 
   export interface WorkspaceQuoteStats {
+    inquiries: number[];
     months: string[];
     quoted: number[];
-    won: number[];
   }
 
   export interface WorkspaceData {

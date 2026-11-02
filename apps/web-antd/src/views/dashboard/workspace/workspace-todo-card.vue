@@ -45,9 +45,7 @@ const priorityClass: Record<WorkspaceTodoView['priority'], string> = {
       >
         <div class="workspace-todo-body">
           <p class="workspace-todo-title">{{ item.title }}</p>
-          <p class="workspace-todo-meta">
-            {{ item.quoteNo }} · {{ item.customer }}
-          </p>
+          <p class="workspace-todo-meta">{{ item.meta }}</p>
         </div>
         <span
           class="workspace-todo-priority"

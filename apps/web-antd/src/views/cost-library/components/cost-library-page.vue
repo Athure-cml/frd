@@ -69,6 +69,12 @@ import { getDefaultTemplate } from '../shared/default-templates';
 import { toCopyDrawerData, toRenewDrawerData } from '../shared/drawer-data';
 import { createHighlightOnlySearchField } from '../shared/highlight-only-search';
 import { createInQuoteLibrarySearchField } from '../shared/in-quote-library-search';
+import {
+  FUMIGATION_MULTI_SEARCH_FIELDS,
+  normalizePipeSearchParams,
+  normalizeSeaMultiSearchParams,
+  ROAD_MULTI_SEARCH_FIELDS,
+} from '../shared/multi-search-params';
 import { createCostRowHighlightStyleHandlers } from '../shared/row-highlight-style';
 import {
   scheduleGridRecalculate,
@@ -790,6 +796,15 @@ function normalizeListParams(formValues?: Record<string, unknown>) {
     } else {
       delete params.supplier;
     }
+    // 多选搜索值（数组）拼成「A|B」交给后端做 OR 匹配
+    normalizePipeSearchParams(params, ROAD_MULTI_SEARCH_FIELDS);
+  }
+  if (props.mode === 'sea') {
+    // 多选搜索值（数组）拼成「A|B」交给后端做 OR 匹配
+    normalizeSeaMultiSearchParams(params);
+  }
+  if (props.mode === 'fumigation') {
+    normalizePipeSearchParams(params, FUMIGATION_MULTI_SEARCH_FIELDS);
   }
   return params;
 }
@@ -864,8 +879,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
     customConfig: {
       storage: false,
     },
-    // 禁止列宽自适应撑满：fit 为 true 时会把 scrollXWidth 拉成容器宽，自定义横条被隐藏
-    fit: false,
+    // 卡车/海运列多需横滚，禁止 fit 以免自定义横条被误关；
+    // 熏蒸列少，开启 fit 铺满内容区，避免右侧大块留白
+    fit: props.mode === 'fumigation',
     // 由 .cost-library-grid CSS 覆盖全局 height:auto，保证加载态可见
     height: '100%',
     id: getGridStorageId(

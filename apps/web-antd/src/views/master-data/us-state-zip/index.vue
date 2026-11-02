@@ -16,6 +16,7 @@ import { getUsStateList } from '#/api/master-data/us-state';
 import {
   batchDeleteUsStateZip,
   deleteUsStateZip,
+  deleteUsStateZipCity,
   downloadUsStateZipExport,
   exportUsStateZip,
   getUsStateZipList,
@@ -87,6 +88,11 @@ function onEdit(row: UsStateZipApi.Row) {
     .open();
 }
 
+/** 无邮编的「仅城市」行：id 为 -cityId，zipCode 为空。 */
+function isCityOnlyRow(row: UsStateZipApi.Row): boolean {
+  return !row.zipCode || row.id < 0;
+}
+
 async function onDelete(row: UsStateZipApi.Row) {
   const label = row.zipCode;
   const hideLoading = message.loading({
@@ -96,6 +102,25 @@ async function onDelete(row: UsStateZipApi.Row) {
   });
   try {
     await deleteUsStateZip(row.id);
+    message.success({
+      content: $t('ui.actionMessage.deleteSuccess', [label]),
+      key: 'us_state_zip_delete_msg',
+    });
+    await gridApi.query();
+  } catch {
+    hideLoading();
+  }
+}
+
+async function onDeleteCity(row: UsStateZipApi.Row) {
+  const label = row.city;
+  const hideLoading = message.loading({
+    content: $t('ui.actionMessage.deleting', [label]),
+    duration: 0,
+    key: 'us_state_zip_delete_msg',
+  });
+  try {
+    await deleteUsStateZipCity(row.cityId);
     message.success({
       content: $t('ui.actionMessage.deleteSuccess', [label]),
       key: 'us_state_zip_delete_msg',
@@ -191,7 +216,17 @@ const [Grid, gridApi] = useVbenVxeGrid({
 });
 
 const { onBatchDelete } = useMasterDataBatchDelete({
-  batchDelete: batchDeleteUsStateZip,
+  batchDelete: async (ids) => {
+    const zipIds = ids.filter((id) => id > 0);
+    if (zipIds.length === 0) {
+      message.warning(h('cityOnlyRowSelected'));
+      return;
+    }
+    if (zipIds.length < ids.length) {
+      message.warning(h('cityOnlyRowSkipped'));
+    }
+    await batchDeleteUsStateZip(zipIds);
+  },
   gridApi,
 });
 </script>
@@ -219,7 +254,17 @@ const { onBatchDelete } = useMasterDataBatchDelete({
 
     <Grid class="system-grid" :form-options="searchFormOptions">
       <template #operation="{ row }">
-        <template v-if="canManage">
+        <template v-if="canManage && isCityOnlyRow(row)">
+          <Popconfirm
+            :title="$t('ui.actionMessage.deleteConfirm', [row.city])"
+            @confirm="onDeleteCity(row)"
+          >
+            <Button danger size="small" type="link">
+              {{ $t('common.delete') }}
+            </Button>
+          </Popconfirm>
+        </template>
+        <template v-else-if="canManage">
           <Button size="small" type="link" @click="onEdit(row)">
             {{ $t('common.edit') }}
           </Button>

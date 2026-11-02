@@ -38,6 +38,7 @@ import { ArrowLeft, Copy, IconifyIcon, Save } from '@vben/icons';
 
 import { useDebounceFn } from '@vueuse/core';
 import {
+  Alert,
   Button,
   Card,
   DatePicker,
@@ -60,16 +61,17 @@ import { searchGlobalPortNameOptions } from '#/api/master-data/global-port';
 import {
   applyQuoteCostImport,
   cancelQuoteApproval,
+  confirmQuote,
   createQuote,
-  deleteQuote,
   generateQuoteSheet,
   getQuoteDetail,
+  getQuoteMailLogs,
   previewQuoteDocFee,
+  resendQuoteMail,
   reviseQuote,
-  submitQuote,
+  sendQuoteMail,
   updateQuote,
   voidQuote,
-  wonQuote,
 } from '#/api/quote';
 import { getQuoteRuleList } from '#/api/quote-rule';
 import { getShippingLineList } from '#/api/shipping-line';
@@ -85,8 +87,9 @@ import CostLibraryPickerModal from '../shared/cost-library-picker-modal.vue';
 import CostSourceTables from '../shared/cost-source-tables.vue';
 import { resolveCostSourceTypes } from '../shared/cost-source-types';
 import { formatQuoteCostRiskHint } from '../shared/format-cost-risk-hint';
+import { markQuoteListForceRefresh } from '../shared/list-cache';
+import QuoteAddressRow from '../shared/quote-address-row.vue';
 import QuoteAuditLogs from '../shared/quote-audit-logs.vue';
-import QuoteCitySelect from '../shared/quote-city-select.vue';
 import {
   stashQuoteCopySource,
   takeQuoteCopySourceId,
@@ -94,6 +97,10 @@ import {
 import QuoteFumigationStationSelect from '../shared/quote-fumigation-station-select.vue';
 import { printQuoteSheet } from '../shared/quote-print';
 import QuotePrintSheet from '../shared/quote-print-sheet.vue';
+import {
+  stashQuoteReviseSource,
+  takeQuoteReviseSource,
+} from '../shared/quote-revise';
 import {
   buildQuoteRuleHintMap,
   buildQuoteRuleSelectOptions,
@@ -107,16 +114,15 @@ import {
 } from '../shared/quote-sea-ssl-remark';
 import QuoteSheetEditorSkeleton from '../shared/quote-sheet-editor-skeleton.vue';
 import { normalizeUsdFieldValue } from '../shared/quote-sheet-format';
-import QuoteStateSelect from '../shared/quote-state-select.vue';
 import {
   canDraftCostActions,
+  canShowQuoteConfirm,
   canShowQuoteVoid,
-  canShowQuoteWon,
-  isQuoteDeletable,
   isQuoteEditable,
   normalizeQuoteStatus,
 } from '../shared/quote-status';
 import { takeRoadQuoteIntroduceId } from '../shared/road-quote-introduce';
+import { parseQuoteDate } from '../shared/sheet-columns';
 import {
   fetchCostImportFields,
   getQuoteLibraryImportBlockReason,
@@ -147,7 +153,6 @@ import {
   applyFixedTruckExtraFees,
   FIXED_TRUCK_REDELIVERY_RATE,
 } from '../shared/sheet-truck-extras';
-import ZipCodeFields from '../shared/zip-code-fields.vue';
 
 import '../shared/quote.css';
 
@@ -180,17 +185,220 @@ const quoteId = ref<number>();
 const quoteNo = ref('');
 const operable = ref(false);
 const costRiskActive = ref(false);
-const costRiskReason = ref('');
+const costRiskReason = ref<null | string>(null);
 const costRiskModes = ref<string[]>([]);
-const costRiskModalShown = ref(false);
 const status = ref<QuoteStatus>('DRAFT');
 const revisionNo = ref(0);
 const revisionLabel = ref('');
 const changeReason = ref('');
 const parentQuoteId = ref<number>();
+const supersededByQuoteId = ref<number>();
 const currentVersion = ref(true);
 const reviseReasonDraft = ref('');
-const revising = ref(false);
+/** 变更新建中：来源单 ID（仅内存，保存时提交） */
+const reviseFromId = ref<null | number>(null);
+
+// ===== 已报价自动发信状态 =====
+const mailLogs = ref<QuoteApi.QuoteMailLog[]>([]);
+const mailPolling = ref(false);
+let mailPollTimer: null | ReturnType<typeof setTimeout> = null;
+let mailPollCount = 0;
+
+const latestMailLog = computed(() => mailLogs.value[0] ?? null);
+
+// 仅两类异常展示 Alert：发送失败、询价单操作人未绑定邮箱（红色）
+const isMailAlertWorthy = (log: null | QuoteApi.QuoteMailLog) =>
+  log !== null &&
+  (log.status === 'FAILED' ||
+    (log.status === 'SKIPPED' && log.skipReason === 'NO_OPERATOR_EMAIL'));
+
+const showMailAlert = computed(
+  () =>
+    !isCreate.value &&
+    actionsReady.value &&
+    isMailAlertWorthy(latestMailLog.value),
+);
+
+// 可见状态均为异常，Alert 统一红色
+const mailAlertType = 'error' as const;
+
+const mailStageLabel = computed(() => {
+  const stage = latestMailLog.value?.stage;
+  return stage ? $t(`page.quote.mail.stage.${stage}`) : '';
+});
+
+const mailAlertMessage = computed(() => {
+  const log = latestMailLog.value;
+  if (!log) {
+    return '';
+  }
+  const email = log.toEmail?.trim() || $t('page.quote.mail.noRecipient');
+  switch (log.status) {
+    case 'FAILED': {
+      return $t('page.quote.mail.failedMessage', [
+        mailStageLabel.value,
+        log.errorMessage?.trim() || $t('page.quote.mail.unknownError'),
+      ]);
+    }
+    case 'SENDING': {
+      return $t('page.quote.mail.sendingMessage', [email]);
+    }
+    case 'SENT': {
+      return $t('page.quote.mail.sentMessage', [email]);
+    }
+    default: {
+      const reason = log.skipReason
+        ? $t(`page.quote.mail.skip.${log.skipReason}`)
+        : $t('page.quote.mail.unknownError');
+      return $t('page.quote.mail.skippedMessage', [reason]);
+    }
+  }
+});
+
+const mailAlertDescription = computed(() => {
+  const log = latestMailLog.value;
+  if (!log || log.status === 'SENDING') {
+    return '';
+  }
+  const time = log.finishedAt || log.createdAt || '';
+  return $t('page.quote.mail.detailLine', [
+    log.toEmail?.trim() || $t('page.quote.mail.noRecipient'),
+    time,
+  ]);
+});
+
+/** 仅已报价且失败/跳过（配置类跳过重发无意义）时允许人工重发 */
+const canResendMail = computed(() => {
+  const log = latestMailLog.value;
+  if (!log || log.status === 'SENDING' || mailPolling.value) {
+    return false;
+  }
+  if (log.status === 'SKIPPED') {
+    return (
+      log.skipReason === 'NO_OPERATOR_EMAIL' || log.skipReason === undefined
+    );
+  }
+  return status.value === 'QUOTED';
+});
+
+async function refreshMailLogs() {
+  if (isCreate.value) {
+    return;
+  }
+  const id = Number(route.params.id);
+  if (!id) {
+    return;
+  }
+  try {
+    mailLogs.value = (await getQuoteMailLogs(id)) ?? [];
+  } catch {
+    mailLogs.value = [];
+  }
+}
+
+function stopMailPolling() {
+  if (mailPollTimer) {
+    clearTimeout(mailPollTimer);
+    mailPollTimer = null;
+  }
+  mailPolling.value = false;
+}
+
+/** 发信是异步的：每 3s 轮询直至终态（最多 10 次） */
+async function pollMailTerminalState() {
+  stopMailPolling();
+  mailPolling.value = true;
+  mailPollCount = 0;
+  const tick = async () => {
+    await refreshMailLogs();
+    mailPollCount += 1;
+    const st = latestMailLog.value?.status;
+    if (st && st !== 'SENDING' && st !== 'PENDING') {
+      mailPolling.value = false;
+      return;
+    }
+    if (mailPollCount >= 10) {
+      mailPolling.value = false;
+      return;
+    }
+    mailPollTimer = setTimeout(tick, 3000);
+  };
+  void tick();
+}
+
+async function onResendMail() {
+  const id = Number(route.params.id);
+  if (!id) {
+    return;
+  }
+  Modal.confirm({
+    centered: true,
+    title: $t('page.quote.mail.resend'),
+    content: $t('page.quote.mail.resendConfirm', [
+      latestMailLog.value?.toEmail?.trim() || $t('page.quote.mail.noRecipient'),
+    ]),
+    onOk: async () => {
+      try {
+        await resendQuoteMail(id);
+        message.success($t('page.quote.mail.resendSuccess'));
+        void pollMailTerminalState();
+      } catch {
+        message.error($t('page.ai.requestFailed'));
+      }
+    },
+  });
+}
+// ===== 人工发送报价单邮件（指定收件邮箱） =====
+const sendMailOpen = ref(false);
+const sendMailEmails = ref<string[]>([]);
+const sendMailSubmitting = ref(false);
+const EMAIL_PATTERN = /^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/;
+
+/** 收件邮箱归一：整串按逗号/分号/空白拆开，去空去重 */
+const splitEmails = (raw: string): string[] =>
+  raw
+    .split(/[,;，；\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+function openSendMailModal() {
+  const lastRecipient = latestMailLog.value?.toEmail?.trim() || '';
+  sendMailEmails.value = lastRecipient ? splitEmails(lastRecipient) : [];
+  sendMailOpen.value = true;
+}
+
+function closeSendMailModal() {
+  sendMailOpen.value = false;
+}
+
+async function onSubmitSendMail() {
+  const id = Number(route.params.id);
+  if (!id) {
+    return;
+  }
+  const emails = [...new Set(sendMailEmails.value.flatMap(splitEmails))];
+  if (emails.length === 0) {
+    message.warning($t('page.quote.mail.sendMailRequired'));
+    return;
+  }
+  const invalid = emails.find((item) => !EMAIL_PATTERN.test(item));
+  if (invalid) {
+    message.error($t('page.quote.mail.sendMailInvalid', [invalid]));
+    return;
+  }
+  sendMailSubmitting.value = true;
+  try {
+    await sendQuoteMail(id, emails);
+    message.success($t('page.quote.mail.sendMailSuccess', [emails.join('; ')]));
+    sendMailOpen.value = false;
+    void pollMailTerminalState();
+  } catch {
+    // 失败原因由全局请求拦截器统一提示（后端会带回具体文案）
+  } finally {
+    sendMailSubmitting.value = false;
+  }
+}
+
 const customerId = ref<number>();
 const customerName = ref('');
 const customerOptions = ref<Array<{ label: string; value: number }>>([]);
@@ -208,16 +416,14 @@ const currencyOptions = ref<Array<{ label: string; value: string }>>([]);
 const remark = ref('');
 const costMatches = ref<QuoteApi.QuoteCostMatchItem[]>([]);
 const portOptions = ref<GlobalPortNameOption[]>([]);
-const quoteDate = ref(dayjs());
+/** 不默认当天；详情/复制/变更用单据创建日，仅匹配逻辑缺省时后端再取当天 */
+const quoteDate = ref<dayjs.Dayjs>();
 const quoteRules = ref<QuoteRuleApi.QuoteRule[]>([]);
 const ruleHintMap = computed(() =>
   buildQuoteRuleHintMap(quoteRules.value, { por: sheet.por }),
 );
 const oceanFreightEntries = ref<OceanFreightEntry[]>([]);
 const sheetPreviewOpen = ref(false);
-const submitOpen = ref(false);
-const submitSubmitting = ref(false);
-const submitComment = ref('');
 const withdrawOpen = ref(false);
 const withdrawSubmitting = ref(false);
 const withdrawComment = ref('');
@@ -276,23 +482,22 @@ const workflowStatus = computed(() => normalizeQuoteStatus(status.value));
 const isPendingApproval = computed(
   () => workflowStatus.value === 'PENDING_APPROVAL',
 );
-const isConfirmedQuote = computed(() => workflowStatus.value === 'SENT');
+const isConfirmedQuote = computed(() => workflowStatus.value === 'QUOTED');
 const showDraftWorkflowActions = computed(
   () =>
     isCreate.value ||
-    (showWorkflowActions.value && workflowStatus.value === 'DRAFT'),
+    (showWorkflowActions.value && workflowStatus.value === 'PENDING_QUOTE'),
 );
 const showConfirmedToolbar = computed(
   () => showWorkflowActions.value && isConfirmedQuote.value,
 );
-/** 仅「已确认」且存在成本异常（风险）的当前版本可发起变更 */
+/** 已报价当前版本均可变更（不依赖成本异常） */
 const canReviseAction = computed(
   () =>
     canOperate.value &&
     canEdit &&
     canCreate &&
     isConfirmedQuote.value &&
-    costRiskActive.value &&
     currentVersion.value !== false,
 );
 const showPendingApprovalToolbar = computed(
@@ -302,29 +507,30 @@ const showReadonlyWorkflowToolbar = computed(
   () =>
     showWorkflowActions.value &&
     !isPendingApproval.value &&
-    workflowStatus.value !== 'DRAFT' &&
+    workflowStatus.value !== 'PENDING_QUOTE' &&
     !isConfirmedQuote.value,
 );
 const canCopyAction = computed(() => canCreate);
-const canVoidAction = computed(
-  () =>
-    canOperate.value &&
-    canApprove &&
-    canShowQuoteVoid(status.value) &&
-    !costRiskActive.value,
-);
-const canConfirmWonAction = computed(
-  () => canApprove && canShowQuoteWon(status.value) && !costRiskActive.value,
-);
 const isSavedDraft = computed(
-  () => !isCreate.value && !!quoteId.value && workflowStatus.value === 'DRAFT',
+  () =>
+    !isCreate.value &&
+    !!quoteId.value &&
+    workflowStatus.value === 'PENDING_QUOTE',
 );
-const canDeleteAction = computed(
+/** 待报价：作废（关联询价单一并作废；已报价只能变更） */
+const canVoidAction = computed(
   () =>
     isSavedDraft.value &&
     canOperate.value &&
-    canDelete &&
-    isQuoteDeletable(status.value),
+    (canApprove || canDelete) &&
+    canShowQuoteVoid(status.value),
+);
+const canConfirmQuoteAction = computed(
+  () =>
+    isSavedDraft.value &&
+    canOperate.value &&
+    canEdit &&
+    canShowQuoteConfirm(status.value),
 );
 const canUseCostLibrary = computed(
   () =>
@@ -333,20 +539,15 @@ const canUseCostLibrary = computed(
     (isCreate.value ? canCreate : canEdit) &&
     canDraftCostActions(isCreate.value, status.value),
 );
-const canSubmitAction = computed(
-  () =>
-    isSavedDraft.value &&
-    canOperate.value &&
-    canSubmit &&
-    !costRiskActive.value,
-);
 const canRollbackAction = computed(
   () => canOperate.value && canSubmit && isPendingApproval.value,
 );
 
 const pageTitle = computed(() => {
   if (isCreate.value) {
-    return $t('page.quote.createTitle');
+    return reviseFromId.value
+      ? $t('page.quote.reviseCreateTitle')
+      : $t('page.quote.createTitle');
   }
   return readOnly.value
     ? $t('page.quote.viewTitle')
@@ -355,16 +556,13 @@ const pageTitle = computed(() => {
 
 const backLabel = computed(() => $t('page.quote.actions.backToList'));
 
+const archiveReason = ref<null | QuoteApi.QuoteListItem['archiveReason']>(null);
+
 const headerStatusTag = computed(() => {
-  const normalized = normalizeQuoteStatus(status.value);
-  // 变更中优先正式状态；恢复已确认后若仍有成本风险再显示异常
-  if (costRiskActive.value && normalized !== 'REVISING') {
-    return {
-      color: 'error',
-      label: $t('page.quote.risk.tag'),
-    };
-  }
-  const tag = resolveQuoteStatusTag(status.value);
+  const tag = resolveQuoteStatusTag(status.value, {
+    archiveReason: archiveReason.value,
+    costRiskActive: costRiskActive.value,
+  });
   return {
     className: tag.className,
     color: tag.color,
@@ -372,25 +570,20 @@ const headerStatusTag = computed(() => {
   };
 });
 
-function showCostRiskModalIfNeeded() {
-  if (
-    !costRiskActive.value ||
-    costRiskModalShown.value ||
-    normalizeQuoteStatus(status.value) === 'REVISING'
-  ) {
-    return;
-  }
-  costRiskModalShown.value = true;
-  Modal.warning({
-    centered: true,
-    title: $t('page.quote.risk.modalTitle'),
-    content: formatQuoteCostRiskHint({
-      modes: costRiskModes.value,
-      reason: costRiskReason.value,
-    }),
-    okText: $t('common.confirm'),
-  });
-}
+/** 异常已并入状态文案（已报价/待报价（异常）），不再单独挂成本风险标 */
+const showHeaderCostRiskTag = computed(() => false);
+
+/** 进入异常单据时顶部 Alert 提示具体模块 */
+const showCostRiskAlert = computed(
+  () => !isCreate.value && actionsReady.value && costRiskActive.value,
+);
+
+const costRiskAlertMessage = computed(() =>
+  formatQuoteCostRiskHint({
+    modes: costRiskModes.value,
+    reason: costRiskReason.value,
+  }),
+);
 
 const matchKeys = computed(() => ({
   zipCode: sheet.zipCode,
@@ -704,7 +897,7 @@ function buildCostImportContext(): CostImportContext {
     oakType: oakType.value,
     pod: sheet.pod,
     por: sheet.por,
-    quoteDate: quoteDate.value.format('YYYY-MM-DD'),
+    quoteDate: quoteDate.value?.format('YYYY-MM-DD'),
   };
 }
 
@@ -769,8 +962,8 @@ async function refreshRoadTruckingFromMatch() {
   }
 }
 
-const applyDocFeeFromPod = useDebounceFn(async (pod?: string) => {
-  if (hydratingSheet.value || readOnly.value) {
+async function resolveDocFeeFromPod(pod?: string, force = false) {
+  if ((!force && hydratingSheet.value) || readOnly.value) {
     return;
   }
   const value = pod?.trim();
@@ -789,7 +982,12 @@ const applyDocFeeFromPod = useDebounceFn(async (pod?: string) => {
   } catch {
     // 未选择港口或规则未配置时跳过
   }
-}, 280);
+}
+
+const applyDocFeeFromPod = useDebounceFn(
+  (pod?: string) => resolveDocFeeFromPod(pod),
+  280,
+);
 
 async function applySeaFreightRecords(records: FreightCostRecord[]) {
   const context = buildCostImportContext();
@@ -972,24 +1170,30 @@ async function applyDetailToForm(
       status.value = detail.status;
       operable.value = detail.operable;
       costRiskActive.value = detail.costRiskActive === true;
-      costRiskReason.value = detail.costRiskReason ?? '';
-      costRiskModes.value = detail.costRiskModes ?? [];
+      costRiskReason.value = detail.costRiskReason ?? null;
+      costRiskModes.value = Array.isArray(detail.costRiskModes)
+        ? detail.costRiskModes.map(String)
+        : [];
+      archiveReason.value = detail.archiveReason ?? null;
       revisionNo.value = detail.revisionNo ?? 0;
       revisionLabel.value = detail.revisionLabel ?? '';
       changeReason.value = detail.changeReason ?? '';
       parentQuoteId.value = detail.parentQuoteId;
+      supersededByQuoteId.value = detail.supersededByQuoteId;
       currentVersion.value = detail.currentVersion !== false;
     } else {
       quoteId.value = undefined;
       quoteNo.value = '';
       status.value = 'DRAFT';
       costRiskActive.value = false;
-      costRiskReason.value = '';
+      costRiskReason.value = null;
       costRiskModes.value = [];
+      archiveReason.value = null;
       revisionNo.value = 0;
       revisionLabel.value = '';
       changeReason.value = '';
       parentQuoteId.value = undefined;
+      supersededByQuoteId.value = undefined;
       currentVersion.value = true;
     }
     customerId.value = detail.customerId;
@@ -997,6 +1201,7 @@ async function applyDetailToForm(
     await ensureSelectedCustomerOption();
     serviceTypes.value = [...(detail.serviceTypes ?? [])];
     oakType.value = detail.oakType;
+    quoteDate.value = parseQuoteDate(detail.quoteDate, detail.createdAt);
     validUntil.value = detail.validUntil ? dayjs(detail.validUntil) : undefined;
     currency.value = detail.currency;
     remark.value = detail.remark ?? '';
@@ -1042,17 +1247,46 @@ async function loadDetail() {
   try {
     const detail = await getQuoteDetail(id);
     await applyDetailToForm(detail, { hydrateOnly: true });
-    showCostRiskModalIfNeeded();
     await nextTick();
+    // 询价递交生成的报价单常有 POD 无 DOC FEE；hydrate 不会触发 pod watch，空值时按 POD 重算
+    if (sheet.pod?.trim() && !String(sheet.docUsd ?? '').trim()) {
+      await resolveDocFeeFromPod(sheet.pod, true);
+    }
     // 控件可能回写后再拍基线，避免空值形态差异造成误判
     await nextTick();
     captureFormSnapshot();
     await auditLogsRef.value?.reload();
+    await refreshMailLogs();
   } finally {
     loading.value = false;
     actionsReady.value = true;
     captureFormSnapshot();
   }
+}
+
+function clearQuoteFeeFields() {
+  costMatches.value = [];
+  oceanFreightEntries.value = [{ rate: '', remark: '', ssl: '' }];
+  sheet.oceanFreight = '';
+  sheet.ofUsd = '';
+  sheet.ssl = '';
+  sheet.truckingFee = undefined;
+  sheet.truckingFee2 = undefined;
+  sheet.truckingNonOakUsd = undefined;
+  sheet.truckingOakUsd = undefined;
+  sheet.nsLift = undefined;
+  sheet.chassis = undefined;
+  sheet.waiting = undefined;
+  sheet.redeliveryFee = undefined;
+  sheet.truckRemark = '';
+  sheet.supplier = '';
+  sheet.fmNonOak = undefined;
+  sheet.fmOak = undefined;
+  sheet.docUsd = '';
+  sheet.cargoInsurancePremium = '';
+  sheet.cargoAgentFee = '';
+  sheet.cifAmount = undefined;
+  sheet.sheetRemark = '';
 }
 
 async function consumeCopyFromStorage() {
@@ -1073,6 +1307,48 @@ async function consumeCopyFromStorage() {
     message.success($t('page.quote.message.copyPrefilled'));
   } catch {
     message.error($t('page.ai.requestFailed'));
+  } finally {
+    loading.value = false;
+  }
+}
+
+/** 变更：只带基础信息，费用与报价库数据清空，由用户重新引入 */
+async function consumeReviseFromStorage() {
+  if (!isCreate.value) {
+    return false;
+  }
+  const stash = takeQuoteReviseSource();
+  if (!stash) {
+    return false;
+  }
+  loading.value = true;
+  try {
+    const detail = await getQuoteDetail(stash.sourceId);
+    await applyDetailToForm(detail, {
+      includeIdentity: false,
+      hydrateOnly: true,
+    });
+    clearQuoteFeeFields();
+    // 保留基础区路线字段；清空费用后恢复基础相关
+    sheet.zipCode = detail.sheet?.zipCode ?? '';
+    sheet.city = detail.sheet?.city ?? '';
+    sheet.state = detail.sheet?.state ?? '';
+    sheet.pickUpAddress = detail.sheet?.pickUpAddress ?? '';
+    sheet.por = detail.sheet?.por ?? '';
+    sheet.pol = detail.sheet?.pol ?? '';
+    sheet.pod = detail.sheet?.pod ?? '';
+    sheet.fumigationPoint = detail.sheet?.fumigationPoint ?? '';
+    reviseFromId.value = stash.sourceId;
+    changeReason.value = stash.changeReason;
+    parentQuoteId.value = stash.sourceId;
+    // 变更会清掉 DOC FEE；POD 往往与来源单相同，watch 不触发，需按 POD 重算（含是否中国港）
+    await nextTick();
+    await resolveDocFeeFromPod(sheet.pod, true);
+    message.success($t('page.quote.message.revisePrefilled'));
+    return true;
+  } catch {
+    message.error($t('page.ai.requestFailed'));
+    return false;
   } finally {
     loading.value = false;
   }
@@ -1599,12 +1875,13 @@ function captureFormSnapshot() {
   savedFormSnapshot.value = buildFormSnapshot();
 }
 
-function hasUnsavedChanges() {
+/** 是否有未保存改动：当前表单与最近一次加载/保存后的快照比对 */
+const hasUnsavedChanges = computed(() => {
   if (!quoteId.value || !savedFormSnapshot.value) {
     return false;
   }
   return buildFormSnapshot() !== savedFormSnapshot.value;
-}
+});
 
 function validateRouteFields(): boolean {
   if (!sheet.por?.trim()) {
@@ -1678,12 +1955,10 @@ async function onGenerateSheet(options?: { auto?: boolean }) {
       fumigationPoint: keepFumigationPoint,
       fumigationEnabled: keepFumigationEnabled,
       oakType: keepOakType,
-      quoteDate: quoteDate.value.format('YYYY-MM-DD'),
+      quoteDate: quoteDate.value?.format('YYYY-MM-DD'),
       skipRoadMatch: existingRoadMatches.length > 0,
     });
-    if (result.quoteDate) {
-      quoteDate.value = dayjs(result.quoteDate);
-    }
+    // 生成报价表可能回落系统当天，勿覆盖表单已展示的单据日期
     Object.assign(sheet, result.sheet);
     if (sheet.ofUsd) {
       sheet.oceanFreight = sheet.oceanFreight || sheet.ofUsd;
@@ -1728,7 +2003,31 @@ async function onSave() {
   saving.value = true;
   try {
     if (isCreate.value) {
-      const created = await createQuote(buildPayload());
+      const payload = buildPayload();
+      // 变更流：保存直接落已报价，旧版归档
+      if (reviseFromId.value && changeReason.value.trim()) {
+        const created = await reviseQuote(reviseFromId.value, {
+          ...payload,
+          changeReason: changeReason.value.trim(),
+          parentQuoteId: reviseFromId.value,
+        });
+        reviseFromId.value = null;
+        markQuoteListForceRefresh('quote');
+        markQuoteListForceRefresh('inquiry');
+        message.success(
+          $t('page.quote.message.reviseSuccess', [
+            created.revisionLabel || created.quoteNo,
+          ]),
+        );
+        await router.replace({
+          name: 'QuoteEdit',
+          params: { id: created.id },
+        });
+        await loadDetail();
+        return;
+      }
+      const created = await createQuote(payload);
+      markQuoteListForceRefresh('quote');
       message.success(
         $t('page.quote.message.createSuccess', [created.quoteNo]),
       );
@@ -1744,39 +2043,11 @@ async function onSave() {
       return;
     }
     const updated = await updateQuote(id, buildPayload());
+    markQuoteListForceRefresh('quote');
     message.success($t('page.quote.message.saveSuccess', [updated.quoteNo]));
     await loadDetail();
   } finally {
     saving.value = false;
-  }
-}
-
-function onSubmit() {
-  const id = quoteId.value;
-  if (!id) return;
-  if (hasUnsavedChanges()) {
-    Modal.warning({
-      centered: true,
-      title: $t('page.quote.actions.submit'),
-      content: $t('page.quote.confirm.submitNeedSave'),
-    });
-    return;
-  }
-  submitComment.value = '';
-  submitOpen.value = true;
-}
-
-async function onSubmitOk() {
-  const id = quoteId.value;
-  if (!id) return;
-  submitSubmitting.value = true;
-  try {
-    await submitQuote(id, submitComment.value);
-    message.success($t('page.quote.message.submitSuccess'));
-    submitOpen.value = false;
-    await loadDetail();
-  } finally {
-    submitSubmitting.value = false;
   }
 }
 
@@ -1798,6 +2069,7 @@ async function onWithdrawOk() {
   withdrawSubmitting.value = true;
   try {
     await cancelQuoteApproval(id, comment);
+    markQuoteListForceRefresh('quote');
     message.success($t('page.quote.message.withdrawSuccess'));
     withdrawOpen.value = false;
     await loadDetail();
@@ -1806,17 +2078,34 @@ async function onWithdrawOk() {
   }
 }
 
-async function onWon() {
+async function onConfirmQuote() {
   const id = quoteId.value;
   if (!id) return;
+  // 确认报价会锁定单据：有未保存改动时先让用户保存，避免改动丢失
+  if (hasUnsavedChanges.value) {
+    Modal.confirm({
+      centered: true,
+      title: $t('page.quote.confirm.unsavedTitle'),
+      content: $t('page.quote.confirm.unsavedContent'),
+      okText: $t('page.quote.confirm.saveFirst'),
+      cancelText: $t('common.cancel'),
+      onOk: async () => {
+        await onSave();
+      },
+    });
+    return;
+  }
   Modal.confirm({
     centered: true,
-    title: $t('page.quote.actions.confirmWon'),
-    content: $t('page.quote.confirm.confirmWon'),
+    title: $t('page.quote.actions.confirmQuote'),
+    content: $t('page.quote.confirm.confirmQuote'),
     onOk: async () => {
-      await wonQuote(id);
-      message.success($t('page.quote.message.wonSuccess'));
+      await confirmQuote(id);
+      markQuoteListForceRefresh('quote');
+      markQuoteListForceRefresh('inquiry');
+      message.success($t('page.quote.message.confirmQuoteSuccess'));
       await loadDetail();
+      void pollMailTerminalState();
     },
   });
 }
@@ -1831,24 +2120,10 @@ async function onVoid() {
     okType: 'danger',
     onOk: async () => {
       await voidQuote(id);
+      markQuoteListForceRefresh('quote');
+      markQuoteListForceRefresh('inquiry');
       message.success($t('page.quote.message.voidSuccess'));
       await loadDetail();
-    },
-  });
-}
-
-async function onDelete() {
-  const id = quoteId.value;
-  if (!id) return;
-  Modal.confirm({
-    centered: true,
-    title: $t('common.delete'),
-    content: $t('page.quote.confirm.delete', [quoteNo.value]),
-    okType: 'danger',
-    onOk: async () => {
-      await deleteQuote(id);
-      message.success($t('page.quote.message.deleteSuccess', [quoteNo.value]));
-      router.push({ name: 'QuoteList' });
     },
   });
 }
@@ -1867,7 +2142,7 @@ function onRevise() {
   if (!id) {
     return;
   }
-  reviseReasonDraft.value = changeReason.value || '';
+  reviseReasonDraft.value = '';
   Modal.confirm({
     centered: true,
     width: 640,
@@ -1891,28 +2166,14 @@ function onRevise() {
         }),
       ]),
     okText: $t('page.quote.actions.revise'),
-    okButtonProps: { loading: revising.value },
     async onOk() {
       const reason = reviseReasonDraft.value.trim();
       if (!reason) {
         message.warning($t('page.quote.message.reviseNeedReason'));
         throw new Error('reason required');
       }
-      revising.value = true;
-      try {
-        const detail = await reviseQuote(id, reason);
-        message.success(
-          $t('page.quote.message.reviseSuccess', [
-            detail.revisionLabel || detail.quoteNo,
-          ]),
-        );
-        await router.push({
-          name: 'QuoteEdit',
-          params: { id: String(detail.id) },
-        });
-      } finally {
-        revising.value = false;
-      }
+      stashQuoteReviseSource({ changeReason: reason, sourceId: id });
+      await router.push({ name: 'QuoteCreate' });
     },
   });
 }
@@ -1924,6 +2185,16 @@ function goParentQuote() {
   router.push({
     name: 'QuoteEdit',
     params: { id: String(parentQuoteId.value) },
+  });
+}
+
+function goSuccessorQuote() {
+  if (!supersededByQuoteId.value) {
+    return;
+  }
+  router.push({
+    name: 'QuoteEdit',
+    params: { id: String(supersededByQuoteId.value) },
   });
 }
 
@@ -1955,9 +2226,12 @@ onMounted(async () => {
     actionsReady.value = true;
     const quotePrefillApplied = await consumeAiQuotePrefillFromStorage();
     if (!quotePrefillApplied) {
-      consumeAiApplyFromStorage();
-      await consumeCopyFromStorage();
-      await consumeRoadIntroduceFromStorage();
+      const reviseApplied = await consumeReviseFromStorage();
+      if (!reviseApplied) {
+        consumeAiApplyFromStorage();
+        await consumeCopyFromStorage();
+        await consumeRoadIntroduceFromStorage();
+      }
     }
     if (oceanFreightEntries.value.length === 0) {
       oceanFreightEntries.value = resolveOceanFreightEntries(
@@ -1976,7 +2250,10 @@ onActivated(async () => {
   if (isCreate.value) {
     const quotePrefillApplied = await consumeAiQuotePrefillFromStorage();
     if (!quotePrefillApplied) {
-      await consumeRoadIntroduceFromStorage();
+      const reviseApplied = await consumeReviseFromStorage();
+      if (!reviseApplied) {
+        await consumeRoadIntroduceFromStorage();
+      }
     }
   }
 });
@@ -1986,25 +2263,21 @@ watch(
   async (name) => {
     if (name === 'QuoteCreate') {
       actionsReady.value = true;
+      reviseFromId.value = null;
       const quotePrefillApplied = await consumeAiQuotePrefillFromStorage();
       if (!quotePrefillApplied) {
-        await consumeCopyFromStorage();
-        await consumeRoadIntroduceFromStorage();
+        const reviseApplied = await consumeReviseFromStorage();
+        if (!reviseApplied) {
+          await consumeCopyFromStorage();
+          await consumeRoadIntroduceFromStorage();
+        }
       }
       return;
     }
     if (name === 'QuoteEdit') {
-      costRiskModalShown.value = false;
       clearAiQuotePrefill();
       await loadDetail();
     }
-  },
-);
-
-watch(
-  () => route.params.id,
-  () => {
-    costRiskModalShown.value = false;
   },
 );
 
@@ -2019,6 +2292,7 @@ watch(
 );
 
 onUnmounted(() => {
+  stopMailPolling();
   window.removeEventListener('ai-apply-cost', onAiApplyEvent);
   window.removeEventListener(AI_PREFILL_QUOTE_EVENT, onAiQuotePrefillEvent);
 });
@@ -2066,6 +2340,12 @@ onUnmounted(() => {
               >
                 {{ headerStatusTag.label }}
               </Tag>
+              <Tag
+                v-if="!isCreate && actionsReady && showHeaderCostRiskTag"
+                color="error"
+              >
+                {{ $t('page.quote.risk.tag') }}
+              </Tag>
               <Button
                 v-if="!isCreate && actionsReady && parentQuoteId"
                 type="link"
@@ -2073,6 +2353,14 @@ onUnmounted(() => {
                 @click="goParentQuote"
               >
                 {{ $t('page.quote.revision.viewParent') }}
+              </Button>
+              <Button
+                v-if="!isCreate && actionsReady && supersededByQuoteId"
+                type="link"
+                class="!px-1"
+                @click="goSuccessorQuote"
+              >
+                {{ $t('page.quote.revision.viewSuccessor') }}
               </Button>
             </div>
           </div>
@@ -2121,21 +2409,24 @@ onUnmounted(() => {
                 {{ $t('page.quote.actions.printQuote') }}
               </Button>
               <Button
-                v-if="canSubmitAction"
+                v-if="canConfirmQuoteAction"
                 class="quote-action-btn quote-action-btn--submit"
-                @click="onSubmit"
+                type="primary"
+                ghost
+                @click="onConfirmQuote"
               >
-                <IconifyIcon class="mr-1 size-4" icon="lucide:send" />
-                {{ $t('page.quote.actions.submit') }}
+                <IconifyIcon class="mr-1 size-4" icon="lucide:badge-check" />
+                {{ $t('page.quote.actions.confirmQuote') }}
               </Button>
               <Button
-                v-if="canDeleteAction"
-                class="quote-action-btn quote-action-btn--delete"
+                v-if="canVoidAction"
+                class="quote-action-btn quote-action-btn--void"
                 danger
                 type="primary"
-                @click="onDelete"
+                @click="onVoid"
               >
-                {{ $t('common.delete') }}
+                <IconifyIcon class="mr-1 size-4" icon="lucide:ban" />
+                {{ $t('page.quote.actions.void') }}
               </Button>
               <Button
                 v-if="canSave"
@@ -2181,28 +2472,6 @@ onUnmounted(() => {
 
             <template v-else-if="showConfirmedToolbar">
               <Button
-                v-if="canReviseAction"
-                class="quote-action-btn quote-action-btn--revise"
-                type="primary"
-                ghost
-                :loading="revising"
-                @click="onRevise"
-              >
-                <IconifyIcon
-                  class="mr-1 size-4"
-                  icon="lucide:git-branch-plus"
-                />
-                {{ $t('page.quote.actions.revise') }}
-              </Button>
-              <Button
-                v-if="canCopyAction"
-                class="quote-action-btn quote-action-btn--copy"
-                @click="onCopy"
-              >
-                <Copy class="mr-1 size-4" />
-                {{ $t('page.quote.actions.copy') }}
-              </Button>
-              <Button
                 class="quote-action-btn quote-action-btn--print"
                 @click="openPrintPreview"
               >
@@ -2210,26 +2479,24 @@ onUnmounted(() => {
                 {{ $t('page.quote.actions.print') }}
               </Button>
               <Button
-                v-if="canConfirmWonAction"
-                class="quote-action-btn quote-action-btn--won"
+                class="quote-action-btn quote-action-btn--mail"
+                @click="openSendMailModal"
+              >
+                <IconifyIcon class="mr-1 size-4" icon="lucide:mail" />
+                {{ $t('page.quote.actions.sendMail') }}
+              </Button>
+              <Button
+                v-if="canReviseAction"
+                class="quote-action-btn quote-action-btn--revise"
                 type="primary"
-                @click="onWon"
+                ghost
+                @click="onRevise"
               >
                 <IconifyIcon
                   class="mr-1 size-4"
-                  icon="lucide:circle-check-big"
+                  icon="lucide:git-branch-plus"
                 />
-                {{ $t('page.quote.actions.confirmWon') }}
-              </Button>
-              <Button
-                v-if="canVoidAction"
-                class="quote-action-btn quote-action-btn--void"
-                danger
-                type="primary"
-                @click="onVoid"
-              >
-                <IconifyIcon class="mr-1 size-4" icon="lucide:ban" />
-                {{ $t('page.quote.actions.void') }}
+                {{ $t('page.quote.actions.revise') }}
               </Button>
             </template>
 
@@ -2253,6 +2520,38 @@ onUnmounted(() => {
           </div>
         </div>
       </header>
+
+      <Alert
+        v-if="showMailAlert"
+        class="quote-mail-alert"
+        :type="mailAlertType"
+        show-icon
+        :message="mailAlertMessage"
+      >
+        <template v-if="mailAlertDescription" #description>
+          {{ mailAlertDescription }}
+        </template>
+        <template v-if="canResendMail" #action>
+          <Button
+            danger
+            ghost
+            size="small"
+            type="primary"
+            @click="onResendMail"
+          >
+            <IconifyIcon class="mr-1 size-3" icon="lucide:mail-warning" />
+            {{ $t('page.quote.mail.resend') }}
+          </Button>
+        </template>
+      </Alert>
+
+      <Alert
+        v-if="showCostRiskAlert"
+        class="quote-cost-risk-alert"
+        type="warning"
+        show-icon
+        :message="costRiskAlertMessage"
+      />
 
       <Card class="quote-editor-card quote-card">
         <QuoteSheetEditorSkeleton v-if="loading" />
@@ -2316,7 +2615,9 @@ onUnmounted(() => {
                         v-else
                         class="w-full"
                         readonly
-                        :value="quoteDate.format('YYYY-MM-DD')"
+                        :value="
+                          quoteDate ? quoteDate.format('YYYY-MM-DD') : '—'
+                        "
                       />
                     </Form.Item>
                     <Form.Item :label="$t('page.quote.sheet.validUntil')">
@@ -2387,28 +2688,12 @@ onUnmounted(() => {
                       />
                     </Form.Item>
                   </div>
-                  <div class="quote-sheet-location-row">
-                    <Form.Item :label="$t('page.quote.sheet.zipCode')">
-                      <ZipCodeFields
-                        v-model:zip-code="sheet.zipCode"
-                        v-model:city="sheet.city"
-                        v-model:state="sheet.state"
-                        :disabled="readOnly"
-                      />
-                    </Form.Item>
-                    <Form.Item :label="$t('page.quote.sheet.city')">
-                      <QuoteCitySelect
-                        v-model="sheet.city"
-                        :disabled="readOnly"
-                      />
-                    </Form.Item>
-                    <Form.Item :label="$t('page.quote.sheet.state')">
-                      <QuoteStateSelect
-                        v-model="sheet.state"
-                        :disabled="readOnly"
-                      />
-                    </Form.Item>
-                  </div>
+                  <QuoteAddressRow
+                    v-model:city="sheet.city"
+                    v-model:state="sheet.state"
+                    v-model:zip-code="sheet.zipCode"
+                    :disabled="readOnly"
+                  />
                   <div
                     v-if="showFumigationFees"
                     class="quote-sheet-location-row quote-sheet-location-row--2"
@@ -2770,26 +3055,6 @@ onUnmounted(() => {
       </Card>
       <CostLibraryPickerModal ref="costPickerRef" @confirm="onCostsConfirmed" />
       <Modal
-        v-model:open="submitOpen"
-        centered
-        :confirm-loading="submitSubmitting"
-        :title="$t('page.approval.submitModalTitle')"
-        width="560px"
-        @ok="onSubmitOk"
-      >
-        <Form layout="vertical">
-          <Form.Item :label="$t('page.approval.submitRemark')">
-            <Input.TextArea
-              v-model:value="submitComment"
-              :maxlength="500"
-              :placeholder="$t('page.approval.submitRemarkPlaceholder')"
-              :rows="4"
-              show-count
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
-      <Modal
         v-model:open="withdrawOpen"
         centered
         :confirm-loading="withdrawSubmitting"
@@ -2810,6 +3075,30 @@ onUnmounted(() => {
         </Form>
       </Modal>
       <Modal
+        v-model:open="sendMailOpen"
+        centered
+        :confirm-loading="sendMailSubmitting"
+        :title="$t('page.quote.mail.sendMailTitle')"
+        width="560px"
+        @cancel="closeSendMailModal"
+        @ok="onSubmitSendMail"
+      >
+        <Form layout="vertical">
+          <Form.Item :label="$t('page.quote.mail.sendMailLabel')" required>
+            <Select
+              v-model:value="sendMailEmails"
+              mode="tags"
+              :placeholder="$t('page.quote.mail.sendMailPlaceholder')"
+              :token-separators="[',', ';', '，', '；', ' ']"
+              style="width: 100%"
+            />
+          </Form.Item>
+          <div class="text-muted-foreground text-xs">
+            {{ $t('page.quote.mail.sendMailHint') }}
+          </div>
+        </Form>
+      </Modal>
+      <Modal
         v-model:open="sheetPreviewOpen"
         centered
         class="quote-print-modal"
@@ -2819,7 +3108,7 @@ onUnmounted(() => {
         <QuotePrintSheet
           :cost-snapshots="costMatches"
           :customer-name="previewCustomerName"
-          :quote-date="quoteDate.format('YYYY-MM-DD')"
+          :quote-date="quoteDate?.format('YYYY-MM-DD') ?? ''"
           :service-types="serviceTypes"
           :sheet="sheet"
         />

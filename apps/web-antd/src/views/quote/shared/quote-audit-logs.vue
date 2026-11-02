@@ -13,9 +13,12 @@ const props = defineProps<{
 }>();
 
 const loading = ref(false);
-const tabKey = ref('approval');
+const tabKey = ref('ops');
 const approvalLogs = ref<QuoteApi.ApprovalHistoryItem[]>([]);
 const operationLogs = ref<QuoteApi.OperationLogItem[]>([]);
+
+/** 仅历史走过审批的单据展示审批日志；新单（无记录）不显示该 Tab */
+const showApprovalTab = computed(() => approvalLogs.value.length > 0);
 
 function resultTagColor(record: QuoteApi.ApprovalHistoryItem) {
   if (record.action === 'SUBMIT' || record.result === '提交') {
@@ -85,6 +88,7 @@ async function loadLogs() {
   if (!props.quoteId) {
     approvalLogs.value = [];
     operationLogs.value = [];
+    tabKey.value = 'ops';
     return;
   }
   loading.value = true;
@@ -95,6 +99,12 @@ async function loadLogs() {
     ]);
     approvalLogs.value = approval ?? [];
     operationLogs.value = operations.items ?? [];
+    // 无审批历史时不落在审批 Tab
+    if (approvalLogs.value.length === 0) {
+      tabKey.value = 'ops';
+    } else if (tabKey.value !== 'approval' && tabKey.value !== 'ops') {
+      tabKey.value = 'ops';
+    }
   } finally {
     loading.value = false;
   }
@@ -120,9 +130,12 @@ defineExpose({ reload: loadLogs });
     </div>
     <div class="quote-editor-section__body">
       <Tabs v-model:active-key="tabKey">
-        <Tabs.TabPane key="approval" :tab="$t('page.quote.tabs.approvalLog')">
+        <Tabs.TabPane
+          v-if="showApprovalTab"
+          key="approval"
+          :tab="$t('page.quote.tabs.approvalLog')"
+        >
           <Table
-            v-if="approvalLogs.length"
             :columns="approvalColumns"
             :data-source="approvalLogs"
             :loading="loading"
@@ -131,7 +144,6 @@ defineExpose({ reload: loadLogs });
             row-key="id"
             size="small"
           />
-          <Empty v-else :description="$t('common.noData')" />
         </Tabs.TabPane>
         <Tabs.TabPane key="ops" :tab="$t('page.quote.tabs.operationLog')">
           <Table

@@ -1,4 +1,8 @@
+import type { Dayjs } from 'dayjs';
+
 import type { QuoteApi } from '#/api/quote';
+
+import dayjs from 'dayjs';
 
 /** 列表/导出列定义 — 表头与「报价单列表模板.xlsx」一致 */
 export const QUOTE_SHEET_COLUMNS: Array<{
@@ -37,10 +41,10 @@ export const QUOTE_SHEET_COLUMNS: Array<{
 /** 报价单列表页表头（精简列） */
 export const QUOTE_LIST_COLUMNS: Array<{
   field:
-    | 'allIn'
     | 'oakType'
     | 'porPol'
     | 'quoteDate'
+    | 'supplier'
     | 'validUntil'
     | keyof QuoteApi.QuoteSheetFields;
   listSource?: 'row' | 'sheet';
@@ -52,8 +56,14 @@ export const QUOTE_LIST_COLUMNS: Array<{
   { field: 'pol', title: 'POL', width: 96 },
   { field: 'pod', title: 'POD', width: 96 },
   { field: 'zipCode', title: 'ZIP CODE', width: 100 },
-  { field: 'city', title: 'CITY', width: 100 },
   { field: 'state', title: 'STATE', width: 80 },
+  { field: 'city', title: 'CITY', width: 100 },
+  {
+    field: 'supplier',
+    listSource: 'row',
+    title: 'SUPPLIER',
+    width: 140,
+  },
   { field: 'pickUpAddress', title: 'PICK UP ADDRESS', width: 180 },
   { field: 'fumigationPoint', title: 'STATION', width: 120 },
   {
@@ -61,13 +71,6 @@ export const QUOTE_LIST_COLUMNS: Array<{
     listSource: 'row',
     title: 'OAK / NON-OAK',
     width: 128,
-  },
-  {
-    field: 'allIn',
-    listSource: 'row',
-    title: 'ALL IN',
-    type: 'money',
-    width: 160,
   },
   {
     field: 'quoteDate',
@@ -137,9 +140,6 @@ export function formatQuoteListCellValue(
   col: (typeof QUOTE_LIST_COLUMNS)[number],
 ) {
   if (col.listSource === 'row') {
-    if (col.field === 'allIn') {
-      return formatMoney(row.allIn);
-    }
     if (col.field === 'oakType') {
       if (row.oakType === 'OAK') {
         return 'OAK';
@@ -155,6 +155,10 @@ export function formatQuoteListCellValue(
     if (col.field === 'validUntil') {
       return formatQuoteDate(row.validUntil);
     }
+    if (col.field === 'supplier') {
+      const value = row.supplier?.trim() || row.sheet?.supplier?.trim();
+      return value || '—';
+    }
   }
   return sheetCellValue(
     row.sheet,
@@ -167,4 +171,19 @@ export function formatQuoteDate(value?: string) {
     return '—';
   }
   return value.length >= 10 ? value.slice(0, 10) : value;
+}
+
+/** 从 yyyy-MM-dd 或带时间的字符串解析报价日期；无效则返回 undefined（不回落到今天） */
+export function parseQuoteDate(
+  ...candidates: Array<null | string | undefined>
+): Dayjs | undefined {
+  for (const value of candidates) {
+    if (!value) continue;
+    const text = value.length >= 10 ? value.slice(0, 10) : value;
+    const parsed = dayjs(text);
+    if (parsed.isValid()) {
+      return parsed;
+    }
+  }
+  return undefined;
 }

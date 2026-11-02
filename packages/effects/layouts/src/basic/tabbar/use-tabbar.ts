@@ -74,6 +74,38 @@ export function useTabbar() {
     tabbarStore.setAffixTabs(affixTabs);
   };
 
+  /**
+   * sessionStorage 恢复的旧标签可能缺少 keepAlive/domCached。
+   * 按当前路由表回填，避免返回列表时组件被销毁重建、再次请求。
+   */
+  const syncTabsCacheMetaFromRoutes = () => {
+    const routeMap = new Map(
+      router
+        .getRoutes()
+        .filter((item) => !!item.name)
+        .map((item) => [String(item.name), item]),
+    );
+    let changed = false;
+    for (const tab of tabbarStore.tabs) {
+      const name = tab.name ? String(tab.name) : '';
+      if (!name) continue;
+      const record = routeMap.get(name);
+      if (!record?.meta) continue;
+      tab.meta = tab.meta ?? {};
+      if (record.meta.keepAlive && !tab.meta.keepAlive) {
+        tab.meta.keepAlive = true;
+        changed = true;
+      }
+      if (record.meta.domCached && !tab.meta.domCached) {
+        tab.meta.domCached = true;
+        changed = true;
+      }
+    }
+    if (changed) {
+      void tabbarStore.updateCacheTabs();
+    }
+  };
+
   // 点击tab,跳转路由
   const handleClick = (key: string) => {
     const { fullPath, path } = tabbarStore.getTabByKey(key);
@@ -99,6 +131,15 @@ export function useTabbar() {
     () => accessStore.accessMenus,
     () => {
       initAffixTabs();
+      syncTabsCacheMetaFromRoutes();
+    },
+    { immediate: true },
+  );
+
+  watch(
+    () => accessStore.accessRoutes,
+    () => {
+      syncTabsCacheMetaFromRoutes();
     },
     { immediate: true },
   );

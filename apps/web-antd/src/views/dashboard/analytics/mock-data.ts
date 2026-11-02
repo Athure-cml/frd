@@ -16,31 +16,31 @@ export interface RecentQuoteItem {
 export function getOverviewItems(): AnalysisOverviewItem[] {
   return [
     {
-      icon: 'lucide:file-text',
-      title: $t('page.analytics.kpi.monthQuotes'),
-      totalTitle: $t('page.analytics.kpi.monthQuotesTotal'),
+      icon: 'lucide:clipboard-list',
+      title: $t('page.analytics.kpi.monthInquiries'),
+      totalTitle: $t('page.analytics.kpi.monthInquiries'),
       totalValue: 1856,
       value: 128,
     },
     {
-      icon: 'lucide:wallet',
-      title: $t('page.analytics.kpi.monthAmount'),
-      totalTitle: $t('page.analytics.kpi.monthAmountTotal'),
-      totalValue: 4280,
-      value: 284,
+      icon: 'lucide:file-check-2',
+      title: $t('page.analytics.kpi.monthQuoted'),
+      totalTitle: $t('page.analytics.kpi.monthQuoted'),
+      totalValue: 980,
+      value: 86,
     },
     {
       icon: 'lucide:percent',
-      title: $t('page.analytics.kpi.winRate'),
-      totalTitle: $t('page.analytics.kpi.winRatePrev'),
+      title: $t('page.analytics.kpi.conversionRate'),
+      totalTitle: $t('page.analytics.kpi.conversionRate'),
       totalValue: 28,
       value: 32,
     },
     {
-      icon: 'lucide:clock',
-      title: $t('page.analytics.kpi.followUp'),
-      totalTitle: $t('page.analytics.kpi.expiringSoon'),
-      totalValue: 6,
+      icon: 'lucide:hourglass',
+      title: $t('page.analytics.kpi.pendingQuote'),
+      totalTitle: $t('page.analytics.kpi.costRisk'),
+      totalValue: 3,
       value: 17,
     },
   ];
@@ -49,6 +49,7 @@ export function getOverviewItems(): AnalysisOverviewItem[] {
 /** @deprecated Use getOverviewItems() for locale-aware labels */
 export const overviewItems = getOverviewItems();
 
+/** @deprecated Prefer quoteCountTrend for workspace stats */
 export const quoteAmountTrend = {
   months: [
     '1月',
@@ -66,6 +67,25 @@ export const quoteAmountTrend = {
   ],
   quoted: [186, 210, 245, 228, 262, 278, 301, 295, 312, 288, 305, 284],
   won: [52, 61, 74, 68, 81, 88, 95, 91, 102, 96, 104, 91],
+};
+
+export const quoteCountTrend = {
+  months: [
+    '1月',
+    '2月',
+    '3月',
+    '4月',
+    '5月',
+    '6月',
+    '7月',
+    '8月',
+    '9月',
+    '10月',
+    '11月',
+    '12月',
+  ],
+  inquiries: [98, 105, 118, 112, 125, 132, 141, 138, 148, 136, 142, 128],
+  quoted: [52, 61, 74, 68, 81, 88, 95, 91, 102, 96, 104, 91],
 };
 
 export const monthlyQuoteVolume = {

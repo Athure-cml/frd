@@ -16,7 +16,7 @@ export function isQuoteSuperAdmin(user?: QuoteOperatorUser): boolean {
   return user.roles?.includes('super_admin') ?? false;
 }
 
-/** 单据生命周期操作：创建人或超级管理员 */
+/** 单据生命周期操作：操作人、超级管理员，或尚未认领（询价递交后待首次保存） */
 export function canOperateQuote(
   user?: QuoteOperatorUser,
   createdBy?: null | number,
@@ -27,8 +27,9 @@ export function canOperateQuote(
   if (isQuoteSuperAdmin(user)) {
     return true;
   }
+  // 未认领：可读用户即可操作，首次保存后写入操作人
   if (createdBy === null || createdBy === undefined) {
-    return false;
+    return true;
   }
   return String(user.userId) === String(createdBy);
 }

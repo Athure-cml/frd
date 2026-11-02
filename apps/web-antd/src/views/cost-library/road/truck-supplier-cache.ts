@@ -82,7 +82,8 @@ export function createTruckSupplierSearchProps() {
     },
     class: 'w-full cost-select-multiple-wrap',
     maxTagCount: 'responsive' as const,
-    mode: 'multiple' as const,
+    // tags：支持从外部粘贴多个供应商（换行/分号等分隔）
+    mode: 'tags' as const,
     optionFilterProp: 'label',
     // 选中 tag 只展示简称，避免全称过长
     optionLabelProp: 'shortLabel',

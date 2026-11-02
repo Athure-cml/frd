@@ -15,6 +15,7 @@ import {
 import { getDefaultTemplate } from '../../../cost-library/shared/default-templates';
 import { ROAD_REMARK_FIELD } from '../../../cost-library/shared/field-catalog/road';
 import { formatDateYmd } from '../../../cost-library/shared/formatters';
+import { FUMIGATION_LEGACY_LAYOUT } from '../../../cost-library/shared/fumigation-template-layouts';
 import { buildQuoteRuleHeaderSlot } from '../../shared/quote-rule-header';
 
 export type { QuoteLibraryMode };
@@ -39,9 +40,9 @@ const SEA_FREIGHT_EFF_FIELD = 'cf_sea_freight_eff';
 /** 卡车报价库导出兜底表头（列表列以已应用的视图模板为准） */
 export const QUOTE_LIBRARY_ROAD_COLUMNS: QuoteLibraryColumnDef[] = [
   { field: 'zipCode', title: 'ZIP CODE', width: 100 },
+  { field: 'state', title: 'STATE', width: 80 },
   { field: 'city', title: 'CITY', width: 110 },
   { field: 'logYardNameAddress', title: 'PICK UP ADDRESS', width: 180 },
-  { field: 'state', title: 'STATE', width: 80 },
   { field: 'por', title: 'POR', width: 96 },
   {
     bgColor: DEFAULT_TOTAL_COLUMN_BG,
@@ -369,9 +370,13 @@ function stripSnapshotGridColumns(
 export function buildQuoteLibrarySnapshotColumns(
   mode: QuoteLibraryMode,
   template: CostTableTemplate = getDefaultTemplate(mode),
+  options?: { fumigationLegacy?: boolean },
 ): VxeTableGridOptions<QuoteLibraryRow>['columns'] {
   if (mode === 'fumigation') {
-    const columns = buildFumigationColumnsFromLayout(template.layout, {
+    const layout = options?.fumigationLegacy
+      ? FUMIGATION_LEGACY_LAYOUT
+      : template.layout;
+    const columns = buildFumigationColumnsFromLayout(layout, {
       canEdit: false,
       formatDateValue: formatDateYmd,
       includeCheckbox: false,

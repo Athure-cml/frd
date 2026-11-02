@@ -144,6 +144,34 @@ export function createTemplateColumnBgStyleHandlers() {
   };
 
   return {
-    cellStyle: ({ column }: { column: ColumnWithBgParams }) => resolve(column),
+    /**
+     * 行有「常用」标记色时直接涂整格常用色（含模板列），
+     * 保证成本库转入报价库后颜色不被列底盖住。过期行仍走灰底。
+     */
+    cellStyle: ({
+      column,
+      row,
+    }: {
+      column: ColumnWithBgParams;
+      row?: {
+        highlight?: null | { color?: null | string };
+        status?: null | string;
+      };
+    }) => {
+      if (row?.status !== 'expired') {
+        const highlightColor = normalizeColumnBgColor(row?.highlight?.color);
+        if (highlightColor) {
+          const fg = contrastTextColorForBg(highlightColor);
+          return {
+            '--col-tmpl-bg': highlightColor,
+            '--cost-row-highlight-bg': highlightColor,
+            '--cost-row-highlight-fg': fg,
+            backgroundColor: highlightColor,
+            color: fg,
+          };
+        }
+      }
+      return resolve(column);
+    },
   };
 }

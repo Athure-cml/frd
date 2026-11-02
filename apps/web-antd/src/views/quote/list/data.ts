@@ -13,11 +13,12 @@ import { getFumigationStationList, lookupQuoteZip } from '#/api/quote';
 import { getUserList } from '#/api/system/user';
 import { $t } from '#/locales';
 
+import { createTruckSupplierFormSelectProps } from '../../cost-library/road/truck-supplier-cache';
 import { createPortSelectProps } from '../../cost-library/shared/freight-schema';
 import { buildOperationColumn } from '../../system/shared/columns';
 import {
   canShowQuoteVoid,
-  isQuoteDeletable,
+  isQuoteStatusAbnormal,
   normalizeQuoteStatus,
 } from '../shared/quote-status';
 import {
@@ -54,30 +55,24 @@ function createZipSearchProps() {
   };
 }
 
+/** 搜索栏 CITY：允许手输关键字（后端 LIKE）也可从下拉选 */
 function createCitySearchProps() {
-  const params = reactive({ keyword: '' });
-  const setKeyword = useDebounceFn((keyword: string) => {
-    params.keyword = keyword.trim();
+  const options = reactive<Array<{ label: string; value: string }>>([]);
+  const search = useDebounceFn(async (keyword: string) => {
+    const q = keyword.trim();
+    if (!q) {
+      options.splice(0);
+      return;
+    }
+    const rows = await searchDestCityNameOptions({ keyword: q, limit: 50 });
+    options.splice(0, options.length, ...rows);
   }, 280);
   return {
     allowClear: true,
-    api: async (p: { keyword?: string }) => {
-      const keyword = p?.keyword?.trim() || '';
-      if (!keyword) {
-        return [];
-      }
-      return searchDestCityNameOptions({
-        keyword,
-        limit: 50,
-      });
-    },
     class: 'w-full',
     filterOption: false,
-    immediate: false,
-    optionFilterProp: 'label',
-    params,
-    showSearch: true,
-    onSearch: setKeyword,
+    options,
+    onSearch: search,
   };
 }
 
@@ -140,73 +135,73 @@ export const transportModeTagOptions = () => [
 export const QUOTE_PENDING_APPROVAL_TAG_CLASS = 'quote-status-tag--pending';
 /** 变更中：浅紫底 + 深紫字 */
 export const QUOTE_REVISING_TAG_CLASS = 'quote-status-tag--revising';
-/** 已归档：浅灰蓝底 + 深蓝灰字 */
+/** 已归档：灰色 */
 export const QUOTE_SUPERSEDED_TAG_CLASS = 'quote-status-tag--superseded';
 
 export function resolveQuoteStatusTag(
   status: QuoteApi.QuoteListItem['status'],
+  options?: {
+    archiveReason?: QuoteApi.QuoteListItem['archiveReason'];
+    costRiskActive?: boolean;
+  },
 ) {
   const normalized = normalizeQuoteStatus(status);
   const matched = statusTagOptions().find((item) => item.value === normalized);
+  const abnormal = isQuoteStatusAbnormal(status, options?.costRiskActive);
+  let label = matched?.label ?? status;
+  if (abnormal) {
+    label =
+      normalized === 'QUOTED'
+        ? t('status.QUOTED_ABNORMAL')
+        : t('status.PENDING_QUOTE_ABNORMAL');
+  } else if (normalized === 'ARCHIVED') {
+    const archiveReason =
+      options?.archiveReason ??
+      (status === 'REVISING' || status === 'SUPERSEDED'
+        ? 'SUPERSEDED'
+        : undefined);
+    if (archiveReason) {
+      const reasonKey = `status.ARCHIVED_${archiveReason}`;
+      const reasonLabel = t(reasonKey);
+      // 缺文案时退回「已归档」
+      label = reasonLabel === reasonKey ? t('status.ARCHIVED') : reasonLabel;
+    }
+  }
   return {
     className: matched?.className,
-    color: matched?.color ?? 'default',
-    label: matched?.label ?? status,
+    color: abnormal ? 'error' : (matched?.color ?? 'default'),
+    label,
   };
 }
 
+/** 列表统一「已归档」；具体归档原因仅详情页通过 resolveQuoteStatusTag(..., archiveReason) 展示 */
 export function resolveQuoteListStatusTag(row: QuoteApi.QuoteListItem) {
-  const normalized = normalizeQuoteStatus(row.status);
-  // 终态 / 变更中优先展示正式状态，不被成本风险标签覆盖
-  if (
-    row.costRiskActive &&
-    !row.voided &&
-    normalized !== 'REVISING' &&
-    normalized !== 'SUPERSEDED' &&
-    normalized !== 'VOIDED' &&
-    normalized !== 'WON' &&
-    normalized !== 'EXPIRED'
-  ) {
-    return { color: 'error', label: t('risk.tag') };
-  }
-  return resolveQuoteStatusTag(row.status);
+  return resolveQuoteStatusTag(row.status, {
+    costRiskActive: row.costRiskActive === true,
+  });
 }
 
+/** @deprecated 异常已并入状态文案，不再单独展示成本风险标签 */
+export function shouldShowQuoteListCostRiskTag(_row: QuoteApi.QuoteListItem) {
+  return false;
+}
+
+/** 对外四态：标签展示与状态搜索共用（旧枚举经 normalizeQuoteStatus 归一后再匹配） */
 export const statusTagOptions = () => [
-  { color: 'default', label: t('status.DRAFT'), value: 'DRAFT' },
   {
     className: QUOTE_PENDING_APPROVAL_TAG_CLASS,
     color: 'warning',
-    label: t('status.PENDING_APPROVAL'),
-    value: 'PENDING_APPROVAL',
+    label: t('status.PENDING_QUOTE'),
+    value: 'PENDING_QUOTE',
   },
-  { color: 'blue', label: t('status.SENT'), value: 'SENT' },
-  { color: 'success', label: t('status.WON'), value: 'WON' },
-  { color: 'warning', label: t('status.REJECTED'), value: 'REJECTED' },
-  { color: 'warning', label: t('status.EXPIRED'), value: 'EXPIRED' },
+  { color: 'blue', label: t('status.QUOTED'), value: 'QUOTED' },
   { color: 'error', label: t('status.VOIDED'), value: 'VOIDED' },
   {
-    className: QUOTE_REVISING_TAG_CLASS,
-    color: 'purple',
-    label: t('status.REVISING'),
-    value: 'REVISING',
-  },
-  {
     className: QUOTE_SUPERSEDED_TAG_CLASS,
-    color: 'geekblue',
-    label: t('status.SUPERSEDED'),
-    value: 'SUPERSEDED',
+    color: 'default',
+    label: t('status.ARCHIVED'),
+    value: 'ARCHIVED',
   },
-  // 兼容旧数据展示
-  {
-    className: QUOTE_PENDING_APPROVAL_TAG_CLASS,
-    color: 'warning',
-    label: t('status.PENDING_APPROVAL'),
-    value: 'PENDING',
-  },
-  { color: 'blue', label: t('status.SENT'), value: 'EFFECTIVE' },
-  { color: 'blue', label: t('status.SENT'), value: 'FOLLOWING' },
-  { color: 'warning', label: t('status.REJECTED'), value: 'LOST' },
 ];
 
 const QUOTE_PORT_TYPES = ['INLAND', 'RAIL', 'SEAPORT'] as const;
@@ -279,15 +274,15 @@ export function useQuoteSearchSchema(): VbenFormSchema[] {
     },
     {
       component: 'ApiSelect',
-      componentProps: createCitySearchProps(),
-      fieldName: 'city',
-      label: 'CITY',
-    },
-    {
-      component: 'ApiSelect',
       componentProps: createStateSearchProps(),
       fieldName: 'state',
       label: 'STATE',
+    },
+    {
+      component: 'AutoComplete',
+      componentProps: createCitySearchProps(),
+      fieldName: 'city',
+      label: 'CITY',
     },
     {
       component: 'Input',
@@ -313,6 +308,12 @@ export function useQuoteSearchSchema(): VbenFormSchema[] {
       },
       fieldName: 'fumigationPoint',
       label: 'STATION',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: createTruckSupplierFormSelectProps(),
+      fieldName: 'supplier',
+      label: 'SUPPLIER',
     },
     {
       component: 'Select',
@@ -402,24 +403,14 @@ export function useQuoteColumns(
   const operationOptions: Array<Record<string, any> | string> = [
     { code: 'view', text: t('actions.view') },
   ];
-  if (canVoid) {
+  // 待报价可作废（取代退回）；已报价无作废入口
+  if (canVoid || canDelete) {
     operationOptions.push({
       code: 'void',
       danger: true,
       show: (row: QuoteApi.QuoteListItem) =>
-        canOperateRow(row) &&
-        canShowQuoteVoid(row.status) &&
-        !row.costRiskActive,
+        canOperateRow(row) && canShowQuoteVoid(row.status),
       text: t('actions.void'),
-    });
-  }
-  if (canDelete) {
-    operationOptions.push({
-      code: 'delete',
-      danger: true,
-      show: (row: QuoteApi.QuoteListItem) =>
-        canOperateRow(row) && isQuoteDeletable(row.status),
-      text: $t('common.delete'),
     });
   }
 
@@ -486,7 +477,8 @@ export function useQuoteColumns(
       fixed: 'right',
       slots: { default: 'status' },
       title: '状态',
-      width: 108,
+      // 容纳「已报价（异常）」等较长文案，避免 Tag 被裁切
+      width: 140,
     },
   ];
 

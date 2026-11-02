@@ -9,7 +9,13 @@ defineProps<{
   disabled?: boolean;
 }>();
 
+const emit = defineEmits<{ change: [string] }>();
+
 const state = defineModel<string>({ default: '' });
+
+function onChange(value: unknown) {
+  emit('change', String(value ?? ''));
+}
 const stateOptions = ref<Array<{ label: string; value: string }>>([]);
 
 onMounted(async () => {
@@ -31,5 +37,6 @@ onMounted(async () => {
     option-filter-prop="label"
     :placeholder="disabled ? '—' : undefined"
     show-search
+    @change="onChange"
   />
 </template>

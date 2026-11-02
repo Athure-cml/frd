@@ -6,9 +6,10 @@ import { $t } from '#/locales';
 
 import { buildFumigationColumnsFromLayout } from '../shared/build-fumigation-columns';
 import { getDefaultTemplate } from '../shared/default-templates';
+import MultiPasteSelect from '../shared/multi-paste-select.vue';
 import { createCostStatusSearchField } from '../shared/status-search';
-import { createRegionPortSearchProps } from './form-schema';
-import { createFumigationStationSelectProps } from './fumigation-supplier-cache';
+import { createRegionPortSearchMultiProps } from './form-schema';
+import { createFumigationStationSearchMultiProps } from './fumigation-supplier-cache';
 
 const f = (key: string) => $t(`page.costLibrary.fumigationFields.${key}`);
 
@@ -21,32 +22,35 @@ function dateSearchProps() {
   };
 }
 
-/** 搜索栏顺序对齐表头：REGION→STATION→FM-OUT有效期→FM-IN有效期，状态最后 */
+/**
+ * 搜索栏顺序对齐表头：REGION → STATION → 生效期 → 有效期，状态最后。
+ * 新版熏蒸为单级表头（生效期 + 单条有效期），不再区分 FM-OUT / FM-IN 有效期。
+ */
 export function useFumigationSearchSchema(): VbenFormSchema[] {
   return [
     {
-      component: 'ApiSelect',
-      componentProps: createRegionPortSearchProps(),
+      component: MultiPasteSelect,
+      componentProps: createRegionPortSearchMultiProps(),
       fieldName: 'region',
       label: f('region'),
     },
     {
-      component: 'ApiSelect',
-      componentProps: createFumigationStationSelectProps(),
+      component: MultiPasteSelect,
+      componentProps: createFumigationStationSearchMultiProps(),
       fieldName: 'station',
       label: f('station'),
     },
     {
       component: 'DatePicker',
       componentProps: dateSearchProps(),
-      fieldName: 'outdoorValidity',
-      label: f('outdoorValiditySearch'),
+      fieldName: 'effectiveDate',
+      label: f('effectiveDateSearch'),
     },
     {
       component: 'DatePicker',
       componentProps: dateSearchProps(),
-      fieldName: 'indoorValidity',
-      label: f('indoorValiditySearch'),
+      fieldName: 'validity',
+      label: f('outdoorValidity'),
     },
     createCostStatusSearchField(),
   ];

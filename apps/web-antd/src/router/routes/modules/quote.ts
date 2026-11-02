@@ -19,7 +19,37 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/quote/list/index.vue'),
         meta: {
           icon: 'lucide:list',
+          keepAlive: true,
           title: $t('page.quote.list'),
+        },
+      },
+      {
+        name: 'InquiryList',
+        path: '/quotes/inquiry',
+        component: () => import('#/views/quote/inquiry/list/index.vue'),
+        meta: {
+          // keepAlive 保留搜索态；是否重新拉数由列表 onActivated 智能判断
+          icon: 'lucide:clipboard-list',
+          keepAlive: true,
+          title: $t('page.inquiry.list'),
+        },
+      },
+      {
+        name: 'InquiryCreate',
+        path: '/quotes/inquiry/create',
+        component: () => import('#/views/quote/inquiry/editor/index.vue'),
+        meta: {
+          hideInMenu: true,
+          title: $t('page.inquiry.createTitle'),
+        },
+      },
+      {
+        name: 'InquiryEdit',
+        path: '/quotes/inquiry/:id/edit',
+        component: () => import('#/views/quote/inquiry/editor/index.vue'),
+        meta: {
+          hideInMenu: true,
+          title: $t('page.inquiry.editTitle'),
         },
       },
       {

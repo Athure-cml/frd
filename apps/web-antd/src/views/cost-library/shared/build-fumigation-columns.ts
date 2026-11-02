@@ -86,6 +86,15 @@ export function resolveFumigationColumnSegments(
   layout: CostTableTemplateLayout,
 ): FumigationColumnSegment[] {
   const order = resolveFumigationFieldOrder(layout);
+  // 新版单级表头：groups 为空时全部按叶子列输出，不再自动拼 FM-OUTDOOR/INDOOR
+  if (!layout.groups?.length) {
+    return order
+      .filter(
+        (field) => Boolean(field) && isFieldVisibleInLayout(layout, field),
+      )
+      .map((field) => ({ field, type: 'leaf' as const }));
+  }
+
   const used = new Set<string>();
   const segments: FumigationColumnSegment[] = [];
 
@@ -185,10 +194,8 @@ function buildLeafColumn(
   };
   if (hasFixedWidth) {
     column.width = rawWidth;
-  } else if (typeof minWidth === 'number' && minWidth > 0) {
-    // 同时写 width，避免仅 minWidth 时被拉满容器，刷新后算不出横向滚动
-    column.width = minWidth;
   }
+  // 未显式 width 时只留 minWidth：配合页面 fit，列少时铺满、列多时仍可横滚
 
   if (isCustomFieldKey(field)) {
     column.field = customFieldColumnPath(field);
@@ -365,6 +372,7 @@ export function buildFumigationColumnsFromLayout<T extends { id: number }>(
       }
       return {
         children,
+        field: segment.groupKey,
         title: $t(groupDef.labelKey),
       };
     })

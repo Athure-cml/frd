@@ -491,11 +491,6 @@ html.dark .workspace-empty-illust {
   opacity: 0.55;
 }
 
-.workspace-pipeline-amount {
-  font-weight: 600;
-  color: var(--ws-text, #0f172a);
-}
-
 .workspace-pipeline-status {
   flex-shrink: 0;
   padding: 2px 8px;

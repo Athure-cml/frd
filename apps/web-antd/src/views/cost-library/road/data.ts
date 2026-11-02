@@ -14,6 +14,7 @@ import { lookupQuoteZip } from '#/api/quote';
 import { $t } from '#/locales';
 
 import { buildColumnsFromTemplate } from '../shared/build-columns';
+import MultiPasteSelect from '../shared/multi-paste-select.vue';
 import { createCostStatusSearchField } from '../shared/status-search';
 import { createTruckSupplierSearchProps } from './truck-supplier-cache';
 
@@ -36,9 +37,12 @@ function createPortSearchProps() {
       });
       return items.map(({ label, value }) => ({ label, value }));
     },
-    class: 'w-full',
+    class: 'w-full cost-select-multiple-wrap',
     filterOption: false,
     immediate: false,
+    // tags：粘贴/输入的值直接成为标签
+    maxTagCount: 'responsive' as const,
+    mode: 'tags' as const,
     onSearch: (keyword: string) => {
       setKeyword(keyword);
     },
@@ -48,30 +52,33 @@ function createPortSearchProps() {
   };
 }
 
-function createZipSearchProps() {
-  const options = reactive<Array<{ label: string; value: string }>>([]);
-  const search = useDebounceFn(async (keyword: string) => {
-    const q = keyword.trim();
-    if (!q) {
-      options.splice(0);
-      return;
-    }
-    const rows = await lookupQuoteZip(q, 30);
-    options.splice(
-      0,
-      options.length,
-      ...rows.map((row) => ({
-        label: `${row.zipCode} · ${row.city}, ${row.stateCode}`,
-        value: row.zipCode,
-      })),
-    );
+function createZipMultiSearchProps() {
+  const params = reactive({ keyword: '' });
+  const setKeyword = useDebounceFn((keyword: string) => {
+    params.keyword = keyword.trim();
   }, 280);
   return {
     allowClear: true,
-    class: 'w-full',
+    api: async (p: { keyword?: string }) => {
+      const keyword = p?.keyword?.trim() ?? '';
+      if (!keyword) {
+        return [];
+      }
+      const rows = await lookupQuoteZip(keyword, 30);
+      return rows.map((row) => ({
+        label: `${row.zipCode} · ${row.city}, ${row.stateCode}`,
+        value: row.zipCode,
+      }));
+    },
+    class: 'w-full cost-select-multiple-wrap',
     filterOption: false,
-    options,
-    onSearch: search,
+    immediate: false,
+    maxTagCount: 'responsive' as const,
+    mode: 'tags' as const,
+    onSearch: setKeyword,
+    optionFilterProp: 'label',
+    params,
+    showSearch: true,
   };
 }
 
@@ -95,7 +102,8 @@ function createCitySearchProps() {
     class: 'w-full cost-select-multiple-wrap',
     filterOption: false,
     immediate: false,
-    mode: 'multiple' as const,
+    maxTagCount: 'responsive' as const,
+    mode: 'tags' as const,
     optionFilterProp: 'label',
     params,
     showSearch: true,
@@ -126,8 +134,10 @@ function createStateSearchProps() {
         value: state.code,
       }));
     },
-    class: 'w-full',
+    class: 'w-full cost-select-multiple-wrap',
     filterOption: stateFilterOption,
+    maxTagCount: 'responsive' as const,
+    mode: 'tags' as const,
     optionFilterProp: 'label',
     showSearch: true,
   };
@@ -136,31 +146,31 @@ function createStateSearchProps() {
 export function useRoadSearchSchema(): VbenFormSchema[] {
   return [
     {
-      component: 'AutoComplete',
-      componentProps: createZipSearchProps(),
+      component: MultiPasteSelect,
+      componentProps: createZipMultiSearchProps(),
       fieldName: 'zipCode',
       label: t('zipCode'),
     },
     {
-      component: 'ApiSelect',
-      componentProps: createCitySearchProps(),
-      fieldName: 'city',
-      label: t('city'),
-    },
-    {
-      component: 'ApiSelect',
+      component: MultiPasteSelect,
       componentProps: createStateSearchProps(),
       fieldName: 'state',
       label: t('state'),
     },
     {
-      component: 'ApiSelect',
+      component: MultiPasteSelect,
+      componentProps: createCitySearchProps(),
+      fieldName: 'city',
+      label: t('city'),
+    },
+    {
+      component: MultiPasteSelect,
       componentProps: createPortSearchProps(),
       fieldName: 'por',
       label: t('por'),
     },
     {
-      component: 'ApiSelect',
+      component: MultiPasteSelect,
       componentProps: createTruckSupplierSearchProps(),
       fieldName: 'supplier',
       label: t('supplier'),
@@ -193,7 +203,7 @@ export function useRoadSearchSchema(): VbenFormSchema[] {
       fieldName: 'validDate',
       label: t('validDate'),
     },
-    createCostStatusSearchField(),
+    createCostStatusSearchField(['active']),
   ];
 }
 

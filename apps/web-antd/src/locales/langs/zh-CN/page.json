@@ -153,22 +153,36 @@
       "approveQuote": "审批待审报价",
       "confirmWon": "确认成交并归档",
       "completeDraft": "待提交审批报价单",
-      "reviewCostRisk": "复核成本变更风险",
+      "pendingQuote": "待处理报价单",
+      "reviewCostRisk": "成本异常",
+      "pendingMail": "发送报价邮件",
+      "confirmLibrary": "待确认报价库",
       "archiveLost": "归档未成交报价",
+      "library": {
+        "road": "卡车报价库",
+        "sea": "海运报价库",
+        "fumigation": "熏蒸报价库",
+        "countMeta": "{0} {1} 条"
+      },
       "filters": {
         "all": "全部",
         "urgent": "紧急",
+        "pendingQuote": "待处理",
         "approve": "待审批",
         "follow": "待跟进",
-        "costRisk": "成本风险"
+        "costRisk": "成本异常",
+        "confirmLibrary": "待确认"
       },
       "actions": {
         "approve": "去审批",
         "follow": "去跟进",
         "review": "去复核",
         "complete": "去完善",
+        "quote": "去处理",
         "archive": "去归档",
-        "handle": "去处理"
+        "handle": "去处理",
+        "confirmLibrary": "去确认",
+        "resendMail": "重发邮件"
       },
       "priority": {
         "urgent": "紧急",
@@ -196,7 +210,9 @@
       "costUpdatedTitle": "引用成本已更新",
       "costUpdated": "报价单 {0} 引用的{1}成本已有更新，请核对。",
       "costRiskTitle": "报价单成本风险",
-      "costRisk": "引用的报价库数据有更新，请重新引入报价单"
+      "costRisk": "引用的报价库数据有更新，请重新引入报价单",
+      "mailFailedTitle": "报价邮件发送失败",
+      "mailFailed": "报价单 {0} 的报价邮件发送失败：{1}，请前往重发。"
     }
   },
   "analytics": {
@@ -209,6 +225,8 @@
     "chart": {
       "quotedAmount": "报价金额",
       "wonAmount": "成交金额",
+      "inquiryCount": "询价单数量",
+      "quotedCount": "已报价数量",
       "quoteCount": "报价单数",
       "unit": "单",
       "amountUnit": "万"
@@ -228,6 +246,11 @@
     "quoteStatus": "状态",
     "updatedAt": "更新时间",
     "kpi": {
+      "monthInquiries": "本月询价单",
+      "monthQuoted": "本月已报价",
+      "conversionRate": "转换率(%)",
+      "pendingQuote": "待报价",
+      "costRisk": "成本异常",
       "monthQuotes": "本月报价单",
       "monthQuotesTotal": "累计报价单",
       "monthAmount": "本月报价额(万)",
@@ -267,11 +290,10 @@
       "outdoorNonOak": "NON OAK",
       "outdoorOak": "OAK",
       "outdoorValidity": "有效期",
-      "outdoorValiditySearch": "FM-OUT有效期",
+      "effectiveDateSearch": "生效期",
       "indoorNonOak": "NON OAK",
       "indoorOak": "OAK",
       "indoorValidity": "有效期",
-      "indoorValiditySearch": "FM-IN有效期",
       "address": "ADDRESS",
       "remark": "备注"
     },
@@ -497,6 +519,7 @@
     "template": {
       "label": "表格视图",
       "defaultName": "标准视图",
+      "fumigationLegacyName": "熏蒸旧版（已锁定）",
       "manage": "视图模板",
       "menuTitle": "视图模板",
       "roadMenu": "卡车成本库模板",
@@ -901,6 +924,36 @@
     }
   },
   "quote": {
+    "mail": {
+      "resend": "重新发送",
+      "resendConfirm": "将重新向 {0} 发送报价单 PDF，确认继续？",
+      "resendSuccess": "已重新发起发送",
+      "sentMessage": "报价邮件已发送至 {0}",
+      "sendingMessage": "报价邮件正在发送至 {0}…",
+      "failedMessage": "报价邮件发送失败（{0}）：{1}",
+      "skippedMessage": "报价邮件未发送：{0}",
+      "detailLine": "收件人：{0} · {1}",
+      "noRecipient": "未确定收件人",
+      "unknownError": "未知错误",
+      "stage": {
+        "PREPARE": "发送准备",
+        "PDF": "PDF 生成",
+        "SMTP": "邮件服务器"
+      },
+      "skip": {
+        "MAIL_DISABLED": "系统未开启自动发信",
+        "NO_INQUIRY": "报价单未关联询价单",
+        "NO_OPERATOR_EMAIL": "询价单操作人未绑定邮箱",
+        "NO_FROM": "未配置发件邮箱"
+      },
+      "sendMailTitle": "发送报价单邮件",
+      "sendMailLabel": "收件邮箱",
+      "sendMailPlaceholder": "输入邮箱后回车，可填多个",
+      "sendMailHint": "将把报价单打印模板 PDF 作为附件发送至上述邮箱。",
+      "sendMailRequired": "请至少填写一个收件邮箱",
+      "sendMailInvalid": "邮箱格式不正确：{0}",
+      "sendMailSuccess": "已发起发送至 {0}"
+    },
     "title": "报价管理",
     "list": "报价单列表",
     "libraryFilterHint": "正在反查：{0} #{1} 被引用的报价单",
@@ -963,10 +1016,12 @@
       "confirmStatusFilterAll": "全部确认状态"
     },
     "createTitle": "新建报价单",
+    "reviseCreateTitle": "变更报价单",
     "editTitle": "编辑报价单",
     "viewTitle": "查看报价单",
     "risk": {
       "tag": "成本风险",
+      "alertTitle": "成本异常",
       "modalTitle": "成本风险提示",
       "libraryRoad": "卡车报价库",
       "librarySea": "海运报价库",
@@ -1034,6 +1089,7 @@
       "view": "查看",
       "export": "导出",
       "void": "作废",
+      "return": "退回",
       "submit": "提交审批",
       "send": "审批通过",
       "approve": "审批通过",
@@ -1044,8 +1100,9 @@
       "won": "确认成交",
       "confirmWon": "确认成交",
       "copy": "复制新建",
-      "revise": "发起变更",
+      "revise": "变更",
       "print": "打印报价单",
+      "sendMail": "发送报价单",
       "printQuote": "打印报价",
       "matchQuote": "匹配报价",
       "importQuote": "引入报价",
@@ -1053,12 +1110,14 @@
       "addFollowUp": "新增跟进",
       "backToList": "返回列表",
       "backToDetail": "返回详情",
-      "generateSheet": "匹配报价"
+      "generateSheet": "匹配报价",
+      "confirmQuote": "确认报价"
     },
     "revision": {
       "fromChange": "变更单",
       "notCurrent": "变更单",
-      "viewParent": "查看原单",
+      "viewParent": "查看旧单据",
+      "viewSuccessor": "查看新单据",
       "changeReason": "变更原因"
     },
     "fields": {
@@ -1115,19 +1174,27 @@
       "OTHER": "其他"
     },
     "status": {
-      "DRAFT": "草稿",
-      "PENDING_APPROVAL": "待审批报价",
-      "SENT": "已确认报价",
-      "WON": "已成交",
-      "REJECTED": "已拒绝",
-      "EXPIRED": "已过期",
+      "PENDING_QUOTE": "待报价",
+      "PENDING_QUOTE_ABNORMAL": "待报价（异常）",
+      "QUOTED": "已报价",
+      "QUOTED_ABNORMAL": "已报价（异常）",
       "VOIDED": "已作废",
-      "REVISING": "变更中",
-      "SUPERSEDED": "已归档(变更)",
-      "EFFECTIVE": "已生效",
-      "FOLLOWING": "跟进中",
-      "PENDING": "待审批报价",
-      "LOST": "已拒绝"
+      "ARCHIVED": "已归档",
+      "ARCHIVED_SUPERSEDED": "已归档（变更）",
+      "ARCHIVED_QUOTED_EXPIRED": "已归档（已报价过期）",
+      "ARCHIVED_PENDING_EXPIRED": "已归档（待报价过期）",
+      "DRAFT": "待报价",
+      "PENDING_APPROVAL": "待报价",
+      "SENT": "已报价",
+      "WON": "已报价",
+      "REJECTED": "已作废",
+      "EXPIRED": "已归档",
+      "REVISING": "已归档（变更）",
+      "SUPERSEDED": "已归档（变更）",
+      "EFFECTIVE": "已报价",
+      "FOLLOWING": "已报价",
+      "PENDING": "待报价",
+      "LOST": "已作废"
     },
     "validation": {
       "customerRequired": "请选择客户",
@@ -1151,7 +1218,8 @@
       "createSuccess": "报价单 {0} 已创建",
       "saveSuccess": "报价单 {0} 已保存",
       "deleteSuccess": "报价单 {0} 已删除",
-      "voidSuccess": "已作废",
+      "returnSuccess": "报价单 {0} 已退回，关联询价单已回到待递交",
+      "voidSuccess": "报价单已作废，关联询价单已同步作废",
       "submitSuccess": "已提交审批",
       "sendSuccess": "审批通过，报价已确认",
       "approveSuccess": "审批通过，报价已确认",
@@ -1162,8 +1230,9 @@
       "wonSuccess": "已确认成交",
       "copySuccess": "已复制为新草稿",
       "copyPrefilled": "已带入报价内容，保存后将生成新报价单",
-      "reviseSuccess": "已创建变更草稿 {0}",
+      "reviseSuccess": "变更单 {0} 已保存为已报价",
       "reviseNeedReason": "请填写变更原因",
+      "revisePrefilled": "已带入基础信息，请重新引入报价库数据后保存",
       "followUpCreated": "跟进记录已添加",
       "followSuccess": "跟进状态已更新",
       "noCostSnapshot": "暂无报价库匹配快照",
@@ -1176,7 +1245,9 @@
       "maxSeaFreight": "最多引入 {0} 条海运费",
       "maxRoadFreight": "最多引入 {0} 条卡车报价库数据",
       "sheetGenerated": "报价单已生成，可手动调整后保存",
-      "zipSearching": "查询中…"
+      "zipSearching": "查询中…",
+      "confirmQuoteSuccess": "已确认报价",
+      "loadTemplateFailed": "未找到报价库视图模板，请先在报价库配置并应用模板"
     },
     "ruleHint": {
       "cost": "成本"
@@ -1210,6 +1281,10 @@
       "zipCode": "ZIP CODE",
       "city": "CITY",
       "state": "STATE",
+      "selectStateFirst": "请先选择州",
+      "zipAutoFilled": "已按城市自动补全邮编",
+      "zipPickHint": "该城市对应 {0} 个邮编，请选择或填写",
+      "zipNotFoundHint": "该城市在主数据中暂无邮编，可留空或手工填写",
       "porPol": "POR/POL",
       "por": "POR",
       "pol": "POL",
@@ -1257,10 +1332,11 @@
     },
     "confirm": {
       "delete": "确定删除报价单「{0}」吗？",
+      "return": "确定退回报价单「{0}」吗？退回后本单将取消，关联询价单回到待递交。",
       "deletePrefix": "确定删除报价单 ",
       "deleteSuffix": " 吗？此操作不可恢复。",
-      "void": "确定作废报价单「{0}」吗？",
-      "revise": "将基于当前已确认报价创建变更草稿，原单保持已确认。请填写变更原因：",
+      "void": "确定作废报价单「{0}」吗？作废后关联询价单也将变为已作废。",
+      "revise": "将跳转新建报价单并带入基础信息，请重新引入报价库后保存（直接落已报价，原单归档）。请填写变更原因：",
       "send": "确定审批通过报价单「{0}」吗？审批后将变为已确认报价。",
       "approve": "确定审批通过报价单「{0}」吗？审批后将变为已确认报价。",
       "reject": "确定拒绝报价单「{0}」吗？",
@@ -1271,7 +1347,11 @@
       "submitNeedSave": "当前报价单有未保存的修改，请先保存后再提交审批。",
       "won": "确认将该报价单标记为已成交？",
       "confirmWon": "确认将该报价单标记为已成交？",
-      "deleteFollowUp": "确定删除这条跟进记录吗？"
+      "deleteFollowUp": "确定删除这条跟进记录吗？",
+      "confirmQuote": "确认后报价单将变为已报价，关联询价单同步变为已报价。是否继续？",
+      "unsavedTitle": "存在未保存的修改",
+      "unsavedContent": "当前报价单还有未保存的改动，请先保存后再点击「确认报价」。",
+      "saveFirst": "立即保存"
     },
     "costSource": {
       "MANUAL": "手动",
@@ -1316,6 +1396,8 @@
       "rateMeaning": "1 单位源币种 = 汇率 × 目标币种",
       "usStateZip": "维护美国州、城市与邮政编码（State / City / Zip code），供运价录入与报价使用。",
       "usStateZipEmpty": "暂无邮政编码数据，可上传 GeoNames US.txt 全量导入，或使用 Excel 导入 / 手工新建。",
+      "cityOnlyRowSelected": "勾选中包含无邮编的城市行，请使用行内「删除」操作城市",
+      "cityOnlyRowSkipped": "已跳过勾选中无邮编的城市行，仅删除邮编行",
       "usStateZipImportTemplate": "Excel：表头 State / City / Zip code（可先导出再改）。也可上传 GeoNames US.txt（Tab 分隔）。同州同城同邮编会更新，文件内重复行会失败。",
       "usStateZipImportFormat": "支持 .xlsx 或 GeoNames .txt",
       "selectFile": "请选择 Excel 文件",
@@ -1488,6 +1570,8 @@
       "username": "账号",
       "avatar": "头像",
       "realName": "姓名",
+      "phone": "手机号",
+      "email": "邮箱",
       "dept": "部门",
       "parentDept": "上级部门",
       "roles": "角色",
@@ -1775,6 +1859,57 @@
       "approve": "同意",
       "reject": "驳回",
       "createConfig": "新增配置"
+    }
+  },
+  "inquiry": {
+    "title": "询价单",
+    "list": "询价单列表",
+    "createTitle": "新建询价单",
+    "editTitle": "编辑询价单",
+    "viewTitle": "查看询价单",
+    "hint": {
+      "list": "填写基础信息后保存为待递交；递交后自动生成报价单。"
+    },
+    "actions": {
+      "create": "新建询价单",
+      "copy": "复制新建",
+      "save": "保存",
+      "submit": "递交",
+      "openQuote": "打开报价单",
+      "backToList": "返回列表"
+    },
+    "fields": {
+      "inquiryNo": "询价单号",
+      "status": "状态",
+      "quoteNo": "关联报价单",
+      "customerName": "客户",
+      "createdBy": "创建人",
+      "updatedAt": "更新时间",
+      "validUntil": "有效期至",
+      "keyword": "关键词"
+    },
+    "status": {
+      "PENDING_SUBMIT": "待递交",
+      "PENDING_QUOTE": "待报价",
+      "QUOTED": "已报价",
+      "VOIDED": "已作废",
+      "EXPIRED": "已过期"
+    },
+    "confirm": {
+      "submit": "是否递交报价员？确认后将自动生成一张报价单。",
+      "delete": "确认删除询价单 {0}？"
+    },
+    "message": {
+      "createSuccess": "询价单 {0} 已保存",
+      "saveSuccess": "询价单 {0} 已保存",
+      "submitSuccess": "已递交，生成报价单 {0}",
+      "deleteSuccess": "已删除",
+      "copyPrefilled": "已带入询价内容，保存后将生成新询价单"
+    },
+    "validation": {
+      "serviceTypeRequired": "请选择服务类型",
+      "porRequired": "请填写 POR",
+      "podRequired": "请填写 POD"
     }
   }
 }

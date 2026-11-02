@@ -153,22 +153,36 @@
       "approveQuote": "Approve pending quote",
       "confirmWon": "Confirm win and archive",
       "completeDraft": "Quote pending approval submission",
-      "reviewCostRisk": "Review cost change risk",
+      "pendingQuote": "Pending quote",
+      "reviewCostRisk": "Cost exception",
+      "pendingMail": "Send quote email",
+      "confirmLibrary": "Quote library pending confirm",
       "archiveLost": "Archive lost quote",
+      "library": {
+        "road": "Truck quote library",
+        "sea": "Ocean quote library",
+        "fumigation": "Fumigation quote library",
+        "countMeta": "{0}: {1}"
+      },
       "filters": {
         "all": "All",
         "urgent": "Urgent",
+        "pendingQuote": "Pending",
         "approve": "Approvals",
         "follow": "Follow-ups",
-        "costRisk": "Cost risk"
+        "costRisk": "Cost exception",
+        "confirmLibrary": "Library confirm"
       },
       "actions": {
         "approve": "Approve",
         "follow": "Follow up",
         "review": "Review",
         "complete": "Complete",
+        "quote": "Handle",
         "archive": "Archive",
-        "handle": "Open"
+        "handle": "Open",
+        "confirmLibrary": "Confirm",
+        "resendMail": "Resend"
       },
       "priority": {
         "urgent": "Urgent",
@@ -196,7 +210,9 @@
       "costUpdatedTitle": "Referenced cost updated",
       "costUpdated": "Quote {0} references updated {1} cost. Please review.",
       "costRiskTitle": "Quote cost risk",
-      "costRisk": "Referenced quote library data was updated. Please re-import the quote."
+      "costRisk": "Referenced quote library data was updated. Please re-import the quote.",
+      "mailFailedTitle": "Quote email failed",
+      "mailFailed": "Quote email for {0} failed: {1}. Please resend."
     }
   },
   "analytics": {
@@ -209,8 +225,10 @@
     "chart": {
       "quotedAmount": "Quoted Amount",
       "wonAmount": "Won Amount",
+      "inquiryCount": "Inquiries",
+      "quotedCount": "Quoted Orders",
       "quoteCount": "Quote Count",
-      "unit": "quotes",
+      "unit": "orders",
       "amountUnit": "10k"
     },
     "transport": {
@@ -228,6 +246,11 @@
     "quoteStatus": "Status",
     "updatedAt": "Updated",
     "kpi": {
+      "monthInquiries": "Inquiries This Month",
+      "monthQuoted": "Quoted This Month",
+      "conversionRate": "Conversion Rate (%)",
+      "pendingQuote": "Pending Quote",
+      "costRisk": "Cost Anomalies",
       "monthQuotes": "Quotes This Month",
       "monthQuotesTotal": "Total Quotes",
       "monthAmount": "Amount This Month (10k)",
@@ -267,11 +290,10 @@
       "outdoorNonOak": "NON OAK",
       "outdoorOak": "OAK",
       "outdoorValidity": "Validity",
-      "outdoorValiditySearch": "FM-OUT Validity",
+      "effectiveDateSearch": "Effective Time",
       "indoorNonOak": "NON OAK",
       "indoorOak": "OAK",
       "indoorValidity": "Validity",
-      "indoorValiditySearch": "FM-IN Validity",
       "address": "ADDRESS",
       "remark": "Remark"
     },
@@ -497,6 +519,7 @@
     "template": {
       "label": "Table view",
       "defaultName": "Standard",
+      "fumigationLegacyName": "Fumigation legacy (locked)",
       "manage": "View templates",
       "menuTitle": "View Templates",
       "roadMenu": "Truck cost templates",
@@ -902,6 +925,36 @@
     }
   },
   "quote": {
+    "mail": {
+      "resend": "Resend",
+      "resendConfirm": "Resend the quote PDF to {0}?",
+      "resendSuccess": "Resend started",
+      "sentMessage": "Quote email sent to {0}",
+      "sendingMessage": "Sending quote email to {0}…",
+      "failedMessage": "Quote email failed ({0}): {1}",
+      "skippedMessage": "Quote email not sent: {0}",
+      "detailLine": "To: {0} · {1}",
+      "noRecipient": "No recipient",
+      "unknownError": "Unknown error",
+      "stage": {
+        "PREPARE": "Prepare",
+        "PDF": "PDF render",
+        "SMTP": "Mail server"
+      },
+      "skip": {
+        "MAIL_DISABLED": "Auto email is disabled",
+        "NO_INQUIRY": "Quote is not linked to an inquiry",
+        "NO_OPERATOR_EMAIL": "Inquiry operator has no email bound",
+        "NO_FROM": "Sender mailbox not configured"
+      },
+      "sendMailTitle": "Send quote email",
+      "sendMailLabel": "Recipients",
+      "sendMailPlaceholder": "Type an email and press Enter; multiple allowed",
+      "sendMailHint": "The quote PDF will be attached and sent to the addresses above.",
+      "sendMailRequired": "Enter at least one recipient email",
+      "sendMailInvalid": "Invalid email: {0}",
+      "sendMailSuccess": "Sending to {0}"
+    },
     "title": "Quotes",
     "list": "Quote List",
     "libraryFilterHint": "Filtering quotes that reference {0} #{1}",
@@ -917,6 +970,7 @@
         "menuTitle": "View templates",
         "manage": "View templates",
         "defaultName": "Standard",
+        "fumigationLegacyName": "Fumigation legacy (locked)",
         "createTitle": "New quote library view",
         "editTitle": "Edit quote library view",
         "roadMenu": "Truck quote templates",
@@ -964,10 +1018,12 @@
       "confirmStatusFilterAll": "All confirm statuses"
     },
     "createTitle": "New Quote",
+    "reviseCreateTitle": "Revise Quote",
     "editTitle": "Edit Quote",
     "viewTitle": "View Quote",
     "risk": {
       "tag": "Cost risk",
+      "alertTitle": "Cost anomaly",
       "modalTitle": "Cost risk notice",
       "libraryRoad": "truck quote library",
       "librarySea": "ocean quote library",
@@ -1035,6 +1091,7 @@
       "view": "View",
       "export": "Export",
       "void": "Void",
+      "return": "Return",
       "submit": "Submit for Approval",
       "send": "Approve",
       "approve": "Approve",
@@ -1045,8 +1102,9 @@
       "won": "Confirm Won",
       "confirmWon": "Confirm Won",
       "copy": "Copy as New",
-      "revise": "Start Revision",
+      "revise": "Revise",
       "print": "Print Quote Sheet",
+      "sendMail": "Send Quote",
       "printQuote": "Print Quote",
       "matchQuote": "Match Quote",
       "importQuote": "Import Quote",
@@ -1054,12 +1112,14 @@
       "addFollowUp": "Add Follow-up",
       "backToList": "Back to list",
       "backToDetail": "Back to detail",
-      "generateSheet": "Match Quote"
+      "generateSheet": "Match Quote",
+      "confirmQuote": "Confirm Quote"
     },
     "revision": {
       "fromChange": "Change Order",
       "notCurrent": "Change Order",
-      "viewParent": "View original",
+      "viewParent": "View previous quote",
+      "viewSuccessor": "View revised quote",
       "changeReason": "Change reason"
     },
     "fields": {
@@ -1116,19 +1176,27 @@
       "OTHER": "Other"
     },
     "status": {
-      "DRAFT": "Draft",
-      "PENDING_APPROVAL": "Pending Approval Quote",
-      "SENT": "Confirmed",
-      "WON": "Won",
-      "REJECTED": "Rejected",
-      "EXPIRED": "Expired",
+      "PENDING_QUOTE": "Pending Quote",
+      "PENDING_QUOTE_ABNORMAL": "Pending Quote (Abnormal)",
+      "QUOTED": "Quoted",
+      "QUOTED_ABNORMAL": "Quoted (Abnormal)",
       "VOIDED": "Voided",
-      "REVISING": "Revising",
-      "SUPERSEDED": "Superseded",
-      "EFFECTIVE": "Effective",
-      "FOLLOWING": "Following",
-      "PENDING": "Pending Approval Quote",
-      "LOST": "Rejected"
+      "ARCHIVED": "Archived",
+      "ARCHIVED_SUPERSEDED": "Archived (Superseded)",
+      "ARCHIVED_QUOTED_EXPIRED": "Archived (Quoted Expired)",
+      "ARCHIVED_PENDING_EXPIRED": "Archived (Pending Expired)",
+      "DRAFT": "Pending Quote",
+      "PENDING_APPROVAL": "Pending Quote",
+      "SENT": "Quoted",
+      "WON": "Quoted",
+      "REJECTED": "Voided",
+      "EXPIRED": "Archived",
+      "REVISING": "Archived (Change)",
+      "SUPERSEDED": "Archived (Change)",
+      "EFFECTIVE": "Quoted",
+      "FOLLOWING": "Quoted",
+      "PENDING": "Pending Quote",
+      "LOST": "Voided"
     },
     "validation": {
       "customerRequired": "Please select a customer",
@@ -1152,7 +1220,8 @@
       "createSuccess": "Quote {0} created",
       "saveSuccess": "Quote {0} saved",
       "deleteSuccess": "Quote {0} deleted",
-      "voidSuccess": "Quote voided",
+      "returnSuccess": "Quote {0} returned; related inquiry is pending submit again",
+      "voidSuccess": "Quote voided; linked inquiry also voided",
       "submitSuccess": "Submitted for approval",
       "sendSuccess": "Approved — quote confirmed",
       "approveSuccess": "Approved — quote confirmed",
@@ -1163,8 +1232,9 @@
       "wonSuccess": "Marked as won",
       "copySuccess": "Copied as new draft",
       "copyPrefilled": "Quote content loaded — save to create a new quote",
-      "reviseSuccess": "Revision draft {0} created",
+      "reviseSuccess": "Revision {0} saved as Quoted",
       "reviseNeedReason": "Please enter a change reason",
+      "revisePrefilled": "Basic info loaded — re-import quote library data, then save",
       "followUpCreated": "Follow-up added",
       "followSuccess": "Follow-up status updated",
       "noCostSnapshot": "No quote library snapshot",
@@ -1177,7 +1247,9 @@
       "maxSeaFreight": "Up to {0} ocean freight lines allowed",
       "maxRoadFreight": "Up to {0} truck quote library records allowed",
       "sheetGenerated": "Quote sheet generated — you may adjust values before saving",
-      "zipSearching": "Searching…"
+      "zipSearching": "Searching…",
+      "confirmQuoteSuccess": "Quote confirmed",
+      "loadTemplateFailed": "No quote-library view template found. Configure and apply one in the quote library first."
     },
     "ruleHint": {
       "cost": "Cost"
@@ -1211,6 +1283,10 @@
       "zipCode": "ZIP CODE",
       "city": "CITY",
       "state": "STATE",
+      "selectStateFirst": "Select state first",
+      "zipAutoFilled": "Zip code auto-filled from city",
+      "zipPickHint": "{0} zip codes for this city, please choose or enter one",
+      "zipNotFoundHint": "No zip code in master data for this city; leave blank or enter manually",
       "porPol": "POR/POL",
       "por": "POR",
       "pol": "POL",
@@ -1258,10 +1334,11 @@
     },
     "confirm": {
       "delete": "Delete quote \"{0}\"?",
+      "return": "Return quote \"{0}\"? It will be cancelled and the related inquiry will go back to pending submit.",
       "deletePrefix": "Delete quote ",
       "deleteSuffix": "? This cannot be undone.",
-      "void": "Void quote \"{0}\"?",
-      "revise": "Create a revision draft from this confirmed quote. The original stays confirmed. Enter the change reason:",
+      "void": "Void quote \"{0}\"? The linked inquiry will also be voided.",
+      "revise": "Open a new quote with basic info copied. Re-import quote library data and save — it becomes Quoted and the original is archived. Enter the change reason:",
       "send": "Approve quote \"{0}\"? It will become confirmed.",
       "approve": "Approve quote \"{0}\"? It will become confirmed.",
       "reject": "Reject quote \"{0}\"?",
@@ -1272,7 +1349,11 @@
       "submitNeedSave": "This quote has unsaved changes. Please save before submitting for approval.",
       "won": "Mark this quote as won?",
       "confirmWon": "Mark this quote as won?",
-      "deleteFollowUp": "Delete this follow-up record?"
+      "deleteFollowUp": "Delete this follow-up record?",
+      "confirmQuote": "Confirm this quote? Related inquiry will sync to Quoted.",
+      "unsavedTitle": "Unsaved changes",
+      "unsavedContent": "This quote has unsaved changes. Please save before confirming.",
+      "saveFirst": "Save now"
     },
     "costSource": {
       "MANUAL": "Manual",
@@ -1317,6 +1398,8 @@
       "rateMeaning": "1 unit of source currency = rate × target currency",
       "usStateZip": "Maintain US states, cities, and zip codes (State / City / Zip code) for freight and quotes.",
       "usStateZipEmpty": "No zip code data yet. Upload GeoNames US.txt for a full import, or use Excel import / manual entry.",
+      "cityOnlyRowSelected": "Selection contains city rows without zip codes. Use the row-level Delete to remove a city.",
+      "cityOnlyRowSkipped": "City rows without zip codes were skipped; only zip rows were deleted.",
       "usStateZipImportTemplate": "Excel: headers State / City / Zip code (export first, then edit). GeoNames US.txt (tab-separated) is also supported. Same state+city+zip updates; duplicate rows in the file fail.",
       "usStateZipImportFormat": "Supports .xlsx or GeoNames .txt",
       "selectFile": "Please select an Excel file",
@@ -1489,6 +1572,8 @@
       "username": "Username",
       "avatar": "Avatar",
       "realName": "Name",
+      "phone": "Mobile",
+      "email": "Email",
       "dept": "Department",
       "parentDept": "Parent",
       "roles": "Roles",
@@ -1776,6 +1861,57 @@
       "approve": "Approve",
       "reject": "Return",
       "createConfig": "New Config"
+    }
+  },
+  "inquiry": {
+    "title": "Inquiry",
+    "list": "Inquiry List",
+    "createTitle": "New Inquiry",
+    "editTitle": "Edit Inquiry",
+    "viewTitle": "View Inquiry",
+    "hint": {
+      "list": "Save as Pending Submit, then submit to create a quote."
+    },
+    "actions": {
+      "create": "New Inquiry",
+      "copy": "Copy as New",
+      "save": "Save",
+      "submit": "Submit",
+      "openQuote": "Open Quote",
+      "backToList": "Back to list"
+    },
+    "fields": {
+      "inquiryNo": "Inquiry No.",
+      "status": "Status",
+      "quoteNo": "Linked Quote",
+      "customerName": "Customer",
+      "createdBy": "Created By",
+      "updatedAt": "Updated At",
+      "validUntil": "Valid Until",
+      "keyword": "Keyword"
+    },
+    "status": {
+      "PENDING_SUBMIT": "Pending Submit",
+      "PENDING_QUOTE": "Pending Quote",
+      "QUOTED": "Quoted",
+      "VOIDED": "Voided",
+      "EXPIRED": "Expired"
+    },
+    "confirm": {
+      "submit": "Submit to quoter? A quote will be created automatically.",
+      "delete": "Delete inquiry {0}?"
+    },
+    "message": {
+      "createSuccess": "Inquiry {0} saved",
+      "saveSuccess": "Inquiry {0} saved",
+      "submitSuccess": "Submitted. Quote {0} created",
+      "deleteSuccess": "Deleted",
+      "copyPrefilled": "Inquiry content prefilled; save to create a new inquiry"
+    },
+    "validation": {
+      "serviceTypeRequired": "Select service type",
+      "porRequired": "POR is required",
+      "podRequired": "POD is required"
     }
   }
 }

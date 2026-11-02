@@ -150,6 +150,11 @@ export async function deleteUsStateZip(id: number) {
   return requestClient.delete(`${BASE}/zips/${id}`);
 }
 
+/** 删除城市（含其下邮编）。用于列表中「无邮编的仅城市行」。 */
+export async function deleteUsStateZipCity(cityId: number) {
+  return requestClient.delete(`${BASE}/cities/${cityId}`);
+}
+
 export async function batchDeleteUsStateZip(ids: number[]) {
   return requestClient.post(`${BASE}/zips/batch-delete`, { ids });
 }

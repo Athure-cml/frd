@@ -10,7 +10,7 @@ import { searchGlobalPortNameOptions } from '#/api/master-data/global-port';
 import { getUsStateList } from '#/api/master-data/us-state';
 import {
   getUsStateZipCityNodes,
-  searchDestCityNameOptions,
+  resolveDestZips,
 } from '#/api/master-data/us-state-zip';
 import { lookupQuoteZip } from '#/api/quote';
 import { $t } from '#/locales';
@@ -167,16 +167,47 @@ function createPortSelectProps(options: {
   return base;
 }
 
-function createZipSelectProps() {
-  const params = reactive({ keyword: '' });
+function createZipSelectProps(cityName?: string, stateCode?: string) {
+  const params = reactive({
+    keyword: '',
+    city: (cityName ?? '').trim(),
+    state: (stateCode ?? '').trim(),
+  });
   const setKeyword = useDebounceFn((keyword: string) => {
     params.keyword = keyword.trim();
   }, 280);
 
   return {
     allowClear: true,
-    api: async (p: { keyword?: string }) => {
+    api: async (p: { city?: string; keyword?: string; state?: string }) => {
       const keyword = p?.keyword?.trim() || '';
+      const city = (p?.city ?? params.city ?? '').trim();
+      const state = (p?.state ?? params.state ?? '').trim();
+      // City+State 已确定时先给出主数据候选：唯一 1 个，多个（1:N）全部列出供选
+      if (city && state) {
+        try {
+          const [item] = await resolveDestZips([{ city, state }]);
+          const candidates =
+            item?.status === 'unique' && item.zipCode
+              ? [item.zipCode]
+              : item?.status === 'ambiguous'
+                ? (item.candidates ?? [])
+                : [];
+          if (candidates.length > 0) {
+            const matched = keyword
+              ? candidates.filter((zip) => zip.includes(keyword))
+              : candidates;
+            if (matched.length > 0) {
+              return matched.map((zip) => ({ label: zip, value: zip }));
+            }
+          }
+          if (!keyword) {
+            return [];
+          }
+        } catch {
+          // 候选解析失败时退回通用 ZIP 搜索
+        }
+      }
       if (!keyword) {
         return [];
       }
@@ -230,37 +261,39 @@ function createStateSelectProps() {
 }
 
 function createCitySelectProps(stateCode?: string) {
-  const params = reactive({ keyword: '', state: stateCode || '' });
+  const state = (stateCode || '').trim();
+  const params = reactive({ keyword: '', state });
   const setKeyword = useDebounceFn((keyword: string) => {
     params.keyword = keyword.trim();
   }, 280);
 
   return {
     allowClear: true,
-    api: async (p: { keyword?: string; state?: string }) => {
-      const keyword = p?.keyword?.trim() || params.keyword || '';
-      const state = p?.state || stateCode || '';
-      if (state) {
-        await ensureStateIdMap();
-        const stateId = stateIdByCode.get(state);
-        if (stateId) {
-          const nodes = await getUsStateZipCityNodes(stateId, { keyword });
-          return nodes
-            .filter((node): node is typeof node & { city: string } =>
-              Boolean(node.city),
-            )
-            .map((node) => ({
-              label: node.city,
-              value: node.city,
-            }));
-        }
-      }
-      return searchDestCityNameOptions({
-        keyword: keyword || undefined,
-        limit: 50,
-      });
-    },
     class: 'w-full',
+    // 城市必须先由州限定：未选州时禁用且无选项
+    disabled: !state,
+    placeholder: state ? undefined : $t('page.quote.sheet.selectStateFirst'),
+    api: async (p: { keyword?: string; state?: string }) => {
+      const code = (p?.state || state || '').trim();
+      const keyword = p?.keyword?.trim() || params.keyword || '';
+      if (!code) {
+        return [];
+      }
+      await ensureStateIdMap();
+      const stateId = stateIdByCode.get(code);
+      if (!stateId) {
+        return [];
+      }
+      const nodes = await getUsStateZipCityNodes(stateId, { keyword });
+      return nodes
+        .filter((node): node is typeof node & { city: string } =>
+          Boolean(node.city),
+        )
+        .map((node) => ({
+          label: node.city,
+          value: node.city,
+        }));
+    },
     filterOption: false,
     optionFilterProp: 'label',
     params,
@@ -269,6 +302,42 @@ function createCitySelectProps(stateCode?: string) {
       setKeyword(keyword);
     },
   };
+}
+
+/**
+ * City+State 反查邮编：
+ * - unique：直接回填；
+ * - ambiguous（1:N）：保持为空，由 ZIP 下拉列出该 City+State 的全部候选；
+ * - notFound：留空手填。
+ */
+async function autoFillRoadZip(
+  cityName: string,
+  stateCode: string,
+  existingZip: string,
+  formApi?: { setFieldValue?: (field: string, value: unknown) => void },
+) {
+  const city = cityName.trim();
+  const state = stateCode.trim();
+  if (!city || !state || !formApi?.setFieldValue) {
+    return;
+  }
+  try {
+    const [item] = await resolveDestZips([{ city, state }]);
+    if (!item) {
+      return;
+    }
+    if (item.canonicalCity && item.canonicalCity !== city) {
+      formApi.setFieldValue('city', item.canonicalCity);
+    }
+    if (existingZip.trim()) {
+      return;
+    }
+    if (item.status === 'unique' && item.zipCode) {
+      formApi.setFieldValue('zipCode', item.zipCode);
+    }
+  } catch {
+    // 解析失败不阻塞录入
+  }
 }
 
 async function applyZipLookup(
@@ -303,8 +372,11 @@ export function useRoadFormSchema(): VbenFormSchema[] {
   return [
     {
       component: 'ApiSelect',
-      componentProps: (_values, formApi) => ({
-        ...createZipSelectProps(),
+      componentProps: (values, formApi) => ({
+        ...createZipSelectProps(
+          String(values.city ?? ''),
+          String(values.state ?? ''),
+        ),
         onChange: (value: unknown) => {
           const zip =
             typeof value === 'string'
@@ -322,25 +394,52 @@ export function useRoadFormSchema(): VbenFormSchema[] {
           });
         },
       }),
+      dependencies: {
+        // City 或 State 变化时刷新候选：City+State 命中的邮编直接列出（1:N 时全列）
+        triggerFields: ['state', 'city'],
+      },
       fieldName: 'zipCode',
       label: t('zipCode'),
       rules: 'required',
     },
     {
       component: 'ApiSelect',
-      componentProps: (values) => createCitySelectProps(values.state),
+      componentProps: (_values, formApi) => ({
+        ...createStateSelectProps(),
+        onChange: () => {
+          // 换州即重新定位：城市与邮编必须重选
+          formApi?.setFieldValue?.('city', '');
+          formApi?.setFieldValue?.('zipCode', '');
+        },
+      }),
+      fieldName: 'state',
+      label: t('state'),
+      rules: 'required',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: (values, formApi) => ({
+        ...createCitySelectProps(values.state),
+        onChange: (value: unknown) => {
+          const cityName =
+            typeof value === 'string'
+              ? value
+              : String((value as { value?: unknown })?.value ?? value ?? '');
+          // 换城市后旧 ZIP 必然失效：先清空，再按新 City+State 重新解析/补全
+          formApi?.setFieldValue?.('zipCode', '');
+          void autoFillRoadZip(
+            cityName,
+            String(values.state ?? ''),
+            '',
+            formApi,
+          );
+        },
+      }),
       dependencies: {
         triggerFields: ['state'],
       },
       fieldName: 'city',
       label: t('city'),
-      rules: 'required',
-    },
-    {
-      component: 'ApiSelect',
-      componentProps: createStateSelectProps(),
-      fieldName: 'state',
-      label: t('state'),
       rules: 'required',
     },
     {

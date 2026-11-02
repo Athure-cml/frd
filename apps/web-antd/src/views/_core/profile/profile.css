@@ -15,19 +15,18 @@
 }
 
 .profile-badge__logo {
-  display: inline-flex;
-  gap: 0.28em;
-  align-items: baseline;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 20px;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 1.5rem;
-  font-style: italic;
-  font-weight: 700;
-  line-height: 1;
 }
 
-.profile-badge__logo-letter {
-  color: #006fe6;
+.profile-badge__logo-img {
+  display: block;
+  width: auto;
+  max-width: 160px;
+  height: 36px;
+  object-fit: contain;
 }
 
 .profile-badge__identity {

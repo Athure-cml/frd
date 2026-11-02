@@ -52,6 +52,10 @@ export function resolvePermissionModule(code: string): null | string {
   if (code === 'quote:approve' || code.startsWith('approval:config:')) {
     return 'approval';
   }
+  // 询价单挂在报价一级菜单下，权限树与侧栏一致
+  if (code.startsWith('inquiry:')) {
+    return 'quote';
+  }
   if (root === 'dashboard' || root === 'quote') {
     return root;
   }

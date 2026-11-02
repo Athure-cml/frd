@@ -8,18 +8,18 @@ import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 import { $t } from '#/locales';
 
 import { readThemeColors } from '../shared/chart-theme';
-import { quoteAmountTrend } from './mock-data';
+import { quoteCountTrend } from './mock-data';
 
 const props = withDefaults(
   defineProps<{
+    inquiries?: number[];
     months?: string[];
     quoted?: number[];
-    won?: number[];
   }>(),
   {
+    inquiries: () => [],
     months: () => [],
     quoted: () => [],
-    won: () => [],
   },
 );
 
@@ -40,9 +40,9 @@ function renderChart() {
   const hasLiveData = props.months.length > 0;
   const months = hasLiveData
     ? props.months.map((item) => formatMonthLabel(item))
-    : quoteAmountTrend.months;
-  const quoted = hasLiveData ? props.quoted : quoteAmountTrend.quoted;
-  const won = hasLiveData ? props.won : quoteAmountTrend.won;
+    : quoteCountTrend.months;
+  const inquiries = hasLiveData ? props.inquiries : quoteCountTrend.inquiries;
+  const quoted = hasLiveData ? props.quoted : quoteCountTrend.quoted;
 
   void renderEcharts({
     color: [colors.primary, colors.success],
@@ -55,31 +55,30 @@ function renderChart() {
     },
     legend: {
       data: [
-        $t('page.analytics.chart.quotedAmount'),
-        $t('page.analytics.chart.wonAmount'),
+        $t('page.analytics.chart.inquiryCount'),
+        $t('page.analytics.chart.quotedCount'),
       ],
       top: 0,
     },
     series: [
       {
         areaStyle: { opacity: 0.08 },
-        data: quoted,
-        name: $t('page.analytics.chart.quotedAmount'),
+        data: inquiries,
+        name: $t('page.analytics.chart.inquiryCount'),
         smooth: true,
         type: 'line',
       },
       {
         areaStyle: { opacity: 0.08 },
-        data: won,
-        name: $t('page.analytics.chart.wonAmount'),
+        data: quoted,
+        name: $t('page.analytics.chart.quotedCount'),
         smooth: true,
         type: 'line',
       },
     ],
     tooltip: {
       trigger: 'axis',
-      valueFormatter: (value) =>
-        `${value} ${$t('page.analytics.chart.amountUnit')}`,
+      valueFormatter: (value) => `${value} ${$t('page.analytics.chart.unit')}`,
     },
     xAxis: {
       boundaryGap: false,
@@ -88,8 +87,9 @@ function renderChart() {
     },
     yAxis: {
       axisLabel: {
-        formatter: `{value} ${$t('page.analytics.chart.amountUnit')}`,
+        formatter: `{value} ${$t('page.analytics.chart.unit')}`,
       },
+      minInterval: 1,
       splitNumber: 4,
       type: 'value',
     },
@@ -97,7 +97,7 @@ function renderChart() {
 }
 
 watch(
-  () => [props.months, props.quoted, props.won],
+  () => [props.months, props.inquiries, props.quoted],
   () => renderChart(),
   { deep: true, immediate: true },
 );

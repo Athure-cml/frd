@@ -539,6 +539,8 @@ function buildLayoutColumns(
     if (children.length > 0) {
       columns.push({
         children,
+        // 分组列补 field，避免开启 customConfig.storage 时 vxe 警告
+        field: group.key || `group_${index}`,
         headerClassName: group.headerClassName,
         title: $t(group.labelKey),
       });

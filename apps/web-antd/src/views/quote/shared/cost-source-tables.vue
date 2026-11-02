@@ -50,7 +50,6 @@ async function syncActiveTab(preferFirst = false) {
   const next =
     !preferFirst && types.includes(activeTab.value) ? activeTab.value : first;
   activeTab.value = next;
-  // Tabs 重挂载后再写一次，确保面板被选中
   await nextTick();
   if (visibleCostTypes.value.includes(next)) {
     activeTab.value = next;
@@ -90,6 +89,14 @@ const sections = computed(() =>
   }),
 );
 
+const activeSection = computed(
+  () => sections.value.find((item) => item.type === activeTab.value) ?? null,
+);
+
+const activeHasNoData = computed(
+  () => (activeSection.value?.matches.length ?? 0) === 0,
+);
+
 watch(
   tabsKey,
   () => {
@@ -98,8 +105,8 @@ watch(
   { immediate: true, flush: 'sync' },
 );
 
-function onImport(type: QuoteCostType) {
-  emit('import', type);
+function onImport() {
+  emit('import', activeTab.value);
 }
 </script>
 
@@ -110,29 +117,31 @@ function onImport(type: QuoteCostType) {
       v-model:active-key="activeTab"
       destroy-inactive-tab-pane
     >
+      <!-- 引入按钮放在 Tab 栏最右侧，去掉内容区工具条框 -->
+      <template #rightExtra>
+        <div class="quote-cost-source__extra">
+          <Tag v-if="activeHasNoData" color="default">
+            {{ $t('page.quote.message.noCostSnapshot') }}
+          </Tag>
+          <Button
+            v-if="canImport"
+            class="quote-cost-source__import-btn"
+            size="small"
+            @click="onImport"
+          >
+            <IconifyIcon class="mr-1 size-3.5" icon="lucide:database" />
+            {{ $t('page.quote.actions.importCostData') }}
+          </Button>
+        </div>
+      </template>
+
       <Tabs.TabPane
         v-for="section in sections"
         :key="section.type"
         :tab="tabLabel(section.type)"
       >
+        <!-- 表格直接吃 Tab 内容宽，不再套内层 actions 框 -->
         <div class="quote-cost-source__pane">
-          <div
-            v-if="canImport || section.matches.length === 0"
-            class="quote-cost-source__actions"
-          >
-            <Tag v-if="section.matches.length === 0" color="default">
-              {{ $t('page.quote.message.noCostSnapshot') }}
-            </Tag>
-            <Button
-              v-if="canImport"
-              class="quote-cost-source__import-btn"
-              size="small"
-              @click="onImport(section.type)"
-            >
-              <IconifyIcon class="mr-1 size-3.5" icon="lucide:database" />
-              {{ $t('page.quote.actions.importCostData') }}
-            </Button>
-          </div>
           <CostSnapshotGrid
             :empty-description="
               $t('page.quote.message.noCostImported', [tabLabel(section.type)])
@@ -148,27 +157,46 @@ function onImport(type: QuoteCostType) {
 </template>
 
 <style scoped>
+.quote-cost-source {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.quote-cost-source :deep(.ant-tabs),
+.quote-cost-source :deep(.ant-tabs-content),
+.quote-cost-source :deep(.ant-tabs-content-holder),
+.quote-cost-source :deep(.ant-tabs-tabpane) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .quote-cost-source :deep(.ant-tabs-nav) {
   margin-bottom: 0;
 }
 
-.quote-cost-source__pane {
-  /* 横向滚动交给内部 VXE，避免外层滚动导致 fixed 列失效 */
-  overflow: hidden;
-  border: 1px solid hsl(var(--border));
-  border-top: 0;
-  border-radius: 0 0 calc(var(--radius) + 2px) calc(var(--radius) + 2px);
+.quote-cost-source :deep(.ant-tabs-nav-wrap) {
+  flex: 1;
+  min-width: 0;
 }
 
-.quote-cost-source__actions {
-  display: flex;
-  flex-wrap: wrap;
+.quote-cost-source__extra {
+  display: inline-flex;
+  flex-shrink: 0;
   gap: 8px;
   align-items: center;
-  justify-content: flex-end;
-  min-height: 40px;
-  padding: 8px 14px;
-  background: color-mix(in srgb, hsl(var(--muted)) 22%, hsl(var(--card)));
-  border-bottom: 1px solid hsl(var(--border));
+  margin-left: 12px;
+}
+
+.quote-cost-source__pane {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  /* 仅底/侧留白，保证底边线不被卡片圆角裁切；不再套工具条灰框 */
+  padding: 12px 0 16px;
+  overflow: hidden;
 }
 </style>
