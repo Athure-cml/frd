@@ -27,6 +27,10 @@ const chartRef = ref<EchartsUIType>();
 const { renderEcharts } = useEcharts(chartRef);
 
 function formatMonthLabel(value: string) {
+  const dayMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dayMatch) {
+    return $t('page.workspace.dayLabel', [Number(dayMatch[3])]);
+  }
   const match = /^(\d{4})-(\d{2})$/.exec(value);
   if (!match) {
     return value;

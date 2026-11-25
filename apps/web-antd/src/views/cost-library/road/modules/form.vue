@@ -212,7 +212,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
         );
         return;
       }
-      formApi.setValues({ extraFields: {} });
+      formApi.setValues({
+        extraFields: {},
+      });
     });
   },
 });
@@ -238,3 +240,15 @@ const drawerSubmitting = drawerApi.useStore((state) => state.submitting);
     </template>
   </Drawer>
 </template>
+
+<style>
+/* 操作备注 / REMARK 同列宽：控件区与 textarea 都拉满半格 */
+.cost-drawer-form .road-remark-field {
+  min-height: 32px;
+}
+
+.cost-drawer-form .road-remark-field .ant-input,
+.cost-drawer-form .road-remark-field textarea {
+  width: 100%;
+}
+</style>

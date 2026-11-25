@@ -10,6 +10,7 @@ export type QuoteServiceType =
   | 'OTHER'
   | 'SEA'
   | 'TRADE'
+  | 'TRANSLOAD'
   | 'TRUCK';
 
 export type QuoteOakType = 'NON_OAK' | 'OAK';
@@ -302,6 +303,10 @@ export async function lookupQuoteZip(keyword: string, limit = 20) {
   >('/quotes/zip-lookup', { params: { keyword, limit } });
 }
 
+export async function getQuoteListIds(params: Recordable<any> = {}) {
+  return requestClient.get<number[]>('/quotes/ids', { params });
+}
+
 export async function getQuoteList(params: Recordable<any>) {
   return requestClient.get<QuoteApi.PageResult>('/quotes', { params });
 }
@@ -422,10 +427,6 @@ export async function dismissQuoteCostRisk(id: number) {
   );
 }
 
-export async function copyQuote(id: number) {
-  return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/copy`);
-}
-
 /** 变更保存：新单直接落已报价，旧版归档 */
 export async function reviseQuote(
   parentId: number,
@@ -435,6 +436,11 @@ export async function reviseQuote(
     `/quotes/${parentId}/revise`,
     data,
   );
+}
+
+/** 续期：基于过期单新建待报价，挂原询价，清空过期报价库引用 */
+export async function renewQuote(id: number) {
+  return requestClient.post<QuoteApi.QuoteDetail>(`/quotes/${id}/renew`);
 }
 
 export async function exportQuotes(params: Recordable<any> = {}) {

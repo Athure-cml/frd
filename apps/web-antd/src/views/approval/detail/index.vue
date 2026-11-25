@@ -196,7 +196,9 @@ loadDetail();
           <QuotePrintSheet
             :cost-snapshots="detail.quote.costSnapshots"
             :customer-name="detail.quote.customerName"
+            :oak-type="detail.quote.oakType"
             :quote-date="quoteDate"
+            :service-types="detail.quote.serviceTypes"
             :sheet="detail.quote.sheet"
           />
         </div>

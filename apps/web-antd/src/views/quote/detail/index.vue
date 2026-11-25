@@ -6,7 +6,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
 import { Page } from '@vben/common-ui';
-import { ArrowLeft, Copy, IconifyIcon } from '@vben/icons';
+import { ArrowLeft, IconifyIcon } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
 import { formatDateTime } from '@vben/utils';
 
@@ -41,7 +41,6 @@ import { $t } from '#/locales';
 import { statusTagOptions } from '../list/data';
 import CostSourceTables from '../shared/cost-source-tables.vue';
 import { resolveCostSourceTypes } from '../shared/cost-source-types';
-import { stashQuoteCopySource } from '../shared/quote-copy';
 import { printQuoteSheet } from '../shared/quote-print';
 import QuotePrintSheet from '../shared/quote-print-sheet.vue';
 import { canShowQuoteVoid } from '../shared/quote-status';
@@ -62,7 +61,6 @@ const { hasAccessByCodes } = useAccess();
 const canEdit = hasAccessByCodes(['quote:edit']);
 const canSubmit = hasAccessByCodes(['quote:submit']);
 const canApprove = hasAccessByCodes(['quote:approve']);
-const canCreate = hasAccessByCodes(['quote:create']);
 
 const loading = ref(false);
 const followSubmitting = ref(false);
@@ -242,9 +240,17 @@ const detailFeeFields = computed(() => {
   }
   const trucking = resolveTruckingFeeValues(sheet);
   const truckingFields = new Set(trucking.map((item) => item.field));
+  const oakType = detail.value?.oakType;
   return FEE_SHEET_FIELDS.filter((field) => {
     if (field === 'truckingFee' || field === 'truckingFee2') {
       return truckingFields.has(field);
+    }
+    // 熏蒸费按基础信息 OAK / NON-OAK 只展示对应一项
+    if (field === 'fmNonOak') {
+      return oakType === 'NON_OAK';
+    }
+    if (field === 'fmOak') {
+      return oakType === 'OAK';
     }
     return true;
   });
@@ -358,11 +364,6 @@ async function onVoid() {
       message.success($t('page.quote.message.voidSuccess'));
     },
   });
-}
-
-function onCopy() {
-  stashQuoteCopySource(quoteId.value);
-  router.push({ name: 'QuoteCreate' });
 }
 
 function onEdit() {
@@ -511,14 +512,6 @@ onMounted(async () => {
             <div
               class="quote-editor-actions__group quote-editor-actions__group--utility"
             >
-              <Button
-                v-if="canCreate"
-                class="quote-action-btn quote-action-btn--copy"
-                @click="onCopy"
-              >
-                <Copy class="mr-1 size-4" />
-                {{ $t('page.quote.actions.copy') }}
-              </Button>
               <Button
                 class="quote-action-btn quote-action-btn--print"
                 @click="openPrintPreview"
@@ -792,6 +785,7 @@ onMounted(async () => {
         <QuotePrintSheet
           :cost-snapshots="detail.costSnapshots"
           :customer-name="detail.customerName"
+          :oak-type="detail.oakType"
           :quote-date="detail.quoteDate ?? detail.createdAt"
           :service-types="detail.serviceTypes"
           :sheet="detail.sheet"

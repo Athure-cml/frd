@@ -1,15 +1,21 @@
 import type { VbenFormSchema } from '#/adapter/form';
 import type { CostMode, CostTableTemplate } from '#/api/cost';
 
+import { markRaw } from 'vue';
+
 import { getEnabledUnitOptions } from '#/api/unit';
 import { $t } from '#/locales';
 
+import RoadRemarkField from '../road/modules/road-remark-field.vue';
 import { isRoadFeeUnitField } from './fee-unit-pairs';
 import { ROAD_REMARK_FIELD } from './field-catalog/road';
 import {
   buildLayoutFieldItems,
   isCustomFieldKey,
 } from './template-field-model';
+
+/** @deprecated 开关已并入 RoadRemarkField，保留导出避免外部引用报错 */
+export const ROAD_REMARK_ENABLE_FIELD = '_enableRoadRemark';
 
 const FUMIGATION_OUTDOOR_FIELDS = new Set([
   'cf_fum_outdoor_eff',
@@ -141,13 +147,47 @@ export function buildTemplateFormSchema(
           rules: item.required ? 'required' : undefined,
         });
       } else {
-        const isRemarkField = item.field === ROAD_REMARK_FIELD;
+        const isRemarkField =
+          mode === 'road' && item.field === ROAD_REMARK_FIELD;
         if (isRemarkField) {
+          // 与「操作备注」各占半行；开关+输入在同一列内，避免整行拉满难看
+          if (item.required) {
+            ordered.push({
+              component: 'Textarea',
+              componentProps: {
+                class: 'w-full',
+                maxlength: 512,
+                rows: 4,
+                showCount: true,
+              },
+              fieldName: `extraFields.${item.field}`,
+              label: item.title,
+              rules: 'required',
+            });
+          } else {
+            ordered.push({
+              component: markRaw(RoadRemarkField),
+              componentProps: {
+                help: $t('page.costLibrary.roadFields.enableRemarkHelp'),
+                label: item.title || $t('page.costLibrary.roadFields.remark'),
+                maxlength: 512,
+              },
+              fieldName: `extraFields.${item.field}`,
+              hideLabel: true,
+              // 自定义组件需显式指定，否则只收到 modelValue，开关读不到已有 REMARK
+              modelPropName: 'value',
+            });
+          }
+        } else if (item.field === ROAD_REMARK_FIELD) {
           ordered.push({
             component: 'Textarea',
-            componentProps: { maxlength: 512, rows: 2, showCount: true },
+            componentProps: {
+              class: 'w-full',
+              maxlength: 512,
+              rows: 4,
+              showCount: true,
+            },
             fieldName: `extraFields.${item.field}`,
-            formItemClass: 'col-span-full',
             label: item.title,
             rules: item.required ? 'required' : undefined,
           });
@@ -209,9 +249,26 @@ export function buildTemplateFormSchema(
     // 附加费：OTHERS / ALL IN 强制换行，避免与上一组日期挤在同一行
     const forceNewRow =
       mode === 'sea' && (item.field === 'others' || item.field === 'allIn');
+    // 公路：操作备注强制新行左列，右侧留给紧挨着的 REMARK；输入框拉满半列宽度
+    const roadOpRemarkRow =
+      mode === 'road' && item.field === 'remark'
+        ? {
+            componentProps: {
+              ...(typeof base.componentProps === 'object'
+                ? base.componentProps
+                : {}),
+              class: 'w-full',
+              maxlength: 512,
+              rows: 4,
+              showCount: true,
+            },
+            formItemClass: 'col-start-1',
+          }
+        : {};
 
     ordered.push({
       ...base,
+      ...roadOpRemarkRow,
       ...(forceNewRow ? { formItemClass: 'col-start-1' } : {}),
       label: item.title,
       ...applyTemplateFieldValidation(item, base),

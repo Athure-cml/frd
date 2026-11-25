@@ -95,6 +95,26 @@ export function canShowQuoteRevise(
   return normalizeQuoteStatus(status) === 'QUOTED';
 }
 
+/** 已归档且因过期归档 → 可续期 */
+export function canShowQuoteRenew(
+  status: QuoteStatus,
+  options?: {
+    archiveReason?: null | string;
+    expired?: boolean;
+  },
+) {
+  const normalized = normalizeQuoteStatus(status);
+  if (normalized !== 'ARCHIVED' && status !== 'EXPIRED') {
+    return false;
+  }
+  const reason = options?.archiveReason;
+  if (reason === 'QUOTED_EXPIRED' || reason === 'PENDING_EXPIRED') {
+    return true;
+  }
+  // 兼容历史 EXPIRED / 仅标记 expired 的单据
+  return options?.expired === true || status === 'EXPIRED';
+}
+
 /** 有效单据上的成本异常：展示为「待报价（异常）」/「已报价（异常）」 */
 export function isQuoteStatusAbnormal(
   status: QuoteStatus,

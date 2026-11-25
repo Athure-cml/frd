@@ -57,6 +57,9 @@ export interface WorkspaceQuoteStatsView {
   inquiries: number[];
   months: string[];
   quoted: number[];
+  yearInquiries: number[];
+  yearQuoted: number[];
+  years: string[];
 }
 
 const METRIC_META: Record<
@@ -262,6 +265,9 @@ export function mapWorkspaceQuoteStats(
     inquiries: (stats?.inquiries ?? []).map(Number),
     months: stats?.months ?? [],
     quoted: (stats?.quoted ?? []).map(Number),
+    yearInquiries: (stats?.yearInquiries ?? []).map(Number),
+    yearQuoted: (stats?.yearQuoted ?? []).map(Number),
+    years: stats?.years ?? [],
   };
 }
 

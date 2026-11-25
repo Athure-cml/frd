@@ -103,14 +103,16 @@
     "greetingMorning": "早上好，{0}，开始处理今日工作吧",
     "greetingAfternoon": "下午好，{0}，继续跟进报价与成本",
     "greetingEvening": "晚上好，{0}，查看待办报价与运价",
-    "subtitle": "福瑞多货代报价工作台：报价、成本库与主数据一站触达。",
     "createQuote": "新建报价",
     "quickCreate": "快速创建",
     "vsYesterday": "较昨日",
     "viewAll": "查看全部",
     "thisMonth": "本月",
     "last12Months": "近12个月",
+    "statsByMonth": "按月统计",
+    "statsByYear": "按年统计",
     "monthLabel": "{0}月",
+    "dayLabel": "{0}日",
     "quoteStats": "报价统计",
     "topRoutes": "热门线路",
     "routesDrawer": {
@@ -677,6 +679,8 @@
       "otherFee": "OTHERS",
       "operationRemark": "操作备注",
       "remark": "REMARK",
+      "enableRemark": "REMARK",
+      "enableRemarkHelp": "开关打开后填写业务 REMARK；默认关闭，避免与「操作备注」填错",
       "validDate": "VALID TIME",
       "logYardNameAddress": "PICK UP ADDRESS"
     }
@@ -1038,7 +1042,11 @@
       "readonly": "当前报价单不可编辑，仅可查看。",
       "matchKeys": "Zip code / City / State / POR / POL / POD / SSL 用于报价库联合匹配",
       "zipAutoFill": "输入 Zip code 可模糊查询，选中后自动填充 City、State",
-      "followUpStatus": "跟进记录将自动记录当前单据状态，无需手动选择"
+      "followUpStatus": "跟进记录将自动记录当前单据状态，无需手动选择",
+      "selectedCount": "已选 {0} 条",
+      "selectAllAcrossPagesLoading": "正在获取全部匹配记录…",
+      "selectAllAcrossPagesEmpty": "当前筛选条件下没有可全选的记录",
+      "selectAllAcrossPagesSuccess": "已跨页全选 {0} 条"
     },
     "sections": {
       "basic": "基础信息区",
@@ -1101,6 +1109,9 @@
       "confirmWon": "确认成交",
       "copy": "复制新建",
       "revise": "变更",
+      "renew": "续期",
+      "selectAllAcrossPages": "跨页全选",
+      "clearSelection": "取消全选",
       "print": "打印报价单",
       "sendMail": "发送报价单",
       "printQuote": "打印报价",
@@ -1115,6 +1126,7 @@
     },
     "revision": {
       "fromChange": "变更单",
+      "fromRenew": "续期单",
       "notCurrent": "变更单",
       "viewParent": "查看旧单据",
       "viewSuccessor": "查看新单据",
@@ -1171,6 +1183,7 @@
       "TRUCK": "卡车",
       "INSURANCE": "保险",
       "TRADE": "贸易",
+      "TRANSLOAD": "换装",
       "OTHER": "其他"
     },
     "status": {
@@ -1232,7 +1245,9 @@
       "copyPrefilled": "已带入报价内容，保存后将生成新报价单",
       "reviseSuccess": "变更单 {0} 已保存为已报价",
       "reviseNeedReason": "请填写变更原因",
-      "revisePrefilled": "已带入基础信息，请重新引入报价库数据后保存",
+      "revisePrefilled": "已带入原报价单及报价库引用，确认后保存",
+      "renewSuccess": "续期单 {0} 已创建，请核对费用并填写有效期后确认报价",
+      "renewing": "正在续期…",
       "followUpCreated": "跟进记录已添加",
       "followSuccess": "跟进状态已更新",
       "noCostSnapshot": "暂无报价库匹配快照",
@@ -1336,7 +1351,8 @@
       "deletePrefix": "确定删除报价单 ",
       "deleteSuffix": " 吗？此操作不可恢复。",
       "void": "确定作废报价单「{0}」吗？作废后关联询价单也将变为已作废。",
-      "revise": "将跳转新建报价单并带入基础信息，请重新引入报价库后保存（直接落已报价，原单归档）。请填写变更原因：",
+      "revise": "将跳转新建报价单并带入原单信息（含报价库引用），保存后直接落已报价，原单归档。请填写变更原因：",
+      "renew": "将基于过期单「{0}」新建待报价单据：仍关联原询价；操作人/日期重置为当前；有效期清空；过期报价库引用将清空并需重引。是否继续？",
       "send": "确定审批通过报价单「{0}」吗？审批后将变为已确认报价。",
       "approve": "确定审批通过报价单「{0}」吗？审批后将变为已确认报价。",
       "reject": "确定拒绝报价单「{0}」吗？",
@@ -1875,6 +1891,7 @@
       "copy": "复制新建",
       "save": "保存",
       "submit": "递交",
+      "withdraw": "撤回",
       "openQuote": "打开报价单",
       "backToList": "返回列表"
     },
@@ -1897,12 +1914,14 @@
     },
     "confirm": {
       "submit": "是否递交报价员？确认后将自动生成一张报价单。",
+      "withdraw": "将撤回询价单「{0}」，并清理关联的待报价单，询价恢复为待递交。是否继续？",
       "delete": "确认删除询价单 {0}？"
     },
     "message": {
       "createSuccess": "询价单 {0} 已保存",
       "saveSuccess": "询价单 {0} 已保存",
       "submitSuccess": "已递交，生成报价单 {0}",
+      "withdrawSuccess": "已撤回，询价恢复为待递交",
       "deleteSuccess": "已删除",
       "copyPrefilled": "已带入询价内容，保存后将生成新询价单"
     },

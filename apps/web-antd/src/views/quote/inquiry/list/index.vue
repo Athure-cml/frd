@@ -15,7 +15,11 @@ import { Plus } from '@vben/icons';
 import { Button, message, Modal, Tag } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteInquiry, getInquiryList } from '#/api/quote/inquiry';
+import {
+  deleteInquiry,
+  getInquiryList,
+  withdrawInquiry,
+} from '#/api/quote/inquiry';
 import { $t } from '#/locales';
 
 import {
@@ -26,6 +30,7 @@ import { useI18nFormOptions } from '../../../shared/use-i18n-form-options';
 import {
   consumeQuoteListForceRefresh,
   hasActiveListFilters,
+  markQuoteListForceRefresh,
 } from '../../shared/list-cache';
 import {
   resolveInquiryStatusTag,
@@ -41,6 +46,7 @@ const router = useRouter();
 const { hasAccessByCodes } = useAccess();
 const canCreate = hasAccessByCodes(['inquiry:create']);
 const canDelete = hasAccessByCodes(['inquiry:delete']);
+const canWithdraw = hasAccessByCodes(['inquiry:submit']);
 /** 最近一次列表请求的页码（用于 keepAlive 返回时判断是否需刷新） */
 const lastQueryPage = ref(1);
 
@@ -50,6 +56,24 @@ async function onCreate() {
 
 function onView(row: InquiryApi.ListItem) {
   router.push({ name: 'InquiryEdit', params: { id: row.id } });
+}
+
+function onWithdraw(row: InquiryApi.ListItem) {
+  if (row.status !== 'PENDING_QUOTE') {
+    return;
+  }
+  Modal.confirm({
+    centered: true,
+    content: $t('page.inquiry.confirm.withdraw', [row.inquiryNo]),
+    title: $t('page.inquiry.actions.withdraw'),
+    onOk: async () => {
+      await withdrawInquiry(row.id);
+      markQuoteListForceRefresh('inquiry');
+      markQuoteListForceRefresh('quote');
+      message.success($t('page.inquiry.message.withdrawSuccess'));
+      await gridApi.query();
+    },
+  });
 }
 
 function onDelete(row: InquiryApi.ListItem) {
@@ -75,6 +99,10 @@ function onActionClick({
 }: OnActionClickParams<InquiryApi.ListItem>) {
   if (code === 'view') {
     onView(row);
+    return;
+  }
+  if (code === 'withdraw') {
+    onWithdraw(row);
     return;
   }
   if (code === 'delete') {
@@ -103,7 +131,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
   },
   gridOptions: {
     id: 'inquiry-list',
-    columns: useInquiryColumns(onActionClick, canDelete),
+    columns: useInquiryColumns(onActionClick, canDelete, canWithdraw),
     height: '100%',
     pagerConfig: {},
     proxyConfig: {

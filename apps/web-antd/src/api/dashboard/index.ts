@@ -46,6 +46,9 @@ export namespace DashboardApi {
     inquiries: number[];
     months: string[];
     quoted: number[];
+    yearInquiries?: number[];
+    yearQuoted?: number[];
+    years?: string[];
   }
 
   export interface WorkspaceData {

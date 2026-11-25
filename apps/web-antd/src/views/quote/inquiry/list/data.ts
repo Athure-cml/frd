@@ -325,10 +325,19 @@ export function useInquirySearchSchema(): VbenFormSchema[] {
 export function useInquiryColumns(
   onActionClick: OnActionClickFn<InquiryApi.ListItem>,
   canDelete: boolean,
+  canWithdraw = false,
 ): VxeTableGridOptions<InquiryApi.ListItem>['columns'] {
   const operationOptions: Array<Record<string, any> | string> = [
     { code: 'view', text: $t('page.quote.actions.view') },
   ];
+  if (canWithdraw) {
+    operationOptions.push({
+      code: 'withdraw',
+      danger: true,
+      show: (row: InquiryApi.ListItem) => row.status === 'PENDING_QUOTE',
+      text: $t('page.inquiry.actions.withdraw'),
+    });
+  }
   if (canDelete) {
     operationOptions.push({
       code: 'delete',
@@ -405,8 +414,8 @@ export function useInquiryColumns(
   ];
 
   if (operationColumn) {
-    operationColumn.minWidth = 140;
-    operationColumn.width = 140;
+    operationColumn.minWidth = 180;
+    operationColumn.width = 180;
     operationColumn.fixed = 'right';
     columns.push(operationColumn);
   }

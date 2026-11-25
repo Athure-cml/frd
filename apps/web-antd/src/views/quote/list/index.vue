@@ -5,7 +5,7 @@ import type {
 } from '#/adapter/vxe-table';
 import type { QuoteApi } from '#/api/quote';
 
-import { computed, onActivated, ref, watch } from 'vue';
+import { computed, nextTick, onActivated, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
@@ -16,23 +16,27 @@ import { downloadFileFromBlob } from '@vben/utils';
 import { Button, message, Modal, Tag } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { exportQuotes, getQuoteList, voidQuote } from '#/api/quote';
+import {
+  exportQuotes,
+  getQuoteList,
+  getQuoteListIds,
+  renewQuote,
+  voidQuote,
+} from '#/api/quote';
 import { $t } from '#/locales';
 
 import {
   scheduleGridRecalculate,
   useGridResizeRecalculate,
 } from '../../cost-library/shared/schedule-grid-recalculate';
-import {
-  buildListExportParams,
-  getGridSelectedIds,
-} from '../../shared/export-params';
+import { buildListExportParams } from '../../shared/export-params';
 import { useI18nFormOptions } from '../../shared/use-i18n-form-options';
 import {
   consumeQuoteListForceRefresh,
   hasActiveListFilters,
   markQuoteListForceRefresh,
 } from '../shared/list-cache';
+import { normalizeQuoteListSearchParams } from '../shared/quote-multi-search-params';
 import {
   quoteRowClassName,
   resolveQuoteListStatusTag,
@@ -50,10 +54,21 @@ const route = useRoute();
 const { hasAccessByCodes } = useAccess();
 const canDelete = hasAccessByCodes(['quote:delete']);
 const canVoid = hasAccessByCodes(['quote:approve']);
+const canCreate = hasAccessByCodes(['quote:create']);
 const canExport = hasAccessByCodes(['quote:export']);
 const exporting = ref(false);
 /** 最近一次列表请求的页码（用于 keepAlive 返回时判断是否需刷新） */
 const lastQueryPage = ref(1);
+
+const selectedIds = ref<number[]>([]);
+const selectedCount = ref(0);
+const selectingAllPages = ref(false);
+const crossPageSelectActive = ref(false);
+const lastSearchKey = ref('');
+let applyingSelection = false;
+let lastPageItems: QuoteApi.QuoteListItem[] = [];
+
+const selectedIdSet = computed(() => new Set(selectedIds.value));
 
 /** 报价库反查：/quotes/list?libraryMode=road&libraryCostId=123 */
 const libraryFilter = computed(() => {
@@ -94,6 +109,194 @@ function canOperateRow(row: QuoteApi.QuoteListItem) {
   return row.operable === true;
 }
 
+function syncSelection() {
+  selectedCount.value = selectedIds.value.length;
+  if (crossPageSelectActive.value && selectedCount.value === 0) {
+    crossPageSelectActive.value = false;
+  }
+}
+
+function clearSelection() {
+  selectedIds.value = [];
+  crossPageSelectActive.value = false;
+  gridApi.grid?.clearCheckboxRow?.();
+  syncSelection();
+}
+
+function onSearchCriteriaChange() {
+  selectedIds.value = [];
+  crossPageSelectActive.value = false;
+  gridApi.grid?.clearCheckboxRow?.();
+  syncSelection();
+}
+
+function updateSelectedIds(updater: (current: Set<number>) => void) {
+  const next = new Set(selectedIds.value);
+  updater(next);
+  selectedIds.value = [...next];
+  syncSelection();
+}
+
+function getCurrentPageRows(): QuoteApi.QuoteListItem[] {
+  const $grid = gridApi.grid as null | {
+    getTableData?: () => { tableData?: QuoteApi.QuoteListItem[] };
+  };
+  return $grid?.getTableData?.()?.tableData ?? [];
+}
+
+async function applySelectionToRows(rows?: QuoteApi.QuoteListItem[]) {
+  applyingSelection = true;
+  try {
+    await nextTick();
+    const $grid = gridApi.grid as null | {
+      clearCheckboxRow?: () => void;
+      setCheckboxRow?: (
+        rows: QuoteApi.QuoteListItem[],
+        checked: boolean,
+      ) => void;
+    };
+    if (!$grid) {
+      return;
+    }
+    if (selectedIds.value.length === 0) {
+      $grid.clearCheckboxRow?.();
+      return;
+    }
+    const pageRows = rows?.length ? rows : getCurrentPageRows();
+    if (pageRows.length === 0) {
+      return;
+    }
+    const active = selectedIdSet.value;
+    const toUncheck = pageRows.filter((row) => !active.has(row.id));
+    const toCheck = pageRows.filter((row) => active.has(row.id));
+    if (toUncheck.length > 0) {
+      $grid.setCheckboxRow?.(toUncheck, false);
+    }
+    if (toCheck.length > 0) {
+      $grid.setCheckboxRow?.(toCheck, true);
+    }
+  } finally {
+    applyingSelection = false;
+  }
+}
+
+function onCheckboxChange(params: {
+  checked: boolean;
+  row: QuoteApi.QuoteListItem;
+}) {
+  if (applyingSelection) {
+    return;
+  }
+  const rowId = params.row?.id;
+  if (typeof rowId !== 'number') {
+    return;
+  }
+  updateSelectedIds((current) => {
+    if (params.checked) {
+      current.add(rowId);
+    } else {
+      current.delete(rowId);
+    }
+  });
+}
+
+function onCheckboxAll(params: { checked: boolean }) {
+  if (applyingSelection) {
+    return;
+  }
+  const pageIds = getCurrentPageRows()
+    .map((row) => row.id)
+    .filter((id): id is number => typeof id === 'number');
+  updateSelectedIds((current) => {
+    for (const id of pageIds) {
+      if (params.checked) {
+        current.add(id);
+      } else {
+        current.delete(id);
+      }
+    }
+  });
+}
+
+type PatchedResetFn = (() => Promise<void>) & {
+  __quoteSelectionPatched?: boolean;
+};
+
+function patchSearchFormReset() {
+  const formApi = gridApi.formApi as
+    | undefined
+    | {
+        getState?: () => { handleReset?: PatchedResetFn };
+        setState?: (patch: { handleReset: PatchedResetFn }) => void;
+      };
+  if (!formApi?.getState || !formApi?.setState) {
+    return;
+  }
+  const original = formApi.getState()?.handleReset;
+  if (!original || original.__quoteSelectionPatched) {
+    return;
+  }
+  const patched: PatchedResetFn = async () => {
+    lastSearchKey.value = '';
+    onSearchCriteriaChange();
+    await original();
+  };
+  patched.__quoteSelectionPatched = true;
+  formApi.setState({ handleReset: patched });
+}
+
+async function buildCurrentSearchParams() {
+  const formValues = await gridApi.formApi?.getLatestSubmissionValues?.();
+  const normalized = normalizeQuoteListSearchParams({
+    ...formValues,
+  });
+  const filter = libraryFilter.value;
+  return {
+    ...normalized,
+    ...(filter
+      ? {
+          libraryCostId: filter.libraryCostId,
+          libraryMode: filter.libraryMode,
+        }
+      : {}),
+  };
+}
+
+async function onSelectAllAcrossPages() {
+  if (selectingAllPages.value) {
+    return;
+  }
+  selectingAllPages.value = true;
+  const hideLoading = message.loading({
+    content: $t('page.quote.hint.selectAllAcrossPagesLoading'),
+    duration: 0,
+    key: 'quote_select_all_msg',
+  });
+  try {
+    const params = await buildCurrentSearchParams();
+    const ids = await getQuoteListIds(params);
+    if (ids.length === 0) {
+      message.warning({
+        content: $t('page.quote.hint.selectAllAcrossPagesEmpty'),
+        key: 'quote_select_all_msg',
+      });
+      return;
+    }
+    selectedIds.value = ids;
+    crossPageSelectActive.value = true;
+    await applySelectionToRows(lastPageItems);
+    syncSelection();
+    message.success({
+      content: $t('page.quote.hint.selectAllAcrossPagesSuccess', [ids.length]),
+      key: 'quote_select_all_msg',
+    });
+  } catch {
+    hideLoading();
+  } finally {
+    selectingAllPages.value = false;
+  }
+}
+
 function onView(row: QuoteApi.QuoteListItem) {
   router.push({ name: 'QuoteEdit', params: { id: row.id } });
 }
@@ -113,12 +316,48 @@ function onVoid(row: QuoteApi.QuoteListItem) {
   });
 }
 
+function onRenew(row: QuoteApi.QuoteListItem) {
+  Modal.confirm({
+    title: $t('page.quote.actions.renew'),
+    content: $t('page.quote.confirm.renew', [row.quoteNo]),
+    okText: $t('page.quote.actions.renew'),
+    onOk: async () => {
+      const hide = message.loading({
+        content: $t('page.quote.message.renewing'),
+        duration: 0,
+        key: 'quote_renew_msg',
+      });
+      try {
+        const created = await renewQuote(row.id);
+        markQuoteListForceRefresh('quote');
+        markQuoteListForceRefresh('inquiry');
+        message.success({
+          content: $t('page.quote.message.renewSuccess', [
+            created.quoteNo ?? '',
+          ]),
+          key: 'quote_renew_msg',
+        });
+        await router.push({
+          name: 'QuoteEdit',
+          params: { id: String(created.id) },
+        });
+      } catch {
+        hide();
+      }
+    },
+  });
+}
+
 function onActionClick({
   code,
   row,
 }: OnActionClickParams<QuoteApi.QuoteListItem>) {
   if (code === 'view') {
     onView(row);
+    return;
+  }
+  if (code === 'renew') {
+    onRenew(row);
     return;
   }
   if (code === 'void') {
@@ -134,9 +373,9 @@ async function onBatchExport() {
     key: 'quote_export_msg',
   });
   try {
-    const formValues = await gridApi.formApi?.getLatestSubmissionValues?.();
+    const params = await buildCurrentSearchParams();
     const blob = await exportQuotes(
-      buildListExportParams(formValues, getGridSelectedIds(gridApi)),
+      buildListExportParams(params, selectedIds.value),
     );
     await downloadFileFromBlob({
       fileName: `报价单-${Date.now()}.xlsx`,
@@ -163,7 +402,11 @@ const searchFormOptions = useI18nFormOptions(() => ({
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: searchFormOptions.value,
   gridEvents: {
+    checkboxAll: onCheckboxAll,
+    checkboxChange: onCheckboxChange,
     dataRendered: () => {
+      void applySelectionToRows(lastPageItems);
+      syncSelection();
       scheduleGridRecalculate(
         () =>
           gridApi.grid as null | {
@@ -174,7 +417,13 @@ const [Grid, gridApi] = useVbenVxeGrid({
   },
   gridOptions: {
     id: 'quote-list',
-    columns: useQuoteColumns(onActionClick, canDelete, canVoid, canOperateRow),
+    columns: useQuoteColumns(
+      onActionClick,
+      canDelete,
+      canVoid,
+      canOperateRow,
+      canCreate,
+    ),
     // 勿用 auto：数据加载后表体变高，横向滚动条会被裁掉，直到 resize 才恢复
     height: '100%',
     pagerConfig: {},
@@ -182,11 +431,19 @@ const [Grid, gridApi] = useVbenVxeGrid({
       ajax: {
         query: async ({ page }, formValues) => {
           lastQueryPage.value = page.currentPage || 1;
+          const searchKey = JSON.stringify(formValues ?? {});
+          if (searchKey !== lastSearchKey.value) {
+            onSearchCriteriaChange();
+            lastSearchKey.value = searchKey;
+          }
           const filter = libraryFilter.value;
-          return await getQuoteList({
+          const normalized = normalizeQuoteListSearchParams({
+            ...formValues,
+          });
+          const result = await getQuoteList({
             page: page.currentPage,
             pageSize: page.pageSize,
-            ...formValues,
+            ...normalized,
             ...(filter
               ? {
                   libraryCostId: filter.libraryCostId,
@@ -194,6 +451,8 @@ const [Grid, gridApi] = useVbenVxeGrid({
                 }
               : {}),
           });
+          lastPageItems = result.items ?? [];
+          return result;
         },
       },
     },
@@ -203,7 +462,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
     checkboxConfig: {
       highlight: true,
-      reserve: true,
+      reserve: false,
     },
     fit: false,
     scrollbarConfig: {
@@ -242,7 +501,12 @@ watch(
  * 2) 有搜索条件或非第 1 页 → 保留缓存，不请求
  * 3) 默认空条件第 1 页 → 刷新，避免漏掉新单据
  */
+onMounted(() => {
+  patchSearchFormReset();
+});
+
 onActivated(async () => {
+  patchSearchFormReset();
   scheduleGridRecalculate(
     () =>
       gridApi.grid as null | {
@@ -283,6 +547,26 @@ onActivated(async () => {
     <div ref="gridHostRef" class="cost-library-grid-host h-full min-h-0">
       <Grid class="quote-grid" :form-options="searchFormOptions">
         <template #toolbar-tools>
+          <Tag v-if="selectedCount > 0" class="mr-2" color="processing">
+            {{ $t('page.quote.hint.selectedCount', [selectedCount]) }}
+          </Tag>
+          <Button
+            v-if="!crossPageSelectActive"
+            class="mr-2"
+            :loading="selectingAllPages"
+            @click="onSelectAllAcrossPages"
+          >
+            {{ $t('page.quote.actions.selectAllAcrossPages') }}
+          </Button>
+          <Button
+            v-if="crossPageSelectActive"
+            class="mr-2"
+            ghost
+            type="primary"
+            @click="clearSelection"
+          >
+            {{ $t('page.quote.actions.clearSelection') }}
+          </Button>
           <Button
             v-if="canExport"
             class="mr-2"

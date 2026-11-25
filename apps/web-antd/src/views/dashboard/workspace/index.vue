@@ -72,11 +72,7 @@ function handleNoticeClick(item: NotificationItem) {
 <template>
   <div class="dashboard-shell workspace-page">
     <section class="workspace-hero">
-      <WorkspaceHeader
-        :date-label="dateLabel"
-        :greeting="greeting"
-        :subtitle="$t('page.workspace.subtitle')"
-      />
+      <WorkspaceHeader :date-label="dateLabel" :greeting="greeting" />
 
       <WorkspaceKpi :items="metrics" />
     </section>

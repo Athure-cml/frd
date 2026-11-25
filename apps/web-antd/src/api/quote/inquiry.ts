@@ -94,6 +94,11 @@ export async function submitInquiry(id: number) {
   return requestClient.post<InquiryApi.Detail>(`/inquiries/${id}/submit`);
 }
 
+/** 撤回待报价询价：清理待报价单，恢复待递交 */
+export async function withdrawInquiry(id: number) {
+  return requestClient.post<InquiryApi.Detail>(`/inquiries/${id}/withdraw`);
+}
+
 export async function deleteInquiry(id: number) {
   return requestClient.delete(`/inquiries/${id}`);
 }

@@ -1,7 +1,7 @@
 import type { SslRemarkLookup } from './quote-sea-ssl-remark';
 import type { OceanFreightEntry } from './sheet-ocean-freight';
 
-import type { QuoteApi, QuoteServiceType } from '#/api/quote';
+import type { QuoteApi, QuoteOakType, QuoteServiceType } from '#/api/quote';
 
 import { parseUsdNumber } from './quote-sheet-format';
 import { resolveOceanFreightEntries } from './sheet-ocean-freight';
@@ -119,6 +119,7 @@ export function buildQuotePrintFeeRows(
   t: TranslateFn,
   sslRemarkByName?: SslRemarkLookup,
   serviceTypes?: QuoteServiceType[],
+  oakType?: null | QuoteOakType,
 ): QuotePrintFeeRow[] {
   const rows: QuotePrintFeeRow[] = [];
   const unitContainer = t('page.quote.sheet.unitPerContainer');
@@ -180,24 +181,28 @@ export function buildQuotePrintFeeRows(
   }
 
   if (showFumigation) {
-    pushFeeRow(
-      rows,
-      t('page.quote.sheet.fmNonOak'),
-      sheet.fmNonOak,
-      unitContainer,
-      '',
-      '',
-      true,
-    );
-    pushFeeRow(
-      rows,
-      t('page.quote.sheet.fmOak'),
-      sheet.fmOak,
-      unitContainer,
-      '',
-      '',
-      true,
-    );
+    // 与详情一致：按基础信息 OAK / NON-OAK 只打对应熏蒸费
+    if (oakType === 'NON_OAK') {
+      pushFeeRow(
+        rows,
+        t('page.quote.sheet.fmNonOak'),
+        sheet.fmNonOak,
+        unitContainer,
+        '',
+        '',
+        true,
+      );
+    } else if (oakType === 'OAK') {
+      pushFeeRow(
+        rows,
+        t('page.quote.sheet.fmOak'),
+        sheet.fmOak,
+        unitContainer,
+        '',
+        '',
+        true,
+      );
+    }
   }
 
   pushFeeRow(

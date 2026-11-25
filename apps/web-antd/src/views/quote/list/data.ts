@@ -13,10 +13,12 @@ import { getFumigationStationList, lookupQuoteZip } from '#/api/quote';
 import { getUserList } from '#/api/system/user';
 import { $t } from '#/locales';
 
-import { createTruckSupplierFormSelectProps } from '../../cost-library/road/truck-supplier-cache';
-import { createPortSelectProps } from '../../cost-library/shared/freight-schema';
+import { createTruckSupplierSearchProps } from '../../cost-library/road/truck-supplier-cache';
+import { createPortSearchSelectProps } from '../../cost-library/shared/freight-schema';
+import MultiPasteSelect from '../../cost-library/shared/multi-paste-select.vue';
 import { buildOperationColumn } from '../../system/shared/columns';
 import {
+  canShowQuoteRenew,
   canShowQuoteVoid,
   isQuoteStatusAbnormal,
   normalizeQuoteStatus,
@@ -28,51 +30,62 @@ import {
 
 const t = (key: string) => $t(`page.quote.${key}`);
 
-function createZipSearchProps() {
-  const options = reactive<Array<{ label: string; value: string }>>([]);
-  const search = useDebounceFn(async (keyword: string) => {
-    const q = keyword.trim();
-    if (!q) {
-      options.splice(0);
-      return;
-    }
-    const rows = await lookupQuoteZip(q, 30);
-    options.splice(
-      0,
-      options.length,
-      ...rows.map((row) => ({
-        label: `${row.zipCode} · ${row.city}, ${row.stateCode}`,
-        value: row.zipCode,
-      })),
-    );
+function createZipMultiSearchProps() {
+  const params = reactive({ keyword: '' });
+  const setKeyword = useDebounceFn((keyword: string) => {
+    params.keyword = keyword.trim();
   }, 280);
   return {
     allowClear: true,
-    class: 'w-full',
+    api: async (p: { keyword?: string }) => {
+      const keyword = p?.keyword?.trim() ?? '';
+      if (!keyword) {
+        return [];
+      }
+      const rows = await lookupQuoteZip(keyword, 30);
+      return rows.map((row) => ({
+        label: `${row.zipCode} · ${row.city}, ${row.stateCode}`,
+        value: row.zipCode,
+      }));
+    },
+    class: 'w-full cost-select-multiple-wrap',
     filterOption: false,
-    options,
-    onSearch: search,
+    immediate: false,
+    maxTagCount: 'responsive' as const,
+    mode: 'tags' as const,
+    onSearch: setKeyword,
+    optionFilterProp: 'label',
+    params,
+    showSearch: true,
   };
 }
 
-/** 搜索栏 CITY：允许手输关键字（后端 LIKE）也可从下拉选 */
-function createCitySearchProps() {
-  const options = reactive<Array<{ label: string; value: string }>>([]);
-  const search = useDebounceFn(async (keyword: string) => {
-    const q = keyword.trim();
-    if (!q) {
-      options.splice(0);
-      return;
-    }
-    const rows = await searchDestCityNameOptions({ keyword: q, limit: 50 });
-    options.splice(0, options.length, ...rows);
+function createCityMultiSearchProps() {
+  const params = reactive({ keyword: '' });
+  const setKeyword = useDebounceFn((keyword: string) => {
+    params.keyword = keyword.trim();
   }, 280);
   return {
     allowClear: true,
-    class: 'w-full',
+    api: async (p: { keyword?: string }) => {
+      const keyword = p?.keyword?.trim() || '';
+      if (!keyword) {
+        return [];
+      }
+      return searchDestCityNameOptions({
+        keyword,
+        limit: 50,
+      });
+    },
+    class: 'w-full cost-select-multiple-wrap',
     filterOption: false,
-    options,
-    onSearch: search,
+    immediate: false,
+    maxTagCount: 'responsive' as const,
+    mode: 'tags' as const,
+    onSearch: setKeyword,
+    optionFilterProp: 'label',
+    params,
+    showSearch: true,
   };
 }
 
@@ -89,7 +102,7 @@ function stateFilterOption(
   return label.includes(keyword) || value.includes(keyword);
 }
 
-function createStateSearchProps() {
+function createStateMultiSearchProps() {
   return {
     allowClear: true,
     api: async () => {
@@ -99,8 +112,10 @@ function createStateSearchProps() {
         value: state.code,
       }));
     },
-    class: 'w-full',
+    class: 'w-full cost-select-multiple-wrap',
     filterOption: stateFilterOption,
+    maxTagCount: 'responsive' as const,
+    mode: 'tags' as const,
     optionFilterProp: 'label',
     showSearch: true,
   };
@@ -121,6 +136,7 @@ export function getServiceTypeOptions() {
     { label: t('serviceType.TRUCK'), value: 'TRUCK' },
     { label: t('serviceType.INSURANCE'), value: 'INSURANCE' },
     { label: t('serviceType.TRADE'), value: 'TRADE' },
+    { label: t('serviceType.TRANSLOAD'), value: 'TRANSLOAD' },
     { label: t('serviceType.OTHER'), value: 'OTHER' },
   ];
 }
@@ -219,7 +235,7 @@ export function useQuoteSearchSchema(): VbenFormSchema[] {
       label: 'QUOTE NO',
     },
     {
-      component: 'ApiSelect',
+      component: MultiPasteSelect,
       componentProps: {
         allowClear: true,
         api: async () => {
@@ -228,59 +244,53 @@ export function useQuoteSearchSchema(): VbenFormSchema[] {
             pageSize: 200,
             status: 1,
           });
-          return result.items;
+          return result.items.map((item) => ({
+            label: item.name,
+            value: item.name,
+          }));
         },
-        class: 'w-full',
-        labelField: 'name',
+        class: 'w-full cost-select-multiple-wrap',
+        maxTagCount: 'responsive',
+        mode: 'tags',
         optionFilterProp: 'label',
         showSearch: true,
-        valueField: 'name',
       },
       fieldName: 'customerName',
       label: 'CLIENT',
     },
     {
-      component: 'ApiSelect',
-      componentProps: createPortSelectProps({
-        portTypes: [...QUOTE_PORT_TYPES],
-        requireKeyword: true,
-      }),
+      component: MultiPasteSelect,
+      componentProps: createPortSearchSelectProps([...QUOTE_PORT_TYPES]),
       fieldName: 'por',
       label: 'POR',
     },
     {
-      component: 'ApiSelect',
-      componentProps: createPortSelectProps({
-        portTypes: [...QUOTE_PORT_TYPES],
-        requireKeyword: true,
-      }),
+      component: MultiPasteSelect,
+      componentProps: createPortSearchSelectProps([...QUOTE_PORT_TYPES]),
       fieldName: 'pol',
       label: 'POL',
     },
     {
-      component: 'ApiSelect',
-      componentProps: createPortSelectProps({
-        portTypes: [...QUOTE_PORT_TYPES],
-        requireKeyword: true,
-      }),
+      component: MultiPasteSelect,
+      componentProps: createPortSearchSelectProps([...QUOTE_PORT_TYPES]),
       fieldName: 'pod',
       label: 'POD',
     },
     {
-      component: 'AutoComplete',
-      componentProps: createZipSearchProps(),
+      component: MultiPasteSelect,
+      componentProps: createZipMultiSearchProps(),
       fieldName: 'zipCode',
       label: 'ZIP CODE',
     },
     {
-      component: 'ApiSelect',
-      componentProps: createStateSearchProps(),
+      component: MultiPasteSelect,
+      componentProps: createStateMultiSearchProps(),
       fieldName: 'state',
       label: 'STATE',
     },
     {
-      component: 'AutoComplete',
-      componentProps: createCitySearchProps(),
+      component: MultiPasteSelect,
+      componentProps: createCityMultiSearchProps(),
       fieldName: 'city',
       label: 'CITY',
     },
@@ -295,14 +305,16 @@ export function useQuoteSearchSchema(): VbenFormSchema[] {
       label: 'PICK UP ADDRESS',
     },
     {
-      component: 'ApiSelect',
+      component: MultiPasteSelect,
       componentProps: {
         allowClear: true,
         api: async () => {
           const stations = await getFumigationStationList();
           return stations.map((item) => ({ label: item, value: item }));
         },
-        class: 'w-full',
+        class: 'w-full cost-select-multiple-wrap',
+        maxTagCount: 'responsive',
+        mode: 'tags',
         optionFilterProp: 'label',
         showSearch: true,
       },
@@ -310,8 +322,8 @@ export function useQuoteSearchSchema(): VbenFormSchema[] {
       label: 'STATION',
     },
     {
-      component: 'ApiSelect',
-      componentProps: createTruckSupplierFormSelectProps(),
+      component: MultiPasteSelect,
+      componentProps: createTruckSupplierSearchProps(),
       fieldName: 'supplier',
       label: 'SUPPLIER',
     },
@@ -319,14 +331,18 @@ export function useQuoteSearchSchema(): VbenFormSchema[] {
       component: 'Select',
       componentProps: {
         allowClear: true,
-        class: 'w-full',
+        class: 'w-full cost-select-multiple-wrap',
+        maxTagCount: 'responsive',
+        mode: 'multiple',
         options: statusTagOptions(),
+        optionFilterProp: 'label',
+        showSearch: true,
       },
       fieldName: 'status',
       label: t('fields.status'),
     },
     {
-      component: 'ApiSelect',
+      component: MultiPasteSelect,
       componentProps: {
         allowClear: true,
         api: async () => {
@@ -340,12 +356,24 @@ export function useQuoteSearchSchema(): VbenFormSchema[] {
             value: user.id,
           }));
         },
-        class: 'w-full',
+        class: 'w-full cost-select-multiple-wrap',
+        maxTagCount: 'responsive',
+        mode: 'multiple',
         optionFilterProp: 'label',
         showSearch: true,
       },
       fieldName: 'createdBy',
       label: t('fields.operator'),
+    },
+    {
+      component: 'DatePicker',
+      componentProps: {
+        allowClear: true,
+        class: 'w-full',
+        valueFormat: 'YYYY-MM-DD',
+      },
+      fieldName: 'validUntil',
+      label: 'VALID UNTIL',
     },
   ];
 }
@@ -399,10 +427,22 @@ export function useQuoteColumns(
   canDelete: boolean,
   canVoid: boolean,
   canOperateRow: (row: QuoteApi.QuoteListItem) => boolean = () => true,
+  canCreate = false,
 ): VxeTableGridOptions<QuoteApi.QuoteListItem>['columns'] {
   const operationOptions: Array<Record<string, any> | string> = [
     { code: 'view', text: t('actions.view') },
   ];
+  if (canCreate) {
+    operationOptions.push({
+      code: 'renew',
+      show: (row: QuoteApi.QuoteListItem) =>
+        canShowQuoteRenew(row.status, {
+          archiveReason: row.archiveReason,
+          expired: row.expired,
+        }),
+      text: t('actions.renew'),
+    });
+  }
   // 待报价可作废（取代退回）；已报价无作废入口
   if (canVoid || canDelete) {
     operationOptions.push({

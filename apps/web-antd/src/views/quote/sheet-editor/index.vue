@@ -34,7 +34,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
 import { Page } from '@vben/common-ui';
-import { ArrowLeft, Copy, IconifyIcon, Save } from '@vben/icons';
+import { ArrowLeft, IconifyIcon, Save } from '@vben/icons';
 
 import { useDebounceFn } from '@vueuse/core';
 import {
@@ -67,6 +67,7 @@ import {
   getQuoteDetail,
   getQuoteMailLogs,
   previewQuoteDocFee,
+  renewQuote,
   resendQuoteMail,
   reviseQuote,
   sendQuoteMail,
@@ -90,10 +91,6 @@ import { formatQuoteCostRiskHint } from '../shared/format-cost-risk-hint';
 import { markQuoteListForceRefresh } from '../shared/list-cache';
 import QuoteAddressRow from '../shared/quote-address-row.vue';
 import QuoteAuditLogs from '../shared/quote-audit-logs.vue';
-import {
-  stashQuoteCopySource,
-  takeQuoteCopySourceId,
-} from '../shared/quote-copy';
 import QuoteFumigationStationSelect from '../shared/quote-fumigation-station-select.vue';
 import { printQuoteSheet } from '../shared/quote-print';
 import QuotePrintSheet from '../shared/quote-print-sheet.vue';
@@ -117,6 +114,7 @@ import { normalizeUsdFieldValue } from '../shared/quote-sheet-format';
 import {
   canDraftCostActions,
   canShowQuoteConfirm,
+  canShowQuoteRenew,
   canShowQuoteVoid,
   isQuoteEditable,
   normalizeQuoteStatus,
@@ -510,7 +508,16 @@ const showReadonlyWorkflowToolbar = computed(
     workflowStatus.value !== 'PENDING_QUOTE' &&
     !isConfirmedQuote.value,
 );
-const canCopyAction = computed(() => canCreate);
+/** 过期归档 → 续期新建待报价 */
+const canRenewAction = computed(
+  () =>
+    canCreate &&
+    !isCreate.value &&
+    canShowQuoteRenew(status.value, {
+      archiveReason: archiveReason.value,
+      expired: expiredFlag.value,
+    }),
+);
 const isSavedDraft = computed(
   () =>
     !isCreate.value &&
@@ -557,6 +564,7 @@ const pageTitle = computed(() => {
 const backLabel = computed(() => $t('page.quote.actions.backToList'));
 
 const archiveReason = ref<null | QuoteApi.QuoteListItem['archiveReason']>(null);
+const expiredFlag = ref(false);
 
 const headerStatusTag = computed(() => {
   const tag = resolveQuoteStatusTag(status.value, {
@@ -1175,6 +1183,7 @@ async function applyDetailToForm(
         ? detail.costRiskModes.map(String)
         : [];
       archiveReason.value = detail.archiveReason ?? null;
+      expiredFlag.value = detail.expired === true;
       revisionNo.value = detail.revisionNo ?? 0;
       revisionLabel.value = detail.revisionLabel ?? '';
       changeReason.value = detail.changeReason ?? '';
@@ -1189,6 +1198,7 @@ async function applyDetailToForm(
       costRiskReason.value = null;
       costRiskModes.value = [];
       archiveReason.value = null;
+      expiredFlag.value = false;
       revisionNo.value = 0;
       revisionLabel.value = '';
       changeReason.value = '';
@@ -1264,55 +1274,7 @@ async function loadDetail() {
   }
 }
 
-function clearQuoteFeeFields() {
-  costMatches.value = [];
-  oceanFreightEntries.value = [{ rate: '', remark: '', ssl: '' }];
-  sheet.oceanFreight = '';
-  sheet.ofUsd = '';
-  sheet.ssl = '';
-  sheet.truckingFee = undefined;
-  sheet.truckingFee2 = undefined;
-  sheet.truckingNonOakUsd = undefined;
-  sheet.truckingOakUsd = undefined;
-  sheet.nsLift = undefined;
-  sheet.chassis = undefined;
-  sheet.waiting = undefined;
-  sheet.redeliveryFee = undefined;
-  sheet.truckRemark = '';
-  sheet.supplier = '';
-  sheet.fmNonOak = undefined;
-  sheet.fmOak = undefined;
-  sheet.docUsd = '';
-  sheet.cargoInsurancePremium = '';
-  sheet.cargoAgentFee = '';
-  sheet.cifAmount = undefined;
-  sheet.sheetRemark = '';
-}
-
-async function consumeCopyFromStorage() {
-  if (!isCreate.value) {
-    return;
-  }
-  const sourceId = takeQuoteCopySourceId();
-  if (!sourceId) {
-    return;
-  }
-  loading.value = true;
-  try {
-    const detail = await getQuoteDetail(sourceId);
-    await applyDetailToForm(detail, {
-      includeIdentity: false,
-      hydrateOnly: true,
-    });
-    message.success($t('page.quote.message.copyPrefilled'));
-  } catch {
-    message.error($t('page.ai.requestFailed'));
-  } finally {
-    loading.value = false;
-  }
-}
-
-/** 变更：只带基础信息，费用与报价库数据清空，由用户重新引入 */
+/** 变更：带入原单内容，报价库引用一并保留 */
 async function consumeReviseFromStorage() {
   if (!isCreate.value) {
     return false;
@@ -1328,22 +1290,9 @@ async function consumeReviseFromStorage() {
       includeIdentity: false,
       hydrateOnly: true,
     });
-    clearQuoteFeeFields();
-    // 保留基础区路线字段；清空费用后恢复基础相关
-    sheet.zipCode = detail.sheet?.zipCode ?? '';
-    sheet.city = detail.sheet?.city ?? '';
-    sheet.state = detail.sheet?.state ?? '';
-    sheet.pickUpAddress = detail.sheet?.pickUpAddress ?? '';
-    sheet.por = detail.sheet?.por ?? '';
-    sheet.pol = detail.sheet?.pol ?? '';
-    sheet.pod = detail.sheet?.pod ?? '';
-    sheet.fumigationPoint = detail.sheet?.fumigationPoint ?? '';
     reviseFromId.value = stash.sourceId;
     changeReason.value = stash.changeReason;
     parentQuoteId.value = stash.sourceId;
-    // 变更会清掉 DOC FEE；POD 往往与来源单相同，watch 不触发，需按 POD 重算（含是否中国港）
-    await nextTick();
-    await resolveDocFeeFromPod(sheet.pod, true);
     message.success($t('page.quote.message.revisePrefilled'));
     return true;
   } catch {
@@ -1607,6 +1556,7 @@ const ALLOWED_AI_SERVICE_TYPES = new Set<QuoteServiceType>([
   'OTHER',
   'SEA',
   'TRADE',
+  'TRANSLOAD',
   'TRUCK',
 ]);
 
@@ -2128,15 +2078,6 @@ async function onVoid() {
   });
 }
 
-function onCopy() {
-  const id = quoteId.value;
-  if (!id) {
-    return;
-  }
-  stashQuoteCopySource(id);
-  router.push({ name: 'QuoteCreate' });
-}
-
 function onRevise() {
   const id = quoteId.value;
   if (!id) {
@@ -2174,6 +2115,43 @@ function onRevise() {
       }
       stashQuoteReviseSource({ changeReason: reason, sourceId: id });
       await router.push({ name: 'QuoteCreate' });
+    },
+  });
+}
+
+function onRenew() {
+  const id = quoteId.value;
+  if (!id) {
+    return;
+  }
+  Modal.confirm({
+    title: $t('page.quote.actions.renew'),
+    content: $t('page.quote.confirm.renew', [quoteNo.value]),
+    okText: $t('page.quote.actions.renew'),
+    async onOk() {
+      const hide = message.loading({
+        content: $t('page.quote.message.renewing'),
+        duration: 0,
+        key: 'quote_renew_msg',
+      });
+      try {
+        const created = await renewQuote(id);
+        markQuoteListForceRefresh('quote');
+        markQuoteListForceRefresh('inquiry');
+        message.success({
+          content: $t('page.quote.message.renewSuccess', [
+            created.quoteNo ?? '',
+          ]),
+          key: 'quote_renew_msg',
+        });
+        await router.push({
+          name: 'QuoteEdit',
+          params: { id: String(created.id) },
+        });
+      } catch {
+        hide();
+        throw new Error('renew failed');
+      }
     },
   });
 }
@@ -2229,7 +2207,6 @@ onMounted(async () => {
       const reviseApplied = await consumeReviseFromStorage();
       if (!reviseApplied) {
         consumeAiApplyFromStorage();
-        await consumeCopyFromStorage();
         await consumeRoadIntroduceFromStorage();
       }
     }
@@ -2268,7 +2245,6 @@ watch(
       if (!quotePrefillApplied) {
         const reviseApplied = await consumeReviseFromStorage();
         if (!reviseApplied) {
-          await consumeCopyFromStorage();
           await consumeRoadIntroduceFromStorage();
         }
       }
@@ -2278,6 +2254,18 @@ watch(
       clearAiQuotePrefill();
       await loadDetail();
     }
+  },
+);
+
+/** 同页续期/跳转其它单据时 route.name 不变，按 id 重载 */
+watch(
+  () => String(route.params.id ?? ''),
+  async (id, prev) => {
+    if (route.name !== 'QuoteEdit' || !id || id === prev) {
+      return;
+    }
+    clearAiQuotePrefill();
+    await loadDetail();
   },
 );
 
@@ -2331,7 +2319,11 @@ onUnmounted(() => {
                 v-if="!isCreate && actionsReady && parentQuoteId"
                 color="purple"
               >
-                {{ $t('page.quote.revision.fromChange') }}
+                {{
+                  changeReason === '续期'
+                    ? $t('page.quote.revision.fromRenew')
+                    : $t('page.quote.revision.fromChange')
+                }}
               </Tag>
               <Tag
                 v-if="!isCreate && actionsReady"
@@ -2369,14 +2361,6 @@ onUnmounted(() => {
             class="quote-editor-nav__actions quote-editor-actions"
           >
             <template v-if="showDraftWorkflowActions">
-              <Button
-                v-if="!isCreate && canCopyAction"
-                class="quote-action-btn quote-action-btn--copy"
-                @click="onCopy"
-              >
-                <Copy class="mr-1 size-4" />
-                {{ $t('page.quote.actions.copy') }}
-              </Button>
               <Button
                 v-if="canUseCostLibrary && showCostLibraryActions"
                 class="quote-action-btn quote-action-btn--generate"
@@ -2444,14 +2428,6 @@ onUnmounted(() => {
 
             <template v-else-if="showPendingApprovalToolbar">
               <Button
-                v-if="canCopyAction"
-                class="quote-action-btn quote-action-btn--copy"
-                @click="onCopy"
-              >
-                <Copy class="mr-1 size-4" />
-                {{ $t('page.quote.actions.copy') }}
-              </Button>
-              <Button
                 class="quote-action-btn quote-action-btn--print"
                 @click="openPrintPreview"
               >
@@ -2502,12 +2478,14 @@ onUnmounted(() => {
 
             <template v-else-if="showReadonlyWorkflowToolbar">
               <Button
-                v-if="canCopyAction"
-                class="quote-action-btn quote-action-btn--copy"
-                @click="onCopy"
+                v-if="canRenewAction"
+                class="quote-action-btn quote-action-btn--revise"
+                type="primary"
+                ghost
+                @click="onRenew"
               >
-                <Copy class="mr-1 size-4" />
-                {{ $t('page.quote.actions.copy') }}
+                <IconifyIcon class="mr-1 size-4" icon="lucide:refresh-cw" />
+                {{ $t('page.quote.actions.renew') }}
               </Button>
               <Button
                 class="quote-action-btn quote-action-btn--print"
@@ -2892,7 +2870,7 @@ onUnmounted(() => {
             </div>
           </section>
 
-          <!-- 4. 熏蒸费 -->
+          <!-- 4. 熏蒸费：按基础信息 OAK / NON-OAK 只展示对应费用 -->
           <section v-if="showFumigationFees" class="quote-editor-section">
             <div class="quote-editor-section__head">
               <span class="quote-editor-section__title">{{
@@ -2902,7 +2880,7 @@ onUnmounted(() => {
             <div class="quote-editor-section__body">
               <Form layout="vertical">
                 <div class="quote-sheet-fields">
-                  <Form.Item>
+                  <Form.Item v-if="oakType === 'NON_OAK'">
                     <template #label>
                       <QuoteRuleLabel
                         :hint="ruleHint('fmNonOak')"
@@ -2917,7 +2895,7 @@ onUnmounted(() => {
                       :precision="2"
                     />
                   </Form.Item>
-                  <Form.Item>
+                  <Form.Item v-if="oakType === 'OAK'">
                     <template #label>
                       <QuoteRuleLabel
                         :hint="ruleHint('fmOak')"
@@ -3108,6 +3086,7 @@ onUnmounted(() => {
         <QuotePrintSheet
           :cost-snapshots="costMatches"
           :customer-name="previewCustomerName"
+          :oak-type="oakType"
           :quote-date="quoteDate?.format('YYYY-MM-DD') ?? ''"
           :service-types="serviceTypes"
           :sheet="sheet"

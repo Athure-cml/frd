@@ -33,6 +33,7 @@ import {
   getInquiryDetail,
   submitInquiry,
   updateInquiry,
+  withdrawInquiry,
 } from '#/api/quote/inquiry';
 import { $t } from '#/locales';
 
@@ -61,6 +62,7 @@ const canDelete = hasAccessByCodes(['inquiry:delete']);
 
 const saving = ref(false);
 const submitting = ref(false);
+const withdrawing = ref(false);
 const deleting = ref(false);
 const actionsReady = ref(false);
 /** 非新建默认进入加载态，避免接口返回前闪出按钮/表单 */
@@ -133,6 +135,15 @@ const canSubmitAction = computed(
     !!inquiryId.value &&
     canSubmit &&
     status.value === 'PENDING_SUBMIT',
+);
+
+/** 待报价可撤回：清掉待报价单，回到待递交 */
+const canWithdrawAction = computed(
+  () =>
+    !isCreate.value &&
+    !!inquiryId.value &&
+    canSubmit &&
+    status.value === 'PENDING_QUOTE',
 );
 
 /** 仅待递交可删除 */
@@ -418,6 +429,28 @@ async function onSubmit() {
   });
 }
 
+function onWithdraw() {
+  const id = inquiryId.value;
+  if (!id || !canWithdrawAction.value) return;
+  Modal.confirm({
+    centered: true,
+    content: $t('page.inquiry.confirm.withdraw', [inquiryNo.value || id]),
+    title: $t('page.inquiry.actions.withdraw'),
+    onOk: async () => {
+      withdrawing.value = true;
+      try {
+        const result = await withdrawInquiry(id);
+        markQuoteListForceRefresh('inquiry');
+        markQuoteListForceRefresh('quote');
+        message.success($t('page.inquiry.message.withdrawSuccess'));
+        applyDetail(result);
+      } finally {
+        withdrawing.value = false;
+      }
+    },
+  });
+}
+
 function goBack() {
   router.push({ name: 'InquiryList' });
 }
@@ -502,6 +535,16 @@ onMounted(async () => {
             >
               <IconifyIcon class="mr-1 size-4" icon="lucide:send" />
               {{ $t('page.inquiry.actions.submit') }}
+            </Button>
+            <Button
+              v-if="canWithdrawAction"
+              class="quote-action-btn quote-action-btn--rollback"
+              danger
+              :loading="withdrawing"
+              @click="onWithdraw"
+            >
+              <IconifyIcon class="mr-1 size-4" icon="lucide:undo-2" />
+              {{ $t('page.inquiry.actions.withdraw') }}
             </Button>
             <Button
               v-if="canSave"
@@ -708,7 +751,7 @@ onMounted(async () => {
                       v-model:value="sheet.pickUpAddress"
                       class="w-full"
                       :disabled="readOnly"
-                      :rows="2"
+                      :rows="4"
                     />
                   </Form.Item>
                 </div>
@@ -720,3 +763,19 @@ onMounted(async () => {
     </div>
   </Page>
 </template>
+
+<style scoped>
+.quote-editor-shell {
+  min-height: 100%;
+}
+
+.quote-editor-card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.quote-editor-card :deep(.ant-card-body) {
+  flex: 1 1 auto;
+}
+</style>

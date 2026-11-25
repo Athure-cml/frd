@@ -28,6 +28,9 @@ export function useWorkspaceData() {
     inquiries: [],
     months: [],
     quoted: [],
+    yearInquiries: [],
+    yearQuoted: [],
+    years: [],
   });
 
   async function load() {

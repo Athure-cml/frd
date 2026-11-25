@@ -103,14 +103,16 @@
     "greetingMorning": "Good morning, {0}. Ready to get to work?",
     "greetingAfternoon": "Good afternoon, {0}. Keep quotes and costs on track.",
     "greetingEvening": "Good evening, {0}. Review open quotes and rates.",
-    "subtitle": "Furuiduo freight workbench — quotes, cost library and master data.",
     "createQuote": "New Quote",
     "quickCreate": "Quick Create",
     "vsYesterday": "vs yesterday",
     "viewAll": "View all",
     "thisMonth": "This month",
     "last12Months": "Last 12 months",
+    "statsByMonth": "By month",
+    "statsByYear": "By year",
     "monthLabel": "{0}",
+    "dayLabel": "{0}",
     "quoteStats": "Quote Statistics",
     "topRoutes": "Top Routes",
     "routesDrawer": {
@@ -678,6 +680,9 @@
       "otherFee": "OTHERS",
       "operationRemark": "Operation Remark",
       "remark": "REMARK",
+      "enableRemark": "REMARK",
+      "enableRemarkHelp": "Turn on to fill business REMARK. Off by default to avoid mixing it up with Operation Remark.",
+
       "validDate": "VALID TIME",
       "logYardNameAddress": "PICK UP ADDRESS"
     }
@@ -1040,7 +1045,11 @@
       "readonly": "This quote is read-only.",
       "matchKeys": "Zip code / City / State / POR / POL / POD / SSL for quote library matching",
       "zipAutoFill": "Fuzzy-search Zip code; City and State fill in on selection",
-      "followUpStatus": "Follow-up records automatically capture the current quote status"
+      "followUpStatus": "Follow-up records automatically capture the current quote status",
+      "selectedCount": "{0} selected",
+      "selectAllAcrossPagesLoading": "Loading all matching records…",
+      "selectAllAcrossPagesEmpty": "No records match the current filters",
+      "selectAllAcrossPagesSuccess": "Selected {0} records across pages"
     },
     "sections": {
       "basic": "Basic Info",
@@ -1103,6 +1112,9 @@
       "confirmWon": "Confirm Won",
       "copy": "Copy as New",
       "revise": "Revise",
+      "renew": "Renew",
+      "selectAllAcrossPages": "Select All Pages",
+      "clearSelection": "Clear Selection",
       "print": "Print Quote Sheet",
       "sendMail": "Send Quote",
       "printQuote": "Print Quote",
@@ -1117,6 +1129,7 @@
     },
     "revision": {
       "fromChange": "Change Order",
+      "fromRenew": "Renewed Quote",
       "notCurrent": "Change Order",
       "viewParent": "View previous quote",
       "viewSuccessor": "View revised quote",
@@ -1173,6 +1186,7 @@
       "TRUCK": "Truck",
       "INSURANCE": "Insurance",
       "TRADE": "Trade",
+      "TRANSLOAD": "Transload",
       "OTHER": "Other"
     },
     "status": {
@@ -1234,7 +1248,9 @@
       "copyPrefilled": "Quote content loaded — save to create a new quote",
       "reviseSuccess": "Revision {0} saved as Quoted",
       "reviseNeedReason": "Please enter a change reason",
-      "revisePrefilled": "Basic info loaded — re-import quote library data, then save",
+      "revisePrefilled": "Source quote and quote-library references loaded. Review and save",
+      "renewSuccess": "Renewed quote {0} created. Review fees, set validity, then confirm",
+      "renewing": "Renewing…",
       "followUpCreated": "Follow-up added",
       "followSuccess": "Follow-up status updated",
       "noCostSnapshot": "No quote library snapshot",
@@ -1338,7 +1354,8 @@
       "deletePrefix": "Delete quote ",
       "deleteSuffix": "? This cannot be undone.",
       "void": "Void quote \"{0}\"? The linked inquiry will also be voided.",
-      "revise": "Open a new quote with basic info copied. Re-import quote library data and save — it becomes Quoted and the original is archived. Enter the change reason:",
+      "revise": "Open a new quote with the source details, including quote-library references. Saving marks it Quoted and archives the original. Enter the change reason:",
+      "renew": "Create a new Pending quote from expired quote \"{0}\": keep the original inquiry; reset operator/date to now; clear validity; expired quote-library refs will be cleared and must be re-imported. Continue?",
       "send": "Approve quote \"{0}\"? It will become confirmed.",
       "approve": "Approve quote \"{0}\"? It will become confirmed.",
       "reject": "Reject quote \"{0}\"?",
@@ -1877,6 +1894,7 @@
       "copy": "Copy as New",
       "save": "Save",
       "submit": "Submit",
+      "withdraw": "Withdraw",
       "openQuote": "Open Quote",
       "backToList": "Back to list"
     },
@@ -1899,12 +1917,14 @@
     },
     "confirm": {
       "submit": "Submit to quoter? A quote will be created automatically.",
+      "withdraw": "Withdraw inquiry \"{0}\"? The pending quote will be removed and the inquiry will return to Pending Submit.",
       "delete": "Delete inquiry {0}?"
     },
     "message": {
       "createSuccess": "Inquiry {0} saved",
       "saveSuccess": "Inquiry {0} saved",
       "submitSuccess": "Submitted. Quote {0} created",
+      "withdrawSuccess": "Withdrawn. Inquiry is Pending Submit again",
       "deleteSuccess": "Deleted",
       "copyPrefilled": "Inquiry content prefilled; save to create a new inquiry"
     },

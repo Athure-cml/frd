@@ -2,7 +2,6 @@
 defineProps<{
   dateLabel: string;
   greeting: string;
-  subtitle: string;
 }>();
 </script>
 
@@ -14,7 +13,12 @@ defineProps<{
         {{ greeting }}
         <span aria-hidden="true">👋</span>
       </h1>
-      <p class="workspace-banner-subtitle">{{ subtitle }}</p>
     </div>
   </header>
 </template>
+
+<style scoped>
+.workspace-banner {
+  min-height: 0;
+}
+</style>

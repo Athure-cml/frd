@@ -498,9 +498,15 @@ export function useRoadFormSchema(): VbenFormSchema[] {
     amountField('otherFee', 'otherFee'),
     {
       component: 'Textarea',
-      componentProps: { maxlength: 512, rows: 2, showCount: true },
+      componentProps: {
+        class: 'w-full',
+        maxlength: 512,
+        rows: 4,
+        showCount: true,
+      },
       fieldName: 'remark',
-      formItemClass: 'col-span-full',
+      // 与 REMARK 平分一行：强制从左列起，避免被上一字段挤到右列单独换行
+      formItemClass: 'col-start-1',
       label: t('operationRemark'),
     },
     {
